@@ -3629,6 +3629,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 본인 알림 수신 설정 조회
+         * @description 새 키 사용량 임계 알림 메일의 개인 수신 설정을 조회합니다. 콘솔 알림과 다른 업무·보안 알림에는 영향을 주지 않습니다.
+         */
+        get: operations["getMyNotificationPreferences"];
+        /**
+         * 본인 알림 수신 설정 변경
+         * @description 새 키 사용량 임계 알림 메일만 변경합니다. 기본값은 수신이며 콘솔 알림과 기존 업무·보안 메일은 유지합니다.
+         */
+        put: operations["updateMyNotificationPreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/password": {
         parameters: {
             query?: never;
@@ -5181,7 +5205,7 @@ export interface components {
             /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
             creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
-            /** @description OpenRouter가 마지막으로 보고한 현재 limit window 사용액. 미관측이면 null */
+            /** @description OpenRouter가 마지막으로 보고한 키의 누적 사용액. 현재 리셋 창의 소비량이 아니며 미관측이면 null */
             creditUsage?: number | null;
             /**
              * Format: date-time
@@ -5288,7 +5312,7 @@ export interface components {
             /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
             creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
-            /** @description OpenRouter가 마지막으로 보고한 현재 limit window 사용액. 미관측이면 null */
+            /** @description OpenRouter가 마지막으로 보고한 키의 누적 사용액. 현재 리셋 창의 소비량이 아니며 미관측이면 null */
             creditUsage?: number | null;
             /**
              * Format: date-time
@@ -7174,11 +7198,11 @@ export interface components {
             creditDepletionForecast?: string | null;
             /** @description 유료 모델에 쓸 수 있는 금액 한도(USD). 0이면 유료 모델을 쓸 수 없습니다. */
             creditLimit?: number | null;
-            /** @description 공급자가 보고한 현재 한도 창 사용액(USD). DAILY/WEEKLY/MONTHLY 리셋 뒤에는 감소할 수 있습니다. 아직 보고된 적이 없으면 null입니다. */
+            /** @description 공급자가 보고한 키의 누적 사용액(USD). 일·주·월 리셋별 사용액이나 현재 창의 소비량을 뜻하지 않습니다. 아직 보고된 적이 없으면 null입니다. */
             creditUsage?: number | null;
             /**
              * Format: date-time
-             * @description 그 한도 창 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
+             * @description 그 누적 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
              */
             creditUsageAt?: string | null;
             /**
@@ -7834,11 +7858,11 @@ export interface components {
             creditDepletionForecast?: string | null;
             /** @description 유료 모델에 쓸 수 있는 금액 한도(USD). 0이면 유료 모델을 쓸 수 없습니다. */
             creditLimit: number;
-            /** @description 공급자가 보고한 현재 한도 창 사용액(USD). DAILY/WEEKLY/MONTHLY 리셋 뒤에는 감소할 수 있습니다. 아직 보고된 적이 없으면 null입니다. */
+            /** @description 공급자가 보고한 키의 누적 사용액(USD). 일·주·월 리셋별 사용액이나 현재 창의 소비량을 뜻하지 않습니다. 아직 보고된 적이 없으면 null입니다. */
             creditUsage?: number | null;
             /**
              * Format: date-time
-             * @description 그 한도 창 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
+             * @description 그 누적 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
              */
             creditUsageAt?: string | null;
             /**
@@ -9132,6 +9156,10 @@ export interface components {
         NotificationChannel: "EMAIL";
         /** @enum {string} */
         NotificationImportance: "NORMAL" | "HIGH";
+        NotificationPreferencesView: {
+            /** @description 새 키 사용량 임계 알림 메일 수신 여부. 저장 전 기본값은 true이며 콘솔 알림과 기존 업무·보안 메일에는 영향을 주지 않습니다. */
+            usageMailEnabled: boolean;
+        };
         /** @enum {string} */
         NotificationStatus: "PENDING" | "SENDING" | "SENT" | "FAILED" | "SKIPPED" | "UNKNOWN";
         NotificationView: {
@@ -10673,6 +10701,10 @@ export interface components {
         UpdateNodeStatusRequest: {
             /** @description ACTIVE만 신규 VM 배치 대상 — MAINTENANCE/OFFLINE은 배치 제외 (기존 게스트 무영향) */
             status: components["schemas"]["NodeStatus"];
+        };
+        UpdateNotificationPreferencesRequest: {
+            /** @description 본인의 새 키 사용량 임계 알림 메일 수신 여부. 콘솔 알림과 다른 업무·보안 메일에는 영향을 주지 않습니다. */
+            usageMailEnabled: boolean;
         };
         UpdateOpenRouterAccountRequest: {
             /** @description 새 담당자. 생략하면 유지하고 null이면 지웁니다. */
@@ -19447,6 +19479,68 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MfaRecoveryCodesResponse"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getMyNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotificationPreferencesView"];
+                };
+            };
+            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateMyNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationPreferencesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotificationPreferencesView"];
                 };
             };
             /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */

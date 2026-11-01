@@ -1,9 +1,10 @@
 import { setupWorker } from 'msw/browser'
-import { refreshSuccessHandler, orgAdminUser, orgManagerUser, orgViewerUser, sysAdminUser, sysManagerUser, sysViewerUser } from '../test/msw/handlers/auth'
+import { refreshSuccessHandler, regularUserB, orgAdminUser, orgManagerUser, orgViewerUser, sysAdminUser, sysManagerUser, sysViewerUser } from '../test/msw/handlers/auth'
 import { gpuPreviewEnabled } from '../lib/gpu-preview'
 import { seedGpuPreviewFixtures } from '../test/msw/handlers/gpu'
 import { handlers } from '../test/msw/handlers'
 import { seedAllocationFixture } from '../test/msw/allocation-fixtures'
+import { seedUsageAlertNotifications, seedUsageMailFixture } from '../test/msw/handlers/notifications'
 
 /**
  * 브라우저에서 도는 목 API.
@@ -18,6 +19,8 @@ import { seedAllocationFixture } from '../test/msw/allocation-fixtures'
  */
 export async function startMockApi(): Promise<void> {
   seedAllocationFixture(new URLSearchParams(window.location.search).get('allocationFixture'))
+  seedUsageAlertNotifications(new URLSearchParams(window.location.search).get('usageAlertFixture'))
+  seedUsageMailFixture(new URLSearchParams(window.location.search).get('usageMailFixture'))
   // 로그인된 채로 띄운다. 미리 보기의 목적은 화면을 보는 것이고, 목에는 진짜 리프레시
   // 쿠키가 없어 주소를 직접 치면 세션이 끊긴다.
   //
@@ -25,6 +28,7 @@ export async function startMockApi(): Promise<void> {
   // administrator pages and the same account's personal console.
   if (gpuPreviewEnabled()) seedGpuPreviewFixtures()
   const profiles = {
+    'user-b': ['access-user-b', regularUserB],
     admin: ['access-sys-admin', sysAdminUser],
     'sys-manager': ['access-sys-manager', sysManagerUser],
     'sys-viewer': ['access-sys-viewer', sysViewerUser],

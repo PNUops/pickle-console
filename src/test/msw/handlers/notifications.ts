@@ -2,6 +2,8 @@ import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, problemResponse, unauthorizedProblem } from './auth'
 import { uuid } from '../ids'
+import { llmKeyStore } from './llm-keys'
+import { usageAlertFixture } from '../../usage-alert-fixture'
 
 type Schemas = components['schemas']
 type NotificationView = Schemas['NotificationView']
@@ -139,10 +141,30 @@ function initialDeliveryLog(): AdminNotificationView[] {
   ]
 }
 
+let usageFixtureMode: 'demo' | 'access-revoked' | 'error' | null = null
+let usageMailFixture: 'save-error' | null = null
+export const usageMailPreferenceStore = new Map<string, boolean>()
+
+export function seedUsageMailFixture(mode: string | null) { usageMailFixture = mode === 'save-error' ? mode : null }
+
+export function seedUsageAlertNotifications(mode: string | null) {
+  if (mode !== 'demo' && mode !== 'access-revoked' && mode !== 'error') return
+  usageFixtureMode = mode
+  notificationStore.push({ ...usageAlertFixture('TOKEN'), userId: uuid(42) },
+    { ...usageAlertFixture('CREDIT'), userId: uuid(42) })
+  if (mode === 'access-revoked') {
+    const key = llmKeyStore.find((row) => row.id === uuid(70))
+    if (key) key.myResourceRole = null
+  }
+}
+
 export let notificationStore: StoredNotification[] = initialNotifications()
 export let deliveryLogStore: AdminNotificationView[] = initialDeliveryLog()
 
 export function resetNotificationFixtures() {
+  usageFixtureMode = null
+  usageMailFixture = null
+  usageMailPreferenceStore.clear()
   notificationStore = initialNotifications()
   deliveryLogStore = initialDeliveryLog()
 }
@@ -150,6 +172,18 @@ export function resetNotificationFixtures() {
 function userIdOf(request: Request): string | null {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
   return ACCESS_TOKENS[token]?.id ?? null
+}
+
+/** Reuse the ordinary mock detail/usage standing, never administrator finance work. */
+function visibleTo(notification: StoredNotification, userId: string): boolean {
+  if (notification.userId !== userId) return false
+  if (notification.event !== 'llm.usage.threshold') return true
+  const keyId = /^\/console\/llm-keys\/([^/?#]+)$/.exec(notification.linkPath ?? '')?.[1]
+  return llmKeyStore.some((key) => key.id === keyId && key.myResourceRole != null)
+}
+
+function usageFixtureError() {
+  return problemResponse({ type: 'about:blank', title: '조회 실패', status: 503, code: 'SERVICE_UNAVAILABLE', detail: '현재 알림을 확인하지 못했습니다.' })
 }
 
 function toView({ userId: _userId, ...view }: StoredNotification): NotificationView {
@@ -166,15 +200,36 @@ const notFound = () =>
   })
 
 export const notificationHandlers: RequestHandler[] = [
+  http.get('*/api/v1/me/notification-preferences', ({ request }) => {
+    const userId = userIdOf(request)
+    if (userId == null) return problemResponse(unauthorizedProblem)
+    const body: Schemas['NotificationPreferencesView'] = { usageMailEnabled: usageMailPreferenceStore.get(userId) ?? true }
+    return HttpResponse.json(body)
+  }),
+  http.put('*/api/v1/me/notification-preferences', async ({ request }) => {
+    const userId = userIdOf(request)
+    if (userId == null) return problemResponse(unauthorizedProblem)
+    const body = await request.json().catch(() => null) as Record<string, unknown> | null
+    if (body == null || typeof body.usageMailEnabled !== 'boolean') return problemResponse({
+      type: 'about:blank', title: '입력값을 확인해 주세요', status: 422, code: 'VALIDATION_ERROR', detail: '사용량 알림 메일 수신 여부를 선택해 주세요.',
+    })
+    if (usageMailFixture === 'save-error') return problemResponse({
+      type: 'about:blank', title: '저장 실패', status: 503, code: 'SERVICE_UNAVAILABLE', detail: '메일 설정을 저장하지 못했습니다.',
+    })
+    usageMailPreferenceStore.set(userId, body.usageMailEnabled)
+    const response: Schemas['NotificationPreferencesView'] = { usageMailEnabled: body.usageMailEnabled }
+    return HttpResponse.json(response)
+  }),
   http.get('*/api/v1/notifications', ({ request }) => {
     const userId = userIdOf(request)
     if (userId == null) return problemResponse(unauthorizedProblem)
     const url = new URL(request.url)
+    if (usageFixtureMode === 'error') return usageFixtureError()
     const unreadOnly = url.searchParams.get('unreadOnly') === 'true'
     const page = Number(url.searchParams.get('page') ?? '0')
     const size = Number(url.searchParams.get('size') ?? '20')
     const filtered = notificationStore
-      .filter((n) => n.userId === userId)
+      .filter((n) => visibleTo(n, userId))
       .filter((n) => !unreadOnly || n.readAt == null)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     const body: Schemas['PageResponseNotificationView'] = {
@@ -190,8 +245,9 @@ export const notificationHandlers: RequestHandler[] = [
   http.get('*/api/v1/notifications/unread-count', ({ request }) => {
     const userId = userIdOf(request)
     if (userId == null) return problemResponse(unauthorizedProblem)
+    if (usageFixtureMode === 'error') return usageFixtureError()
     const unreadCount = notificationStore.filter(
-      (n) => n.userId === userId && n.readAt == null,
+      (n) => visibleTo(n, userId) && n.readAt == null,
     ).length
     const body: Schemas['UnreadCountResponse'] = { unreadCount }
     return HttpResponse.json(body, { status: 200 })
@@ -201,7 +257,7 @@ export const notificationHandlers: RequestHandler[] = [
     const userId = userIdOf(request)
     if (userId == null) return problemResponse(unauthorizedProblem)
     const found = notificationStore.find(
-      (n) => n.id === String(params.notificationId) && n.userId === userId,
+      (n) => n.id === String(params.notificationId) && visibleTo(n, userId),
     )
     if (!found) return notFound() // 타인 알림은 존재 마스킹(404)
     // 멱등: 이미 읽었으면 최초 읽음 시각 유지.
@@ -214,7 +270,7 @@ export const notificationHandlers: RequestHandler[] = [
     if (userId == null) return problemResponse(unauthorizedProblem)
     let updatedCount = 0
     for (const n of notificationStore) {
-      if (n.userId === userId && n.readAt == null) {
+      if (visibleTo(n, userId) && n.readAt == null) {
         n.readAt = '2026-07-13T12:00:00+09:00'
         updatedCount += 1
       }
