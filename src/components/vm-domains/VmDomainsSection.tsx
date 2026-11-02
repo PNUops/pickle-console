@@ -37,7 +37,6 @@ function InstitutionVmDomainsSection({ vm }: { vm: VmDetail }) {
     return <Card><CardContent><p className="text-sm text-neutral-500">게시 정보를 조회하거나 운영할 권한이 없습니다.</p></CardContent></Card>
   }
   return <Card><CardHeader><CardTitle>도메인</CardTitle></CardHeader><CardContent className="space-y-3">
-    <p className="text-sm text-neutral-600">공개 서비스에서 각 도메인의 실제 기관과 워크스페이스에 허용된 작업을 확인합니다.</p>
     {vm.publications == null ? <p className="text-sm text-neutral-500">이 화면에는 게시 세부 정보가 제공되지 않았습니다.</p>
       : vm.publications.length === 0 ? <p className="text-sm text-neutral-500">연결된 도메인이 없습니다.</p>
         : <ul className="space-y-2">{vm.publications.map((pub) => <li key={pub.domain.id}><Link className="text-primary-700 underline" to={`${adminPaths.domains()}?domainId=${encodeURIComponent(pub.domain.id)}`}>{pub.fqdn} 관리</Link></li>)}</ul>}

@@ -82,7 +82,7 @@ function NotificationInbox({ reader }: { reader: NotificationReader }) {
       {error && <Alert variant="danger">{error}</Alert>}
       {navigationError && <Alert variant="danger">{navigationError}</Alert>}
 
-      {notifications.showingLegacySnapshot && <p className="text-sm text-neutral-500">이전 조회의 일반 알림만 표시합니다. 사용량 안내와 알림 수는 다시 확인하고 있습니다.</p>}
+      {notifications.showingLegacySnapshot && <p className="text-sm text-neutral-500">일부 알림은 이전 조회 결과예요.</p>}
       {notifications.isPending && (
         <div className="flex justify-center py-12">
           <Spinner label="알림 불러오는 중" />

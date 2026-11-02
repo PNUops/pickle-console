@@ -71,7 +71,7 @@ export function ProfileImpactView({ impact }: { impact: ProfileImpact }) {
           <span className="block text-neutral-500">부여 종료일 {recipient.grantedEndDate ?? (recipient.requestStatus === 'APPROVED' ? '무기한' : '승인 전')}</span>
         </li>)}</ul>}
       </li>)}</ul>}
-    <p className="text-xs text-neutral-500">{formatDateTime(impact.observedAt)} 조회 기준입니다. 변경 후 관계와 신청 결과에서 실제 가입과 생성 상태를 확인해 주세요.</p>
+    <p className="text-xs text-neutral-500">{formatDateTime(impact.observedAt)} 기준</p>
   </section>
 }
 
@@ -133,13 +133,13 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
     queryFn: () => fetchUserSupport(userId, activeOrgId),
     enabled: supportAllowed,
   })
-  if (!supportAllowed) return <Alert>관계 조회는 사용자 지원 업무가 별도로 필요합니다. 프로필 정정과 최소 사용자 조회 권한은 유지됩니다.</Alert>
+  if (!supportAllowed) return <Alert>관계를 조회할 권한이 없습니다.</Alert>
   if (support.isPending) return <><GrantReceiptCard receipt={receipt} /><Spinner label="사용자 관계와 신청 결과 불러오는 중" /></>
   if (support.isError) return <><GrantReceiptCard receipt={receipt} /><Alert variant="danger">{support.error.message}<Button variant="secondary" size="sm" onClick={() => void support.refetch()}>다시 조회</Button></Alert></>
   const data = support.data
   return <div className="space-y-6 [overflow-wrap:anywhere]">
     <GrantReceiptCard receipt={receipt} />
-    {data.relationshipsLimited && <Alert>업무와 대상 범위에 따라 관계 일부만 제공됩니다. 제공되지 않은 정보는 관계가 없다는 뜻이 아닙니다.</Alert>}
+    {data.relationshipsLimited && <Alert>일부 관계는 조회할 수 없어요.</Alert>}
     <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
       <p>{activeOrg?.name ?? '플랫폼 전체'} 자원과 신청 결과 / {formatDateTime(data.observedAt)} 조회</p>
       <Button variant="secondary" size="sm" loading={support.isFetching} onClick={() => void support.refetch()}>관계와 결과 새로고침</Button>

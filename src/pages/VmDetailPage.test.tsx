@@ -903,12 +903,11 @@ describe('VM 상세 — 모니터링', () => {
     // 화면에서는 내부 어휘다 — 그래서 수신자별 문구다.
     renderVm(VM_METRICS_UNAVAILABLE_ID, 'monitoring')
 
-    const notice = await screen.findByText(/지금은 사용량을 읽을 수 없습니다/)
+    const notice = await screen.findByText(/지금은 사용량을 불러올 수 없습니다/)
     expect(screen.queryByText(/하이퍼바이저/)).not.toBeInTheDocument()
     // 잴 수 없다는 사실은 장애 경보가 아니다 — 붉은 경보로 띄우지 않는다.
     expect(notice.closest('[role="alert"]')).toBeNull()
-    // 대신 멈춰 있지도 않다 — 계속 물어보는 중임을 문구가 밝힌다.
-    expect(notice).toHaveTextContent('다시 시도하는 중입니다')
+    expect(notice).not.toHaveTextContent('다시 시도하는 중입니다')
   })
 
   test('삭제 중인 VM은 모니터링 탭을 아예 열지 않는다', async () => {

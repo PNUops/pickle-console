@@ -275,7 +275,7 @@ test('registered blockers retain exact IDs, actual institutions, read flags and 
   expect(modal.getByText('저장 상태: 생성 중')).toBeInTheDocument()
   expect(modal.getByText('저장 상태: 할당됨')).toBeInTheDocument()
   expect(modal.getByText('저장 상태: 발급 전')).toBeInTheDocument()
-  expect(modal.getByText('저장 상태는 실제 외부 적용이나 접속 성공을 뜻하지 않습니다. 도메인 갱신·해제·예약 기한은 별도 관측 정보입니다.')).toBeInTheDocument()
+  expect(modal.queryByText('저장 상태는 실제 외부 적용이나 접속 성공을 뜻하지 않습니다. 도메인 갱신·해제·예약 기한은 별도 관측 정보입니다.')).not.toBeInTheDocument()
   expect(modal.queryByRole('link', { name: '읽기 제한 키' })).not.toBeInTheDocument()
   expect(modal.queryByRole('link', { name: '남은 GPU' })).not.toBeInTheDocument()
   expect(modal.getByText('이 빌드에서는 GPU 조회 화면을 제공하지 않습니다. 정확한 ID로 운영자에게 확인해 주세요.')).toBeInTheDocument()

@@ -22,8 +22,8 @@ test('opens demand comparison inside service metrics without implying installed 
   renderApp(route)
   expect(await screen.findByRole('tab', { name: '장비와 수요 비교' })).toBeInTheDocument()
   expect(await screen.findByRole('heading', { name: '같은 시간창의 수요' })).toBeInTheDocument()
-  expect(screen.getByText(/장비·추론 수집이 구성되지 않았습니다/)).toBeInTheDocument()
-  expect(screen.getByText(/초당 처리량이나 순간 최댓값이 아닙니다/)).toBeInTheDocument()
+  expect(screen.getByText(/장비 수집이 구성되지 않았습니다/)).toBeInTheDocument()
+  expect(screen.queryByText(/초당 처리량이나 순간 최댓값이 아닙니다/)).not.toBeInTheDocument()
   expect(screen.queryByText(/TTFT|TPOT/)).not.toBeInTheDocument()
   expect(screen.getByRole('combobox', { name: '같은 기간의 요청 기록 정확값' })).toBeInTheDocument()
 })
@@ -112,7 +112,7 @@ test('shows a failed refresh beside the last successful response instead of hidi
   await user.click(screen.getByRole('button', { name: '다시 조회' }))
   expect(await screen.findByText(/갱신하지 못했습니다/)).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: '같은 시간창의 수요' })).toBeInTheDocument()
-  expect(screen.getByText('콘솔 마지막 GET 성공')).toBeInTheDocument()
+  expect(screen.getByText('최근 조회')).toBeInTheDocument()
 })
 
 test('labels retained previous-window data while the new window is loading', async () => {
@@ -160,7 +160,7 @@ test('retains the original response window and GET time when a different window 
   await user.click(screen.getByRole('button', { name: '1시간' }))
   await screen.findByText(/갱신하지 못했습니다/)
   expect(screen.getByText(/이전 조회 결과입니다/)).toBeInTheDocument()
-  expect(screen.getByText('콘솔 마지막 GET 성공')).toBeInTheDocument()
+  expect(screen.getByText('최근 조회')).toBeInTheDocument()
   expect(screen.queryByRole('table', { name: '같은 조건의 소비처' })).not.toBeInTheDocument()
 })
 

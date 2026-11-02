@@ -537,7 +537,6 @@ function MappingDrawerContent({
         {mapping.applyState === 'ACTIVE' ? '릴레이가 매핑 설정의 반영을 보고했습니다.'
           : mapping.applyState === 'FAILED' ? '릴레이가 매핑 설정의 반영 실패를 보고했습니다.'
             : '릴레이의 매핑 설정 반영 보고를 기다리고 있습니다.'}
-        {' '}이 보고는 실제 서비스 접속 성공이나 새로 저장한 연결 가드의 반영 완료를 보장하지 않습니다.
       </OperationResult>
 
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
@@ -782,7 +781,6 @@ function GuardsSection({ mapping, canEdit }: {
       {GUARD_FIELDS.map(({ key, label }) => <Field key={key} label={label}
         value={mapping[key] == null ? '릴레이 기본값 사용' : mapping[key] === 0 ? '해제 (0)' : String(mapping[key])} />)}
     </dl>
-    <p className="text-xs text-neutral-500">기본값의 실제 숫자는 이 화면에서 확인할 수 없습니다. 저장값과 릴레이 반영 보고는 별도입니다.</p>
     {editing && canEdit && <GuardsEditor mapping={mapping} onClose={() => setEditing(false)} />}
   </section>
 }

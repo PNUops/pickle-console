@@ -36,10 +36,8 @@ export function GeneratedResourcesCard({ resources, returnTo, unlinkedDomain = f
     <CardContent><p className="text-sm text-foreground-muted">이 신청의 확정 자원 ID 연결 기록이 없습니다. 기존 발급 이름은 부여 내용에서 확인해 주세요. 연결 기록이 없다는 사실만으로 발급 실패를 뜻하지 않습니다.</p></CardContent>
   </Card> : null
   return <Card>
-    <CardHeader><CardTitle>등록된 자원의 실제 상태</CardTitle></CardHeader>
+    <CardHeader><CardTitle>자원 상태</CardTitle></CardHeader>
     <CardContent className="min-w-0 space-y-3 [overflow-wrap:anywhere]">
-      <p className="text-sm text-foreground-muted">이 신청 ID로 연결된 서버 기록입니다. 등록됨과 VM 생성 진행, 실패, 실제 접속 성공은 구분합니다.</p>
-      {resources.some((resource) => resource.type === 'DOMAIN') && <p className="text-sm text-foreground-muted">도메인은 저장된 상태와 갱신·해제·예약 기한을 각각 확인합니다. 현재 DNS 반영이나 실제 연결 성공을 뜻하지 않습니다.</p>}
       <DataTable caption="신청에서 등록된 자원 상태">
         <THead><TR><TH>자원</TH><TH>조회된 상태</TH><TH>기간·종료 기록</TH><TH>실제 배치 노드</TH><TH>기록 갱신</TH><TH>운영 작업</TH></TR></THead>
         <TBody>{resources.map((resource) => {

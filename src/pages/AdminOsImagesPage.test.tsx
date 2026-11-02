@@ -60,7 +60,7 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
     await user.click(within(active).getByRole('button', { name: '은퇴' }))
 
     const dialog = await screen.findByRole('dialog', { name: 'OS 이미지 은퇴' })
-    expect(within(dialog).getByText(/마지막으로 선택 가능한 OS revision입니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/마지막으로 선택 가능한 이미지예요/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '은퇴' }))
 
     expect(await screen.findByText('OS 이미지를 은퇴시켰습니다.')).toBeInTheDocument()
@@ -112,7 +112,7 @@ describe('catalogue navigation and selection impact', () => {
     const activeReplica = screen.getByText('Ubuntu replica').closest('tr')!
     await user.click(within(activeReplica).getByRole('button', { name: '은퇴' }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(/마지막으로 선택 가능한 OS revision/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/마지막으로 선택 가능한 이미지/)).toBeInTheDocument()
   })
 
   test('does not promise removal of a logical choice when another compatible active replica remains', async () => {
@@ -130,7 +130,7 @@ describe('catalogue navigation and selection impact', () => {
     await within(row).findByText('선택 가능')
     await user.click(within(row).getByRole('button', { name: '은퇴' }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(/선택 가능 여부는 유지/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/신청 가능한 이미지는 유지돼요/)).toBeInTheDocument()
     expect(within(dialog).queryByText(/마지막으로 선택 가능한/)).not.toBeInTheDocument()
   })
 

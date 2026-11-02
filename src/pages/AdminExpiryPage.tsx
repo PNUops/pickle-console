@@ -59,8 +59,7 @@ function AdminExpiryContent() {
   return <div className="space-y-6">
     <div>
       <h1 className="text-2xl font-bold text-neutral-900">만료 관리</h1>
-      <p className="mt-1 text-sm text-neutral-500">{scope.activeOrg?.name ?? '플랫폼 전체'} 자원의 주 기한을 자원당 하나씩 조회합니다. 관련 날짜와 관측 상태는 별도로 확인합니다.</p>
-      <p className="mt-1 text-sm text-neutral-500">기한 경과는 실제 중지·회수·해제 완료를 뜻하지 않습니다. 상세 화면에서 현재 상태와 변경 조건을 확인해 주세요.</p>
+      <p className="mt-1 text-sm text-neutral-500">자원별 만료일과 현재 상태를 확인하세요.</p>
     </div>
     <FilterBar tabs={TABS} status={state.window} onStatus={(window) => change({ window: window === 'D7' ? undefined : window }, true)} showOrgFilter={false} orgId={scope.activeOrgId} onOrg={() => {}} orgs={[]}>
       <FormField label="자원 종류"><Select value={state.type ?? ''} onChange={(event) => change({ type: event.target.value || undefined, deadlineKind: undefined }, true)}>

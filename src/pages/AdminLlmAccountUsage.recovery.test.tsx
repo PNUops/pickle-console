@@ -92,7 +92,7 @@ test('account usage distinguishes the console GET success moment from producer o
   server.use(http.get('*/api/v1/admin/llm/accounts/:accountId/usage', () => HttpResponse.json(usage())))
   renderAccount()
   await screen.findByText(OLD_KEY)
-  expect(section().getByText('콘솔 마지막 GET 성공')).toBeInTheDocument()
+  expect(section().getByText('최근 조회')).toBeInTheDocument()
 })
 
 test('the account consumer does not reuse another reader response in the same institution', async () => {

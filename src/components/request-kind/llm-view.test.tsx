@@ -197,11 +197,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(within(within(dialog).getByRole('row', { name: /분당 요청 수 \(키당\)/ })).getByText('서비스 기본값')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    expect(
-      await screen.findByText(
-        '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
     // 네 항목이 모두 비어 있어도 llmKey 자체는 실려 나간다 (계약이 요구한다).
     expect(approved).toEqual([
       {
@@ -793,7 +789,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/목록이 오래됐습니다/)
+    await screen.findByText(/모델 목록이 오래됐어요/)
   })
 
   test('한 번도 못 가져온 목록과 오래된 목록을 구분해 말한다', async () => {
@@ -920,9 +916,7 @@ describe('초과 배정 경고', () => {
     expect(within(dialog).queryByText(/신청자가 직접/)).not.toBeInTheDocument()
     await user.click(within(dialog).getByLabelText('초과 배정임을 확인했습니다'))
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
-    expect(
-      await screen.findByText('신청을 승인했습니다. 대상자별 LLM API 키가 차례로 만들어집니다.'),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
   })
 
   test('the same limit on an ordinary request stays within the balance', async () => {

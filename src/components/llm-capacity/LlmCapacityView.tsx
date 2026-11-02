@@ -191,18 +191,14 @@ export default function LlmCapacityView() {
       <Card>
         <CardHeader><CardTitle>같은 시간창의 수요</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          {windowChanged && <MessageBar variant="warning">이전 조회 결과입니다. 선택한 기간의 새 결과로 해석하지 마세요.</MessageBar>}
+          {windowChanged && <MessageBar variant="warning">이전 조회 결과입니다.</MessageBar>}
           <DescriptionList columns={2} items={[
             { term: '실제 응답 기간', description: `${at(data.from)} 이상 ~ ${at(data.to)} 미만` },
-            { term: '요청한 기간', description: `${at(query.from)} 이상 ~ ${at(query.to)} 미만` },
-            { term: '응답 생성', description: at(data.generatedAt) },
-            { term: '콘솔 마지막 GET 성공', description: at(result?.fetchedAt) },
+            { term: '최근 조회', description: at(result?.fetchedAt) },
             { term: '집계 간격', description: `${count(data.bucketSeconds)}초` },
             { term: '수요 범위', description: scope.activeOrg?.name ?? (scope.tier === 'system' ? '플랫폼 전체' : '허용된 기관') },
           ]} />
           <Totals value={data.summary} />
-          <p className="text-sm text-foreground-muted">TOKEN/CREDIT은 요청 당시 예산 축입니다. 실제 최종 공급원과 비용 부담은 별개이며 토큰 비중은 개인별 GPU 점유율이 아닙니다.</p>
-          {data.summary.financeVisible && <p className="text-sm text-foreground-muted">금액은 공급자가 보고한 요청 금액입니다. 사용자·플랫폼 부담과 원가는 확인되지 않았습니다.</p>}
         </CardContent>
       </Card>
       {isSysTier(user?.role ?? 'USER') && data.telemetryVisible && <InferenceTelemetryView telemetry={data.telemetry} from={data.from} to={data.to} previousWindow={windowChanged} requestedSourceId={query.telemetrySourceId} />}
@@ -219,16 +215,14 @@ export default function LlmCapacityView() {
             { term: '게이트웨이 마지막 연결', description: at(data.quality.gateway.lastContactAt) },
             { term: '응답 시점의 게이트웨이 보고', description: { NOT_REPORTED: '미보고', STALE: '보고 지연', FRESH: '최근 보고됨' }[data.quality.gateway.reportState] },
             { term: '사용량 전달 마지막 성공', description: isSysTier(user?.role ?? 'USER') ? at(data.quality.gateway.lastUsageShipSuccessAt) : '제공되지 않음' },
-            { term: '기간 전체의 수집 완전성', description: '미확인' },
           ]} />
-          <p className="text-sm text-foreground-muted">마지막 수신 시각은 기간 전체의 수집 완료를 보장하지 않습니다. 기록이 없더라도 미수집이나 전송 손실이 없었다는 뜻은 아닙니다.</p>
         </CardContent>
       </Card>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <TimeSeriesChart title="같은 기간의 요청 기록" times={series.map((point) => Date.parse(point.from) / 1000)} series={[{ label: '요청', data: series.map((point) => point.counts.requests ?? null) }]}
           format={(value) => `${count(value)}건`} formatDetail={(value) => `${count(value)}건`} formatTime={(value) => at(new Date(value * 1000).toISOString())} formatAxisTime={(value) => axisAt(value, axisWindowMillis)} splitBase="integer" />
         <TimeSeriesChart title="같은 기간의 입력·출력 토큰" times={series.map((point) => Date.parse(point.from) / 1000)} series={[{ label: '입력', data: series.map((point) => point.counts.inputTokens ?? null) }, { label: '출력', data: series.map((point) => point.counts.outputTokens ?? null) }]}
-          format={formatTokenCompact} formatDetail={formatTokenExact} formatTime={(value) => at(new Date(value * 1000).toISOString())} formatAxisTime={(value) => axisAt(value, axisWindowMillis)} splitBase="integer" caption="각 구간의 합계입니다. 초당 처리량이나 순간 최댓값이 아닙니다." />
+          format={formatTokenCompact} formatDetail={formatTokenExact} formatTime={(value) => at(new Date(value * 1000).toISOString())} formatAxisTime={(value) => axisAt(value, axisWindowMillis)} splitBase="integer" />
       </div>
       {current && sameWindow && <>
         <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -244,7 +238,6 @@ export default function LlmCapacityView() {
             {CONSUMER_SORTS.map((value) => <option key={value} value={value} disabled={value === 'REPORTED_COST_DESC' && !data.summary.financeVisible}>{CONSUMER_SORT_LABELS[value]}</option>)}
           </Select></label>
         </div>
-        <p className="text-xs text-foreground-muted">사업 계정은 현재 키 결합으로 보존 원문만 좁힙니다. 계정의 일별 귀속·키 대사 집계, 과거 결합 이력 또는 실제 지불 주체와는 별도입니다.</p>
         {accounts.isError && <MessageBar variant="warning">계정 선택 목록을 불러오지 못했습니다. 현재 필터는 유지합니다.</MessageBar>}
         {!accounts.isEnabled && <MessageBar>계정 선택 목록은 현재 업무에서 조회하지 않습니다.</MessageBar>}
         {referenceWarning && <MessageBar>선택 목록은 일부만 표시됩니다. 현재 조건과 권한에서 읽을 수 있는 대상만 조회합니다.</MessageBar>}

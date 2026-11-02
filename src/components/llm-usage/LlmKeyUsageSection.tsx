@@ -178,7 +178,7 @@ export default function LlmKeyUsageSection({
                 <p className="text-xs text-neutral-500">
                   {data.from} ~ {data.to}
                 </p>
-                {admin && owned?.fetchedAt && <p className="text-xs text-neutral-500">콘솔 마지막 GET 성공 <ObservationMoment value={owned.fetchedAt} /></p>}
+                {admin && owned?.fetchedAt && <p className="text-xs text-neutral-500">최근 조회 <ObservationMoment value={owned.fetchedAt} /></p>}
 
                 {/* 합계는 타일이, 가장 많이 쓴 날은 위 문장이 말한다. 추정 비율은
                     합계 카드에 붙여 둔다: 가장 먼저 읽히는 숫자가 실측인 척하면 안 된다. */}
@@ -496,19 +496,7 @@ function StatTile({
   )
 }
 
-/**
- * The two budget axes.
- *
- * One is counted here and the other is enforced by the vendor. Only the money
- * gauge carries an observation time, because the token side's batching delay
- * is stated once by the report moment in the card header; putting two numbers
- * side by side and saying nothing makes them read as the same moment.
- *
- * The vendor is not named on this screen. An administrator has to find that
- * account and revoke a key in it, so their screens say who it is; a student
- * cannot act on the name and it is not theirs to know. The comment keeps the
- * fact that the code needs and the screen does not.
- */
+/** Keep daily token progress separate from cumulative reported money. */
 function BudgetSection({ budget }: { budget: LlmKeyBudget | AdminLlmKeyUsage['trend']['budget'] }) {
   const tokenLimit = budget.dailyTokens
   const creditLimit = budget.creditLimit == null ? null : Number(budget.creditLimit)
@@ -532,16 +520,14 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget | AdminLlmKeyUsage['tr
         }
       /> : <p className="text-sm text-neutral-500">토큰 예산 정보를 제공할 수 없습니다.</p>}
       {creditLimit != null ? <BudgetGauge
-        label="금액 사용"
+        label="누적 금액 사용"
         usedLabel={creditUsage == null ? null : formatUsd(creditUsage)}
-        limitLabel={creditLimit > 0 ? formatUsd(creditLimit) : null}
-        ratio={creditUsage != null && creditLimit > 0 ? creditUsage / creditLimit : null}
+        limitLabel={null}
+        ratio={null}
         note={
           creditLimit === 0
             ? '금액 한도가 없어 유료 모델을 쓸 수 없습니다.'
-            : budget.creditDepletionForecast
-              ? `이 속도면 ${budget.creditDepletionForecast}에 한도에 도달합니다.`
-              : undefined
+            : undefined
         }
         freshness={
           budget.creditUsageAt ? (

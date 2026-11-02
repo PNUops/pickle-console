@@ -37,7 +37,7 @@ test.each(sysRoles)('$role reads stored guards; only SYS_ADMIN edits', async (ro
   expect(!!drawer.queryByRole('button', { name: '가드 편집' })).toBe(role.role === 'SYS_ADMIN')
   expect(!!drawer.queryByRole('button', { name: '정지' })).toBe(role.role !== 'SYS_VIEWER')
   expect(drawer.getByText('반영 보고됨')).toBeInTheDocument()
-  expect(drawer.getByText(/실제 서비스 접속 성공이나 새로 저장한 연결 가드/)).toBeInTheDocument()
+  expect(drawer.queryByText(/실제 서비스 접속 성공이나 새로 저장한 연결 가드/)).not.toBeInTheDocument()
 })
 
 test.each(orgRoles)('$role cannot enter the SYS network surface', async (role) => {
@@ -119,7 +119,7 @@ test('bulk registration links use the actual organization from a global request'
   expect(within(table).getByText('자원 등록됨')).toBeInTheDocument()
   expect(within(table).getByRole('link', { name: '상세 보기' })).toHaveAttribute('href', `/admin/vms/${uuid(8801)}?org=${uuid(2)}`)
   expect(screen.getByText(/VM 프로비저닝 완료를 뜻하지 않습니다/)).toBeInTheDocument()
-  expect(screen.getByText(/승인과 부여 내용이 저장되었습니다/)).toBeInTheDocument()
+  expect(screen.getByText('승인했어요.')).toBeInTheDocument()
 })
 
 test('loading then list failure shows no stale result or edit form', async () => {
@@ -162,7 +162,7 @@ test('a delayed decision result cannot appear on another cached request', async 
   await screen.findByText('개인 실험용 서버')
   await act(async () => { finish(); await gate })
   await waitFor(() => expect(client.isMutating()).toBe(0))
-  expect(screen.queryByText(/승인 내용이 저장되었습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/승인했어요/)).not.toBeInTheDocument()
   expect(screen.getByText('개인 실험용 서버')).toBeInTheDocument()
 })
 

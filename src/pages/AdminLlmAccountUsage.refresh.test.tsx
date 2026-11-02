@@ -29,7 +29,7 @@ function section() {
 }
 
 function getMoment() {
-  return section().getByText('콘솔 마지막 GET 성공').parentElement!.textContent
+  return section().getByText('최근 조회').parentElement!.textContent
 }
 
 test('retry keeps the selected account period and replaces the old response only after success', async () => {
@@ -61,7 +61,7 @@ test('retry keeps the selected account period and replaces the old response only
     expect(section().getByRole('button', { name: '7일' })).toHaveAttribute('aria-pressed', 'true')
     expect(section().getByText(/2026-09-24.*2026-09-30/)).toBeInTheDocument()
     expect(section().queryByText('Synthetic first consumer')).not.toBeInTheDocument()
-    expect(section().queryByText(/이전 조회 결과입니다/)).not.toBeInTheDocument()
+    expect(section().queryByText(/이전 조회 기간의 값/)).not.toBeInTheDocument()
     expect(getMoment()).toContain('09:10:00')
   } finally {
     vi.useRealTimers()

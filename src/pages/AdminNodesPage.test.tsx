@@ -195,11 +195,10 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     renderNodes()
 
     const notice = await screen.findByText(
-      /하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/,
+      /하이퍼바이저가 응답하지 않습니다/,
     )
     expect(notice.closest('[role="alert"]')).toBeNull()
-    // 안내는 차분하되 조회는 이어 간다 — 문구도 그렇게 말한다.
-    expect(notice).toHaveTextContent('다시 시도하는 중입니다')
+    expect(notice).not.toHaveTextContent('다시 시도하는 중입니다')
     // 다만 정상 주기(테스트 모드 250ms)보다 촘촘해지지는 않는다: 물러선 주기는
     // 500ms라 900ms 동안 서너 번을 넘지 않는다.
     await waitFor(() => expect(metricsCalls).toBeGreaterThan(1))
@@ -223,9 +222,9 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     )
     renderNodes()
 
-    await screen.findByText(/하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/)
+    await screen.findByText(/하이퍼바이저가 응답하지 않습니다/)
     // 아무 조작 없이 다음 조회 주기에 스스로 되돌아온다.
     expect(await screen.findByRole('heading', { name: 'CPU' })).toBeInTheDocument()
-    expect(screen.queryByText(/하이퍼바이저가 응답하지 않아/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/하이퍼바이저가 응답하지 않습니다/)).not.toBeInTheDocument()
   })
 })

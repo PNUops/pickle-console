@@ -223,9 +223,7 @@ describe('승인 폼', () => {
     expect(within(dialog).getByText('배치: 자동 배치')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    expect(
-      await screen.findByText('승인 내용이 저장되었습니다. VM 생성 진행과 실제 완료는 가상머신 상세에서 확인해 주세요.'),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
     expect(await screen.findByText('검토 결과')).toBeInTheDocument()
 
     expect(approveBodies).toHaveLength(1)
@@ -283,11 +281,7 @@ describe('승인 폼', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    expect(
-      await screen.findByText(
-        '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
     await waitFor(() =>
       expect(openRouterAccountListQueries.length).toBeGreaterThan(before),
     )
@@ -382,9 +376,7 @@ describe('반려 폼', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 반려' })
     await user.click(within(dialog).getByRole('button', { name: '반려 확정' }))
 
-    expect(
-      await screen.findByText('반려 결정과 사유를 저장했습니다. 알림 전달 완료는 별도로 확인해야 합니다.'),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('반려했어요.')).toHaveLength(2))
     expect(rejectBodies).toEqual([
       {
         requestId: uuid(201),

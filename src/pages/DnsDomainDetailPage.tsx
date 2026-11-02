@@ -206,13 +206,10 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
       {!released && (
         <Card className="space-y-3 p-6">
           <h2 className="text-base font-semibold text-neutral-900">사용 기한</h2>
-          {/* Losing the name without a renewal is the whole of what this card
-              has to say. A deactivated school account receives none of the
-              notices, so a reader who is not told that has no way to know. */}
+          {/* Keep the renewal deadline and the consequence of letting it expire. */}
           <p className="text-sm text-neutral-600">
             {formatDateTime(domain.renewDueAt)}까지입니다. 연장하지 않으면 레코드가 삭제되고
-            이름은 예약 상태로 바뀝니다. 알림은 기한 전에 보내지만, 학교 계정을 더 쓰지 않게 되면
-            그 알림도 닿지 않습니다.
+            이름은 예약 상태로 바뀝니다.
           </p>
           {renew.isError && <Alert variant="danger">{renew.error.message}</Alert>}
           {canEdit && (

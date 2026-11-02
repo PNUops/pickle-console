@@ -26,28 +26,25 @@ function normalPage() {
   return renderApp('/console/notifications')
 }
 
-test('token notification preserves the full exact server body without truncation', async () => {
+test('token notification displays the concise server body without adding internal details', async () => {
   const notification = listFixture('TOKEN')
   normalPage()
   const body = await screen.findByText(notification.body, { normalizer: (text) => text })
   expect(body.textContent).toBe(notification.body)
-  expect(body.textContent).toContain('서버 평가 시각: 2026-11-02 01:01:00 KST')
+  expect(body.textContent).toBe('공유 실습 키의 일일 토큰 한도를 80% 이상 사용했어요.')
   expect(body).toHaveClass('whitespace-pre-wrap', '[overflow-wrap:anywhere]')
   expect(body).not.toHaveClass('truncate')
-  expect(body.textContent).toContain('9007199254740993')
+  expect(screen.queryByText(/서버 평가 시각|관측 당시 한도|전송과 관측/)).not.toBeInTheDocument()
   expect(Object.keys(notification)).toHaveLength(8)
 })
 
-test('credit notification preserves reported remaining and time text without inventing spend', async () => {
+test('credit notification displays the server period without deriving a browser threshold', async () => {
   const notification = listFixture('CREDIT')
   normalPage()
   const body = await screen.findByText(notification.body, { normalizer: (text) => text })
   expect(body.textContent).toBe(notification.body)
-  expect(body.textContent).toContain('서버 평가 시각: 2026-11-02 01:01:00 KST')
-  expect(body.textContent).toContain('-0.00000000000000005 USD')
-  expect(body.textContent).toContain('0.00000010 USD')
-  expect(body.textContent).toContain('UTC')
-  expect(body.textContent).toContain('관측 잔여는 실제 기간 사용액')
+  expect(body.textContent).toBe('공유 실습 키의 월간 금액 한도를 모두 사용했어요.')
+  expect(screen.queryByText(/관측 잔여|BYOK|서버 평가 시각/)).not.toBeInTheDocument()
 })
 
 test('usage notification waits for the current ordinary read before navigating', async () => {

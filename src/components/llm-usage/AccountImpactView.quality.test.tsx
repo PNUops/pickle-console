@@ -18,16 +18,18 @@ test.each(['FRESH', 'STALE'] as const)('latest failures and reported freshness s
   expect(screen.getByText('잔액의 최근 확인이 실패했습니다. 마지막 성공 관측값을 표시합니다.')).toBeInTheDocument()
   expect(screen.getByText(/키 대사의 최근 확인이 실패했습니다/)).toBeInTheDocument()
   expect(screen.getByText('계정 잔액 / 키 대사 상태').parentElement).toHaveTextContent(freshness === 'FRESH' ? '최근 관측 / 최근 관측' : '관측 지연 / 관측 지연')
-  for (const [label, time] of [['잔액 마지막 성공', '09:00:00'], ['잔액 마지막 시도', '09:10:00'], ['키 대사 마지막 성공', '09:01:00'], ['키 대사 마지막 시도', '09:11:00']]) {
+  for (const [label, time] of [['잔액 마지막 성공', '09:00:00'], ['키 대사 마지막 성공', '09:01:00']]) {
     expect(screen.getByText(label).parentElement).toHaveTextContent(time)
   }
+  expect(screen.queryByText('잔액 마지막 시도')).not.toBeInTheDocument()
+  expect(screen.queryByText('키 대사 마지막 시도')).not.toBeInTheDocument()
   expect(screen.getByText('$5.00 → $15.00')).toBeInTheDocument()
 })
 
-test('unreported attempt metadata is not replaced with a successful timestamp or zero', () => {
+test('unreported successful observations are not presented as a known time or zero', () => {
   const snapshot = structuredClone(limitsProjectionFixture.accountImpact)
-  snapshot.accounts![0].quality.creditsLastAttemptAt = null
-  snapshot.accounts![0].quality.keyMetersLastAttemptAt = null
+  snapshot.accounts![0].quality.creditsLastSuccessAt = null
+  snapshot.accounts![0].quality.keyMetersLastSuccessAt = null
   render(<AccountImpactView projection={snapshot} />)
-  for (const label of ['잔액 마지막 시도', '키 대사 마지막 시도']) expect(screen.getByText(label).parentElement).toHaveTextContent('미보고')
+  for (const label of ['잔액 마지막 성공', '키 대사 마지막 성공']) expect(screen.getByText(label).parentElement).toHaveTextContent('미보고')
 })

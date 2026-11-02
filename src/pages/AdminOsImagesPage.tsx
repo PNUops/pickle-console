@@ -93,7 +93,6 @@ export function AdminOsImagesPage() {
       <TabPanel id="images" active={state.tab === 'images'}>
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-neutral-900">OS 이미지</h2>
-        <p className="text-sm text-neutral-600">아래 상태는 노드별 이미지 행의 상태입니다. 신청 가능 여부는 동일 revision의 호환 replica와 활성 노드를 함께 확인한 신청 목록을 따릅니다.</p>
         {logicalImages.isError && <Alert variant="warning">신청 가능한 이미지 목록을 확인하지 못했습니다. 개별 행 상태만으로 선택 가능 여부를 판단하지 마세요.</Alert>}
 
         {osImages.isPending && (
@@ -369,20 +368,18 @@ function ToggleOsImageModal({
       <div className="space-y-3">
         {retiring ? (
           <p className="text-sm text-neutral-600">
-            <strong>{image.displayName}</strong> (v{image.version})의 이 노드 replica를 은퇴시킵니다.
-            다른 활성 노드에 동일 revision의 호환 ACTIVE replica가 있으면 신청 선택지는 유지됩니다.
-            기존 VM의 clone 기록은 바뀌지 않습니다. 아직 생성하지 않은 신청은 실제 생성 시점의 이미지 사용 가능 조건을 다시 확인합니다.
+            <strong>{image.displayName}</strong> (v{image.version}): 이 노드의 이미지를 사용 중지해요. 기존 VM은 유지돼요.
           </p>
         ) : (
           <p className="text-sm text-neutral-600">
-            <strong>{image.displayName}</strong> (v{image.version})의 이 replica를 활성화합니다. 신청 목록에 노출되는지는 호환 revision과 노드 상태를 서버에서 다시 확인합니다.
+            <strong>{image.displayName}</strong> (v{image.version}): 이 노드의 이미지를 활성화해요.
           </p>
         )}
         {retiring && !impact && <Alert variant="warning">신청 목록에 미치는 영향을 현재 확인하지 못했습니다. 저장 후 실제 신청 목록을 다시 확인해 주세요.</Alert>}
-        {retiring && impact?.removesChoice === false && <Alert variant="info">이 행을 은퇴해도 현재 신청용 revision의 선택 가능 여부는 유지됩니다.</Alert>}
+        {retiring && impact?.removesChoice === false && <Alert variant="info">신청 가능한 이미지는 유지돼요.</Alert>}
         {retiring && impact?.removesLastChoice && (
           <Alert variant="warning">
-            마지막으로 선택 가능한 OS revision입니다. 이 replica를 은퇴하면 현재 신청 가능한 이미지 선택지가 없어집니다.
+            마지막으로 선택 가능한 이미지예요. 사용 중지하면 신청 가능한 이미지가 없어져요.
           </Alert>
         )}
         {error && <Alert variant="danger">{error}</Alert>}

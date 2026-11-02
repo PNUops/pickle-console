@@ -80,7 +80,7 @@ describe('사업 계정 상세의 배정 현황', () => {
     expect(within(section).getByText(/\$300\.00/)).toBeInTheDocument()
     expect(within(section).getAllByText(/\$290\.00/).length).toBeGreaterThan(0)
     expect(
-      within(section).getByText(/먼저 쓰는 사람이 잔액을 소진하면/),
+      within(section).getByText('남은 배정이 잔액을 넘습니다.'),
     ).toBeInTheDocument()
   })
 
@@ -91,7 +91,7 @@ describe('사업 계정 상세의 배정 현황', () => {
 
     const section = (await screen.findByRole('heading', { name: '배정 현황' })).closest('section')!
     expect(within(section).getByText(/28개/)).toBeInTheDocument()
-    expect(within(section).getByText(/배정 합계에는 이미 들어 있습니다/)).toBeInTheDocument()
+    expect(within(section).getByText('발급 대기').parentElement).toHaveTextContent('28개')
   })
 
   /**
@@ -109,8 +109,7 @@ describe('사업 계정 상세의 배정 현황', () => {
     expect(within(section).queryByText(/잔액을 넘습니다/)).not.toBeInTheDocument()
   })
 
-  /** 창 한도는 합계에 들어가되 창마다 되살아난다는 사실을 따로 말해야 한다. */
-  test('창마다 다시 채워지는 몫을 따로 밝힌다', async () => {
+  test('shows the recurring-window commitment as a monetary value', async () => {
     const windowed = openRouterAccountStore.find(
       (account) => account.allocation.committedMonthly > 0,
     )!
@@ -118,7 +117,7 @@ describe('사업 계정 상세의 배정 현황', () => {
 
     const section = (await screen.findByRole('heading', { name: '배정 현황' })).closest('section')!
     expect(within(section).getByText(/창마다 다시 채워지는 몫/)).toBeInTheDocument()
-    expect(within(section).getByText(/리셋 창마다 한도가 되살아납니다/)).toBeInTheDocument()
+    expect(within(section).getByText(/창마다 다시 채워지는 몫/).parentElement).toHaveTextContent(/\$\d/)
   })
 })
 
@@ -194,15 +193,11 @@ describe('사업 계정 상세의 쓰임새', () => {
     expect(within(priced).getByText('$0.50')).toBeInTheDocument()
   })
 
-  test('귀속이지 청구가 아니라는 것을 화면이 먼저 말한다', async () => {
-    // 바로 위 구역이 공급자 잔액을 말하고 있으므로, 이 말이 없으면 두 숫자가
-    // 같은 것을 뜻한다고 읽힌다.
+  test('labels request-reported cost without a billing explanation', async () => {
     renderDetail(uuid(410))
 
-    expect(await screen.findByText(/요청마다 알려 준 금액을 이 계정의 키로/))
-      .toBeInTheDocument()
-    expect(screen.getByText(/키가 확인되지 않은 요청은 어느 계정에도 속하지 않고/))
-      .toBeInTheDocument()
+    expect(await screen.findByRole('columnheader', { name: '요청별 보고 금액' })).toBeInTheDocument()
+    expect(screen.queryByText(/요청마다 알려 준 금액을 이 계정의 키로/)).not.toBeInTheDocument()
   })
 
   test('기간을 바꾸면 그 기간으로 다시 묻는다', async () => {

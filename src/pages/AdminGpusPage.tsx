@@ -54,7 +54,7 @@ function AdminGpusContent() {
   return <div className="space-y-6">
     <PageHeader title="GPU" />
     {notice && <Alert variant="success">{notice}</Alert>}
-    {canFilterQueue ? <Select aria-label="GPU 할당 필터" className="max-w-48" value={queuedOnly ? 'queued' : 'all'} onChange={(event) => { setQueuedOnly(event.target.value === 'queued'); setPage(0) }}><option value="all">전체 할당</option><option value="queued">대기열</option></Select> : <p className="text-sm text-neutral-500">연결된 GPU의 허용된 관측 정보만 표시합니다.</p>}
+    {canFilterQueue ? <Select aria-label="GPU 할당 필터" className="max-w-48" value={queuedOnly ? 'queued' : 'all'} onChange={(event) => { setQueuedOnly(event.target.value === 'queued'); setPage(0) }}><option value="all">전체 할당</option><option value="queued">대기열</option></Select> : null}
     {allocations.isPending && <Spinner label="GPU 할당 불러오는 중" />}
     {allocations.isError && <Alert variant="danger">{allocations.error.message}</Alert>}
     {allocations.data && (allocations.data.content.length === 0 ? <EmptyState title={queuedOnly ? '대기 중인 GPU 신청이 없습니다' : 'GPU 할당이 없습니다'} /> : <>

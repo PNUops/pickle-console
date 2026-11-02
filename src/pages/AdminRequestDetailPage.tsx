@@ -233,8 +233,7 @@ function DecisionResultCard({
       </CardHeader>
       <CardContent>
         <OperationResult stage="stored">
-          {approved ? '승인과 부여 내용이 저장되었습니다. 리소스의 외부 적용과 실제 완료는 해당 리소스 상세에서 확인해 주세요.'
-            : '반려 결정과 의견이 저장되었습니다. 알림 전달 완료를 확인한 결과는 아닙니다.'}
+          {approved ? '승인했어요.' : '반려했어요.'}
         </OperationResult>
         <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
           <Field label="검토자">{review.reviewerName}</Field>
@@ -343,7 +342,7 @@ function DecisionSection({
       return data
     },
     onSuccess: async () => {
-      if (active.current) { setConfirm(null); onNotice({ variant: 'success', message: form.successMessage }) }
+      if (active.current) { setConfirm(null); onNotice({ variant: 'success', message: '승인했어요.' }) }
       // 승인은 사업 계정에 걸린 배정 상태를 바꾸므로 계정 목록도 다시 읽는다.
       await Promise.all([
         refresh(),
@@ -369,7 +368,7 @@ function DecisionSection({
       setConfirm(null)
       onNotice({
         variant: 'success',
-        message: '반려 결정과 사유를 저장했습니다. 알림 전달 완료는 별도로 확인해야 합니다.',
+        message: '반려했어요.',
       })
       await refresh()
     },
