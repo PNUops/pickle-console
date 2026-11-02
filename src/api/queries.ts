@@ -148,6 +148,8 @@ export type UpdateCampusIpRequestStatusRequest =
 
 /* ─── 알림·운영 콘솔 ─── */
 export type NotificationView = Schemas['NotificationView']
+export type NotificationPreferences = Schemas['NotificationPreferencesView']
+export type UpdateNotificationPreferences = Schemas['UpdateNotificationPreferencesRequest']
 export type NotificationPage = Schemas['PageResponseNotificationView']
 export type UnreadCountResponse = Schemas['UnreadCountResponse']
 export type VmPeriodUpdateRequest = Schemas['VmPeriodUpdateRequest']
@@ -2420,6 +2422,25 @@ export function markAllNotificationsRead(): Promise<{ updatedCount: number }> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/notifications/read-all')
     if (!data) throw toApiError(error, '알림을 모두 읽음 처리하지 못했습니다.')
+    return data
+  })
+}
+
+/** The personal flag is unknown until a successful current-reader response. */
+export function fetchMyNotificationPreferences(signal?: AbortSignal): Promise<NotificationPreferences> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/me/notification-preferences', { signal })
+    if (!data) throw toApiError(error, '메일 설정을 불러오지 못했습니다.')
+    if (typeof data.usageMailEnabled !== 'boolean') throw new ApiError(null, '메일 설정 응답을 확인하지 못했습니다.')
+    return data
+  })
+}
+
+export function updateMyNotificationPreferences(body: UpdateNotificationPreferences): Promise<NotificationPreferences> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/me/notification-preferences', { body })
+    if (!data) throw toApiError(error, '메일 설정을 저장하지 못했습니다.')
+    if (typeof data.usageMailEnabled !== 'boolean') throw new ApiError(null, '메일 설정 응답을 확인하지 못했습니다.')
     return data
   })
 }
