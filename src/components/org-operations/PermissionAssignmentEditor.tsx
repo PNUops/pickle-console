@@ -58,9 +58,9 @@ export function PermissionAssignmentEditor({ name, value, catalogue, workspaces,
       : selectedFromFull(catalogue, value.expectedRevision))}>
       <option value="FULL">전체 관리자 (FULL)</option><option value="SELECTED">선택 업무 (SELECTED)</option>
     </Select></FormField>
-    <p className="text-sm">표시 역할: {permissionRole(value, catalogue)} · 역할은 선택한 권한에서 계산되며 직접 수정하지 않습니다.</p>
-    {value.mode === 'FULL' ? <Alert variant="warning">전체 관리자는 이 기관의 등록된 전체 업무, 모든 워크스페이스와 명시된 전역 지원·기관 위임 권한을 갖습니다. 선택 업무에서 바꾸면 지정 공간 제한이 사라집니다.</Alert> : <>
-      <Alert variant="info">모든 선택 업무를 골라도 전체 관리자나 기관 위임 권한이 생기지 않습니다. 전체 관리자에서 전환하면 위임·미래 업무 자동 포함과 이 출처의 전역 개별 키 비용 읽기 예외가 사라집니다. 다른 FULL 출처의 영향은 저장 전 미리보기에서 확인하세요.</Alert>
+    <p className="text-sm">표시 역할: {permissionRole(value, catalogue)}</p>
+    {value.mode === 'FULL' ? <Alert variant="warning">이 기관의 전체 업무와 모든 공간, 전역 지원·위임 권한을 부여해요. 기존 지정 공간 제한은 해제돼요.</Alert> : <>
+      <Alert variant="info">선택 업무를 모두 골라도 FULL은 아니에요. FULL에서 전환하면 위임, 미래 업무 자동 포함, 이 출처의 전역 키 비용 읽기 권한이 사라져요.</Alert>
       <Button type="button" variant="secondary" size="sm" className="h-auto min-h-8 max-w-full whitespace-normal py-2" disabled={disabled} onClick={() => onChange(selectedFromFull(catalogue, value.expectedRevision))}>현재 FULL의 선택 가능한 업무 모두 선택</Button>
       <FormField label={`${name} 범위 공간 검색`}><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="워크스페이스 이름 또는 ID" /></FormField>
       {[null, ...WORK_GROUPS].map((group) => <section key={group ?? 'global'} className="space-y-3">

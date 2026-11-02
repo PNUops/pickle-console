@@ -12,11 +12,10 @@ export function AccountKeyNavigation({ account }: { account: OpenRouterAccount }
     ['linked', '연결된 키', 'ALL'],
     ['committed', '현재 금액 배정', 'COMMITTED'],
     ['awaitingProvision', '유료 모델 발급 대기', 'AWAITING_PROVISION'],
-    ['usageUnreported', '현재창 사용액 미보고', 'USAGE_UNREPORTED'],
+    ['usageUnreported', '사용액 미보고', 'USAGE_UNREPORTED'],
   ] as const
   return <section className="space-y-3 rounded-panel border border-stroke-subtle bg-surface-card p-4">
     <h2 className="type-section-title">읽을 수 있는 키군 탐색</h2>
-    <p className="text-sm text-foreground-muted">현재 권한으로 읽는 키 행입니다. 계정 전체의 배정 합계나 승인 후 키 생성 대기 계획, 기간별 소비 키와는 모집단이 다릅니다.</p>
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{rows.map(([field, label, cohort]) => {
       const count = navigation[field]
       const available = count.state === 'AVAILABLE' && count.totalElements != null && isExactTokenCount(count.totalElements)

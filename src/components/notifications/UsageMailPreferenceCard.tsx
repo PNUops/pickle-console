@@ -17,7 +17,7 @@ export function UsageMailPreferenceCard({ enabled, loading, saving, error, messa
   useEffect(() => { setDraft(enabled) }, [enabled])
   return <Card className="space-y-3 p-4">
     <h2 className="font-semibold text-neutral-900">사용량 알림 메일</h2>
-    <p className="text-sm text-neutral-600">기본은 켬입니다. 끄면 이 계정의 새 사용량 도달 메일만 받지 않습니다. 콘솔 알림과 신청, 승인, 보안 메일은 유지됩니다.</p>
+    <p className="text-sm text-neutral-600">키 한도를 모두 사용하면 메일로 알려드려요. 꺼도 알림함에서는 확인할 수 있어요.</p>
     {loading && enabled == null && <Spinner label="메일 설정 불러오는 중" />}
     {error && <Alert variant="danger">{error}</Alert>}
     {error && <Button variant="secondary" onClick={onRetry}>메일 설정 다시 조회</Button>}
@@ -33,6 +33,5 @@ export function UsageMailPreferenceCard({ enabled, loading, saving, error, messa
       <Button type="submit" loading={saving} disabled={draft == null || draft === enabled}>메일 설정 저장</Button>
     </form>}
     {message && <Alert variant="success">{message}</Alert>}
-    <p className="text-xs text-neutral-500">서버 관측에 따라 80% 도달은 콘솔로 안내합니다. 100% 도달은 이 설정이 켜져 있을 때 메일도 보냅니다. 관측과 메일 대기로 늦어질 수 있습니다.</p>
   </Card>
 }

@@ -82,10 +82,6 @@ function AdminTasksContent() {
       {requestReturn && <Link className="text-sm text-primary-700 hover:underline" to={requestReturn}>← 신청 상세</Link>}
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">작업 큐</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          VM 비동기 작업(생성·삭제·재설치) 현황입니다. 재시도가 소진된 작업(관리자 확인
-          필요)은 원인 해결 후 재시도할 수 있습니다.
-        </p>
       </div>
       {vmId && <p className="break-all text-sm text-neutral-600">현재 VM의 작업만 조회합니다. <Link className="text-primary-700 hover:underline" to={adminPaths.vmDetail(vmId, params.get('org') ?? undefined)}>VM 상세 보기</Link></p>}
 

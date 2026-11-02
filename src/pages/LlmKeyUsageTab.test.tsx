@@ -1,10 +1,13 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
+import { getResponse, http, HttpResponse } from 'msw'
+import type { LlmKeyUsageTrend } from '../api/queries'
 import { refreshSuccessHandler } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
 import { renderApp } from '../test/render'
 import { uuid } from '../test/msw/ids'
+import { llmKeyHandlers } from '../test/msw/handlers/llm-keys'
 
 const USED_KEY = uuid(70)
 const PENDING_KEY = uuid(71)
@@ -195,15 +198,16 @@ describe('사용량 탭', () => {
     expect(screen.getAllByText('openai/gpt-4o-mini').length).toBeGreaterThan(0)
   })
 
-  test('예산 게이지 둘이 서로 다른 신선도를 밝힌다', async () => {
+  test('cumulative money keeps its observation without a period-cap progress bar', async () => {
     // 하나는 우리가 세고 하나는 공급자가 집행한다. 같은 시점의 값으로
     // 읽히면 안 된다.
     renderUsage(USED_KEY)
 
     const token = await screen.findByRole('progressbar', { name: '오늘 토큰 사용 소진율' })
-    const money = screen.getByRole('progressbar', { name: '금액 사용 소진율' })
     const tokenGauge = token.closest('div[class*="space-y"]') ?? token.parentElement!
-    const moneyGauge = money.closest('div[class*="space-y"]') ?? money.parentElement!
+    const moneyGauge = screen.getByText('누적 금액 사용').closest<HTMLDivElement>('div[class*="space-y"]')!
+    expect(within(moneyGauge).queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(moneyGauge).not.toHaveTextContent('/ $10')
 
     // The money gauge states its observation exactly once. Two renderings of
     // one moment is the defect the time rule exists for, and hiding the second
@@ -223,7 +227,26 @@ describe('사용량 탭', () => {
     expect(tokenGauge.textContent).toContain('오늘 토큰 사용')
     expect(tokenGauge.querySelectorAll('time')).toHaveLength(0)
 
-    expect(screen.getByText(/이 속도면 2026-09-12에 한도에 도달합니다/)).toBeInTheDocument()
+    expect(screen.queryByText(/이 속도면 .*한도에 도달합니다/)).not.toBeInTheDocument()
+  })
+
+  test.each([null, 0, 25])('cumulative money %s remains distinct from an unknown value and the token gauge', async (value) => {
+    const response = await getResponse(llmKeyHandlers, new Request(`http://localhost/api/v1/llm-keys/${USED_KEY}/usage?days=30`))
+    const trend = await response!.json() as LlmKeyUsageTrend
+    trend.budget!.creditUsage = value
+    server.use(http.get('*/api/v1/llm-keys/:keyId/usage', () => HttpResponse.json(trend)))
+    renderUsage(USED_KEY)
+    const token = await screen.findByRole('progressbar', { name: '오늘 토큰 사용 소진율' })
+    expect(token).toHaveAttribute('aria-valuenow', '24')
+    const money = screen.getByText('누적 금액 사용').closest<HTMLDivElement>('div[class*="space-y"]')!
+    expect(within(money).queryByRole('progressbar')).not.toBeInTheDocument()
+    if (value == null) {
+      expect(money).toHaveTextContent('아직 보고된 사용량이 없습니다')
+      expect(money).not.toHaveTextContent('$0')
+    } else {
+      expect(money).toHaveTextContent(`$${value}`)
+      expect(money).not.toHaveTextContent('아직 보고된 사용량이 없습니다')
+    }
   })
 
   test('user usage tab names no vendor', async () => {
@@ -233,7 +256,7 @@ describe('사용량 탭', () => {
     // cannot see the same fact said in different words.
     renderUsage(USED_KEY)
 
-    await screen.findByRole('progressbar', { name: '금액 사용 소진율' })
+    await screen.findByText('누적 금액 사용')
     expect(screen.queryByText(/openrouter/i)).not.toBeInTheDocument()
   })
 

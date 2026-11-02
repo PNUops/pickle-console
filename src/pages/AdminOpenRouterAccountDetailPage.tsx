@@ -187,7 +187,6 @@ function AdminOpenRouterAccountDetailContent() {
       <PageHeader
         eyebrow={account.orgName}
         title={account.name}
-        description="사업 단위 결제 계정의 정보와 관리용 키 상태입니다."
         actions={<Badge variant={account.status === 'ACTIVE' ? 'success' : 'neutral'}>{account.status === 'ACTIVE' ? '활성' : '보관됨'}</Badge>}
       />
 
@@ -256,9 +255,6 @@ function AdminOpenRouterAccountDetailContent() {
       {('credentialVisible' in account && account.credentialVisible === true) && <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
         <div>
           <h2 className="type-section-title">관리용 키</h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            키 값과 그 일부는 저장하지도 화면에 보여 주지도 않습니다.
-          </p>
         </div>
         {!account.activeCredential && !rotation && (
           <MessageBar>등록된 관리용 키가 없습니다.</MessageBar>

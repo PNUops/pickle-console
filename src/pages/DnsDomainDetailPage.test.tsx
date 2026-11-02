@@ -17,13 +17,11 @@ function renderDetail(tab?: string) {
 describe('domain detail', () => {
   beforeEach(() => dnsDomainStore.reset())
 
-  test('says the name is lost without a renewal, and that the notices may not arrive', async () => {
+  test('keeps the renewal consequence without a notification-delivery explanation', async () => {
     renderDetail()
 
-    // Deactivating a school account sends all three notices into the void. A
-    // reader who is not told that has no way to find out.
     expect(await screen.findByText(/연장하지 않으면 레코드가 삭제되고/)).toBeInTheDocument()
-    expect(screen.getByText(/그 알림도 닿지 않습니다/)).toBeInTheDocument()
+    expect(screen.queryByText(/그 알림도 닿지 않습니다/)).not.toBeInTheDocument()
   })
 
   test('saving records sends the whole table, so a deleted row leaves the zone', async () => {

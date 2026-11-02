@@ -7193,7 +7193,7 @@ export interface components {
         InstitutionAdminLlmBudgetResponse: {
             /**
              * Format: date
-             * @description 최근 소비 속도로 금액 한도에 도달할 것으로 보이는 날짜. 이력이 부족하거나 최근에 쓴 적이 없으면 null입니다.
+             * @description 총액 한도를 최근 소비 속도로 소진할 것으로 예상하는 날짜. 주기별 한도이거나, 이력이 부족하거나 최근 소비가 없으면 null입니다.
              */
             creditDepletionForecast?: string | null;
             /** @description 유료 모델에 쓸 수 있는 금액 한도(USD). 0이면 유료 모델을 쓸 수 없습니다. */
@@ -7853,7 +7853,7 @@ export interface components {
         LlmKeyBudgetResponse: {
             /**
              * Format: date
-             * @description 최근 소비 속도로 금액 한도에 도달할 것으로 보이는 날짜. 이력이 부족하거나 최근에 쓴 적이 없으면 null입니다.
+             * @description 총액 한도를 최근 소비 속도로 소진할 것으로 예상하는 날짜. 주기별 한도이거나, 이력이 부족하거나 최근 소비가 없으면 null입니다.
              */
             creditDepletionForecast?: string | null;
             /** @description 유료 모델에 쓸 수 있는 금액 한도(USD). 0이면 유료 모델을 쓸 수 없습니다. */

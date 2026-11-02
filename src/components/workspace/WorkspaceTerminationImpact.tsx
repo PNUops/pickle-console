@@ -57,7 +57,6 @@ export function WorkspaceTerminationImpactBody({ read, invitationId, targetLabel
   const { impact, targets, resources, page, resourcePage, loading, error, stale, load } = read
   return (
       <div className="space-y-4 [overflow-wrap:anywhere]">
-        <Alert variant="info">현재 종료 영향을 조회합니다. 이 조회로 신청이나 대상자가 취소되거나 리소스가 생성되지 않습니다. 실제 변경 시점의 상태는 달라질 수 있습니다.</Alert>
         {targetLabel && <p className="text-sm font-medium">대상 초대: {targetLabel}</p>}
         {loading && <Spinner label="종료 영향 불러오는 중" />}
         {error && <Alert variant="danger">{error}</Alert>}
@@ -74,7 +73,6 @@ export function WorkspaceTerminationImpactBody({ read, invitationId, targetLabel
           <WorkspaceTerminationImpactSummary impact={impact} />
           <section className="space-y-2" aria-label="삭제를 막는 실제 리소스 목록">
             <h3 className="font-semibold">실제 리소스 ({resources.length} / {impact.blockingResources.totalElements}개)</h3>
-            <p className="text-sm">저장 상태는 실제 외부 적용이나 접속 성공을 뜻하지 않습니다. 도메인 갱신·해제·예약 기한은 별도 관측 정보입니다.</p>
             {resources.length === 0 ? <p className="text-sm">{impact.blockingResources.totalElements === 0 ? '이 종료 작업을 막는 실제 리소스가 없습니다.' : '전체 수와 리소스 목록을 함께 확인하지 못했습니다. 전체 영향을 다시 조회해 주세요.'}</p>
               : <ul className="space-y-3">{resources.map((resource) => <TerminationResource key={`${resource.type}:${resource.id}`} resource={resource} admin={admin} source={source} />)}</ul>}
             {resourcePage + 1 < impact.blockingResources.totalPages && <Button variant="secondary" loading={loading} disabled={stale} onClick={() => void load('resources')}>다음 리소스 더 보기</Button>}

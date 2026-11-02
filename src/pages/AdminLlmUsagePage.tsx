@@ -336,11 +336,10 @@ function ConsumersSection({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-foreground-muted">{consumers.from} ~ {consumers.to} KST · 일별 기록과 키 금액 대사 기준 · 전체 {count(consumers.totalItems)}개 · 응답 {count(consumers.page + 1)}페이지 / {CONSUMER_SORT_LABELS[consumers.sort]}</p>
+        <p className="text-sm text-foreground-muted">{consumers.from} ~ {consumers.to} KST · 전체 {count(consumers.totalItems)}개 · {count(consumers.page + 1)}페이지 / {CONSUMER_SORT_LABELS[consumers.sort]}</p>
         <Select aria-label="소비처 정렬" value={selectedSort} onChange={(event) => onSort(event.target.value as typeof consumers.sort)}>
           {CONSUMER_SORTS.map((value) => <option key={value} value={value}>{CONSUMER_SORT_LABELS[value]}</option>)}
         </Select>
-        <p className="text-xs text-foreground-muted">금액 정렬은 요청별 보고 금액을 기준으로 합니다. 기간 키 미터는 공급자 관측값의 별도 차분입니다. 현재 조회 집합의 금융 정보를 읽을 수 없으면 서버가 정렬 요청을 거절하며 조건은 유지됩니다.</p>
         {consumers.items.length === 0 ? (
           <EmptyState
             title="표시할 소비처가 없습니다"
@@ -729,7 +728,7 @@ function LimitReviewSection({ data, activeOrgId, onPage }: { data: AdminLlmUsage
         <CardTitle>한도 검토</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-foreground-muted">압력 기간 {data.limitReview.pressureFrom} ~ {data.limitReview.pressureTo} KST · 설정 조회 {data.limitReview.configurationObservedAt ? formatDateTimeSeconds(data.limitReview.configurationObservedAt) : '미보고'}. 오늘 토큰과 현재 금액 창은 선택한 소비 기간과 별도입니다.</p>
+        <p className="text-sm text-foreground-muted">압력 기간 {data.limitReview.pressureFrom} ~ {data.limitReview.pressureTo} KST · 설정 조회 {data.limitReview.configurationObservedAt ? formatDateTimeSeconds(data.limitReview.configurationObservedAt) : '미보고'}</p>
         {data.limitReview.items.length === 0 ? (
           <EmptyState
             title="검토할 한도가 없습니다"
@@ -784,7 +783,7 @@ function LimitReviewSection({ data, activeOrgId, onPage }: { data: AdminLlmUsage
                     </TD>
                     <TD className="min-w-48 text-xs">{item.financeVisible ? <>
                       <span className="block">한도 {formatUsd(item.creditLimit)}</span>
-                      <span className="block">사용 {formatUsd(item.creditUsage)}</span>
+                      <span className="block">누적 사용 {formatUsd(item.creditUsage)}</span>
                       <span className="block">잔여 {formatUsd(item.creditLimitRemaining)}</span>
                       <span className="block text-foreground-muted">{moment(item.creditUsageAt, '금액 관측 전')}</span>
                       <span className="mt-1 block">
@@ -1030,12 +1029,10 @@ export function AdminLlmUsagePage() {
       {usage.isError && <MessageBar variant="danger">{usage.error.message} {data ? '마지막 성공 응답은 아래에 보존합니다.' : ''}</MessageBar>}
       {data && (
         <>
-          {previousResponse && <MessageBar variant="warning">이전 조회 결과입니다. 새 기간·페이지·정렬의 결과로 해석하지 마세요.</MessageBar>}
+          {previousResponse && <MessageBar variant="warning">이전 조회 결과입니다.</MessageBar>}
           <DescriptionList columns={2} items={[
             { term: '실제 응답 기간', description: `${data.from} ~ ${data.to} KST` },
-            { term: '요청한 기간', description: `${days}일` },
-            { term: '응답 생성', description: formatDateTimeSeconds(data.generatedAt) },
-            { term: '콘솔 마지막 GET 성공', description: result?.fetchedAt ? formatDateTimeSeconds(result.fetchedAt) : '미보고' },
+            { term: '최근 조회', description: result?.fetchedAt ? formatDateTimeSeconds(result.fetchedAt) : '미보고' },
           ]} />
           <DemandSection data={data} onDays={selectDays} />
           <ConsumersSection

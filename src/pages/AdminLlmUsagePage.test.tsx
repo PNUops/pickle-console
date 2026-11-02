@@ -274,7 +274,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(within(actual).getByText('실제 소진 확인')).toBeInTheDocument()
     expect(within(actual).getByRole('button', { name: '90K, 정확값 보기' })).toBeInTheDocument()
     expect(within(actual).getByRole('button', { name: '1K, 정확값 보기' })).toBeInTheDocument()
-    expect(within(actual).getByText('사용 $0.00')).toBeInTheDocument()
+    expect(within(actual).getByText('누적 사용 $0.00')).toBeInTheDocument()
     expect(within(actual).getByText('잔여 $10.00')).toBeInTheDocument()
     expect(actual.querySelector('time[datetime="2026-08-31T12:00:00+09:00"]')).not.toBeNull()
     expect(within(actual).getByText('일일 토큰 한도 소진 2건')).toBeInTheDocument()
@@ -290,7 +290,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     const rateOnly = screen.getByRole('link', { name: 'suspended-admin-key' }).closest('tr')!
     expect(within(rateOnly).getByText('한도 압력')).toBeInTheDocument()
     expect(within(rateOnly).queryByText('실제 소진 확인')).not.toBeInTheDocument()
-    expect(within(rateOnly).getByText('사용 확인 전')).toBeInTheDocument()
+    expect(within(rateOnly).getByText('누적 사용 확인 전')).toBeInTheDocument()
     expect(rateOnly).toHaveTextContent('종류 미상 0')
     expect(document.body).not.toHaveTextContent('server_busy')
     expect(document.body).not.toHaveTextContent('80%')

@@ -16,21 +16,20 @@ export function BulkChangeReceipt({ operation }: { operation: AdminBulkOperation
   const name = (id: string) => hidden.has(id) ? id : names.get(id) ?? id
   return <section className="space-y-4">
     <MessageBar variant="success" title="적용 결과가 저장됐습니다">
-      DB 커밋: {formatDateTime(operation.committedAt)}. 큐 접수와 외부 리소스의 실제 완료는 별도로 확인합니다.
+      저장 시각: {formatDateTime(operation.committedAt)}
     </MessageBar>
     <p className="break-all text-sm">적용 ID: <code>{operation.operationId}</code></p>
     <h2 className="font-semibold">저장 당시 결과</h2>
     <BulkChangeResultTable items={operation.result.items.map((item) => hidden.has(item.targetId) ? { ...item, name: null, fields: [] } : item)} targetType={operation.targetType} />
-    <p className="text-sm text-foreground-muted">현재 권한으로 조회할 수 없는 대상은 이름과 변경값을 가립니다. 당시 저장된 적용·거절 결과는 그대로 보존합니다.</p>
     <DataTable caption="현재 대상 관측">
-      <THead><TR><TH>대상</TH><TH>조회 시각</TH><TH>현재 DB 값</TH></TR></THead>
+      <THead><TR><TH>대상</TH><TH>조회 시각</TH><TH>현재 값</TH></TR></THead>
       <TBody>{operation.observations.map((item) => <TR key={item.targetId}>
         <TD className="break-all">{name(item.targetId)}</TD>
         <TD>{formatDateTime(item.observedAt)}</TD>
         <TD>{item.refusal ? <span>현재 조회 불가: {labelForBulkReason(item.refusal)}</span> : <dl className="space-y-1">{Object.entries(item.values).map(([field, value]) => <div key={field}><dt className="inline text-foreground-muted">{diffFieldLabel(field)}: </dt><dd className="inline">{<BulkValue field={field} value={value} targetType={operation.targetType} />}</dd></div>)}</dl>}</TD>
       </TR>)}</TBody>
     </DataTable>
-    <DataTable caption="후속 작업 접수와 관측" className="min-w-[48rem]">
+    <DataTable caption="처리 현황" className="min-w-[48rem]">
       <THead><TR><TH>대상</TH><TH>종류</TH><TH>후속 처리 확인</TH><TH>현재 작업 상태</TH><TH>참조 ID</TH></TR></THead>
       <TBody>{operation.effects.map((effect) => {
         const masked = effect.targetId != null && hidden.has(effect.targetId)
@@ -43,6 +42,5 @@ export function BulkChangeReceipt({ operation }: { operation: AdminBulkOperation
         </TR>
       })}</TBody>
     </DataTable>
-    <p className="text-sm text-foreground-muted">등록됨은 큐 접수 성공을 뜻하지 않으며, 작업 성공도 외부 자원의 물리적 완료를 증명하지 않습니다. 현재 대상 값이 요청값과 같아도 이 적용이 외부 변경을 완료했다는 증거는 아닙니다.</p>
   </section>
 }

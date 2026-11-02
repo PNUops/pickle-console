@@ -14,14 +14,14 @@ import { capturedAccountStates, projectionBasisKey } from '../test/msw/projectio
 test('a reported tiny positive key amount is not presented as an observed zero', () => {
   render(<KeyCreditObservation llmKey={{ creditUsage: 5e-8, creditLimitRemaining: 0,
     creditUsageAt: '2026-09-30T12:00:00Z' }} />)
-  expect(screen.getByText(/^Limit window 사용 /).textContent).not.toMatch(/\$0(?:\.0+)?$/)
+  expect(screen.getByText(/^누적 금액 사용 /).textContent).not.toMatch(/\$0(?:\.0+)?$/)
   expect(screen.getByText(/^잔여 한도 /)).toHaveTextContent('$0.00')
 })
 
 test('a reported zero key amount remains zero', () => {
   render(<KeyCreditObservation llmKey={{ creditUsage: 0, creditLimitRemaining: null,
     creditUsageAt: '2026-09-30T12:00:00Z' }} />)
-  expect(screen.getByText(/^Limit window 사용 /)).toHaveTextContent('$0.00')
+  expect(screen.getByText(/^누적 금액 사용 /)).toHaveTextContent('$0.00')
   expect(screen.getByText(/^잔여 한도 /)).toHaveTextContent('확인 전')
 })
 

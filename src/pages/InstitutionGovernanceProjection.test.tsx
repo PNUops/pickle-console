@@ -47,7 +47,7 @@ test('student lookup alone never requests the relationship graph or invents unav
   let supportReads = 0
   server.use(http.get('*/api/v1/admin/users/:userId/support', () => { supportReads++; return new HttpResponse(null, { status: 403 }) }))
   renderApp(`/admin/users/${uuid(42)}`)
-  await screen.findByText('관계 조회는 사용자 지원 업무가 별도로 필요합니다. 프로필 정정과 최소 사용자 조회 권한은 유지됩니다.')
+  await screen.findByText('관계를 조회할 권한이 없습니다.')
   expect(screen.getByText('상태 이력은 현재 업무로 제공되지 않습니다.')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '정정' })).not.toBeInTheDocument()
   expect(screen.queryByText('연구팀')).not.toBeInTheDocument()

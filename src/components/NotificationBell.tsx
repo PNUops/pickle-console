@@ -76,7 +76,7 @@ function ReaderNotificationBell({ to, reader }: { to: string; reader: Notificati
       <PopoverPanel open={open} aria-label="알림" className="w-80 sm:w-96">
         {navigationError && <Alert variant="danger">{navigationError}</Alert>}
         {error && <Alert variant="danger">{error}</Alert>}
-        {recent.showingLegacySnapshot && <p className="px-4 py-2 text-xs text-neutral-500">일반 알림은 이전 조회 기준이며 사용량 안내는 다시 확인 중입니다.</p>}
+        {recent.showingLegacySnapshot && <p className="px-4 py-2 text-xs text-neutral-500">일부 알림은 이전 조회 결과예요.</p>}
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
           <span className="text-sm font-semibold text-neutral-900">알림</span>
           <button

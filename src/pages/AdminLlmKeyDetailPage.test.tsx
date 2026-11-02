@@ -423,7 +423,7 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
       'href',
       `/admin/llm/accounts/${uuid(410)}?org=${uuid(1)}`,
     )
-    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('Limit window 사용 $2.50')
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('누적 금액 사용 $2.50')
     expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('잔여 한도 $2.50')
     expect(screen.getByText('금액 관측').closest('div')!
       .querySelector('time[datetime="2026-08-31T00:27:30+09:00"]')).not.toBeNull()
@@ -446,7 +446,7 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
 
     renderDetail('access-sys-admin', sysAdminUser, uuid(177))
     await screen.findByRole('heading', { name: 'remote-connected-unbound-key' })
-    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('Limit window 사용 $0.00')
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('누적 금액 사용 $0.00')
     expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('잔여 한도 $0.00')
   })
 

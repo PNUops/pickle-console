@@ -69,8 +69,7 @@ export function AdminDriftPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">드리프트</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          조정자(reconciler)가 감지한 DB와 Proxmox 사이의 불일치입니다. 더 이상 관측되지
-          않으면 자동으로 해소됩니다.
+          등록 정보와 Proxmox 상태가 다른 항목이에요.
         </p>
       </div>
 

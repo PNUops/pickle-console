@@ -54,12 +54,12 @@ test('personal preference reads ON and writes only its usage-mail boolean', asyn
   normalPage()
   const checkbox = await screen.findByRole('checkbox', { name: '사용량 알림 메일 받기' })
   expect(checkbox).toBeChecked()
-  expect(screen.getByText(/신청, 승인, 보안 메일/)).toBeInTheDocument()
+  expect(screen.getByText('키 한도를 모두 사용하면 메일로 알려드려요. 꺼도 알림함에서는 확인할 수 있어요.')).toBeInTheDocument()
   await userEvent.click(checkbox)
   await userEvent.click(screen.getByRole('button', { name: '메일 설정 저장' }))
   await waitFor(() => expect(writes).toEqual([{ usageMailEnabled: false }]))
   await screen.findByText('사용량 알림 메일 설정을 저장했습니다.')
-  expect(screen.getByText('토큰 한도 도달 안내')).toBeInTheDocument()
+  expect(screen.getByText('키 사용량 알림')).toBeInTheDocument()
 })
 
 test('missing preference does not become an unchecked known setting', async () => {
@@ -68,7 +68,7 @@ test('missing preference does not become an unchecked known setting', async () =
   normalPage()
   await screen.findByText('메일 설정 응답을 확인하지 못했습니다.')
   expect(screen.queryByRole('checkbox', { name: '사용량 알림 메일 받기' })).not.toBeInTheDocument()
-  expect(screen.getByText('토큰 한도 도달 안내')).toBeInTheDocument()
+  expect(screen.getByText('키 사용량 알림')).toBeInTheDocument()
 })
 
 test('late preference GET cannot replace another account setting', async () => {

@@ -427,7 +427,7 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
         )}
       </section>
 
-      {user.relationshipsLimited && <Alert>현재 업무와 대상 범위에서 제공된 관계입니다. 제공되지 않은 항목은 관계가 없다는 뜻이 아닙니다.</Alert>}
+      {user.relationshipsLimited && <Alert>일부 관계는 조회할 수 없어요.</Alert>}
       <UserPermissionsSection user={user} canManageGlobal={canManage} />
 
       {canManage && (
@@ -737,7 +737,6 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
           && <Link to={adminPaths.orgOperations(org.orgId)} className="text-primary-700 hover:underline">업무와 수신 설정 확인</Link>}
       </li>)}</ul>}
     {editable.length > 0 && <nav aria-label="기관 업무 편집" className="flex flex-wrap gap-3 text-sm">{editable.map((institution) => <Link key={institution.id} to={adminPaths.orgOperations(institution.id)} className="text-primary-700 hover:underline">{institution.name} 업무 편집</Link>)}</nav>}
-    <p className="text-xs text-neutral-500">표시 역할을 선택해 권한을 부여하지 않습니다. 기관 운영에서 FULL 또는 SELECTED 업무와 범위를 확인한 뒤 변경합니다.</p>
   </div>
 }
 

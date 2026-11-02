@@ -194,7 +194,6 @@ function AdminLlmKeysPageContent() {
       {!workspaces.isEnabled && <p className="text-sm text-foreground-muted">워크스페이스 선택 목록은 현재 업무에서 조회하지 않습니다.</p>}
       {accounts.isSuccess && accounts.data.length === 0 && <p className="text-sm text-foreground-muted">선택할 수 있는 사업 계정이 없습니다.</p>}
       {workspaces.isSuccess && workspaces.data.length === 0 && <p className="text-sm text-foreground-muted">선택할 수 있는 워크스페이스가 없습니다.</p>}
-      {policyModel && <MessageBar>저장 정책과 기능 권한의 후보를 찾습니다. 발급·예산·실제 경로와 호출 성공을 보장하지 않습니다.</MessageBar>}
 
       {canSelect && (
         <BulkSelectionBar
@@ -207,7 +206,7 @@ function AdminLlmKeysPageContent() {
 
       {(keys.isPending || waitingForSearch) && !parsed.error && <LoadingBlock label="LLM API 키 목록 불러오는 중" />}
       {keys.isError && <MessageBar variant="danger">{keys.error.message}</MessageBar>}
-      {data && <p className="text-xs text-foreground-muted">현재 조회 {isExactTokenCount(data.totalElements) ? data.totalElements.toLocaleString('ko-KR') : '정확값 확인 불가'}개 · 목록 마지막 GET 성공 {formatDateTime(keys.data!.fetchedAt)}. 한도는 저장값이며 적용 완료를 뜻하지 않습니다. TOKEN 사용·잔여는 보존된 배치 기록 기준으로, 실시간 사용량이나 지금 남은 양을 보장하지 않습니다.</p>}
+      {data && <p className="text-xs text-foreground-muted">총 {isExactTokenCount(data.totalElements) ? data.totalElements.toLocaleString('ko-KR') : '정확값 확인 불가'}개 · {formatDateTime(keys.data!.fetchedAt)} 조회</p>}
       {data && data.content.length === 0 && (
         <EmptyState
           title="표시할 LLM API 키가 없습니다"

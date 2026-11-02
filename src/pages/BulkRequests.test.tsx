@@ -527,7 +527,7 @@ describe('recipients on the administrator request detail', () => {
     expect(screen.queryByLabelText('호스트 이름 확정')).not.toBeInTheDocument()
   })
 
-  test('approving a bulk VM request says each VM is created in turn', async () => {
+  test('shows the saved approval for a bulk VM request', async () => {
     const user = userEvent.setup()
     adminRequestStore.push({
       ...adminRequestStore[0],
@@ -541,11 +541,7 @@ describe('recipients on the administrator request detail', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
-    expect(
-      await screen.findByText(
-        '승인 내용이 저장되었습니다. 대상자별 등록 상태와 VM 상세에서 실제 생성 결과를 확인해 주세요.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
   })
 })
 

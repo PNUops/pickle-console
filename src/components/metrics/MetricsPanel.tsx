@@ -128,12 +128,11 @@ export function MetricsPanel<T extends MetricsPayload>({
         )}
         {metrics.isError && data && !isHypervisorUnreadable(metrics.error) && (
           <Alert variant="warning">
-            사용량 데이터를 일시적으로 불러오지 못했습니다.{' '}
-            <ObservationMoment value={data.fetchedAt} /> 읽은 값으로 표시하며 다시 시도하는
-            중입니다.
+            사용량을 불러오지 못했습니다. <ObservationMoment value={data.fetchedAt} />의 이전 조회 값입니다.
           </Alert>
         )}
 
+        {data && !metrics.isError && <p className="text-xs text-neutral-500"><ObservationMoment value={data.fetchedAt} /> 갱신</p>}
         {notice}
 
         {data && notice == null && data.points.length === 0 && (
@@ -142,11 +141,6 @@ export function MetricsPanel<T extends MetricsPayload>({
 
         {data && notice == null && data.points.length > 0 && (
           <>
-            {/* 「지금 값인가」를 묻는 신선도이므로 상대 시간이다 (Time display 규칙).
-                절대 시각은 이 질문에 답하지 않는다. */}
-            <p className="text-xs text-neutral-500">
-              <ObservationMoment value={data.fetchedAt} /> 갱신
-            </p>
             {/* 구간 내내 잰 값이 없으면 차트는 빈 판이 된다 — 왜 비었는지 한 줄로
                 밝힌다(상시 캡션이 아니라 그 상태일 때만). */}
             {blankWindow && (

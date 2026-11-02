@@ -305,8 +305,7 @@ function ForwardingList({
         ))}
       </ul>
       <p className="text-xs text-neutral-500">
-        활성화 대기 중에는 relay 확인 전까지 전달되지 않습니다. 정지됨 상태는 관리자에게 문의해 주세요.
-        삭제 진행 중인 매핑에는 작업을 다시 요청할 수 없습니다.
+        정지된 포트는 관리자에게 문의하세요.
       </p>
     </div>
   )

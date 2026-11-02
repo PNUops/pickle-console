@@ -34,7 +34,7 @@ export function BulkChangeReentry({ family, previewId, operationId, reader, orgI
       if (operation.data.operationId !== operationId || operation.data.targetType !== targetType) return <MessageBar variant="danger">이 목록 종류에 해당하는 적용 결과가 아닙니다.</MessageBar>
       return <div className="space-y-4"><BulkChangeReceipt operation={operation.data} />
         {family === 'llm-keys' && operation.data.change?.kind === 'LLM_KEY_LIMITS' && preview.isFetching && <MessageBar>계정 영향 이력을 현재 권한으로 다시 조회하고 있습니다.</MessageBar>}
-        {family === 'llm-keys' && operation.data.change?.kind === 'LLM_KEY_LIMITS' && preview.isError && <MessageBar variant="warning">계정 영향 이력을 불러오지 못했습니다. 저장된 대상별 적용 결과와 구분해서 확인해 주세요.</MessageBar>}
+        {family === 'llm-keys' && operation.data.change?.kind === 'LLM_KEY_LIMITS' && preview.isError && <MessageBar variant="warning">계정 영향 이력을 불러오지 못했습니다.</MessageBar>}
         {family === 'llm-keys' && preview.isSuccess && !preview.isFetching && preview.data.previewId === operation.data.previewId && preview.data.change?.kind === 'LLM_KEY_LIMITS' && <AccountImpactView projection={preview.data.accountImpact} />}
         <Button variant="secondary" onClick={() => { void operation.refetch(); if (needsAccountImpact) void preview.refetch() }} loading={operation.isFetching}>현재 상태 다시 조회</Button></div>
     }

@@ -32,8 +32,8 @@ test('renders reported global history and keeps measured zero distinct from unsu
   await user.selectOptions(figure.getByRole('combobox', { name: '장비 관측: GPU 활성도 정확값' }), String(Date.parse(from) / 1000))
   expect(figure.getByText('관측 평균 0%')).toBeInTheDocument()
   await user.selectOptions(screen.getByRole('combobox', { name: '장비 관측 지표' }), 'gpu_memory_total_bytes')
-  expect(await screen.findByText('지원되지 않는 지표입니다. 0으로 표시하지 않습니다.')).toBeInTheDocument()
-  expect(screen.getByText(/기관·공간·키·원인별 수요 필터로 나눈 장비 점유율이 아닙니다/)).toBeInTheDocument()
+  expect(await screen.findByText('지원하지 않는 지표입니다.')).toBeInTheDocument()
+  expect(screen.queryByText(/기관·공간·키·원인별 수요 필터로 나눈 장비 점유율이 아닙니다/)).not.toBeInTheDocument()
 })
 
 test('leaves the final empty bucket blank instead of extending the last sample', async () => {
@@ -45,7 +45,7 @@ test('leaves the final empty bucket blank instead of extending the last sample',
   const last = (Date.parse(to) - 60_000) / 1000
   await user.selectOptions(figure.getByRole('combobox', { name: '장비 관측: GPU 활성도 정확값' }), String(last))
   expect(figure.getByText('관측 평균 —')).toBeInTheDocument()
-  expect(figure.getByText(/표본 최대.*순간 최댓값이 아닙니다/)).toBeInTheDocument()
+  expect(figure.queryByText(/표본 최대.*순간 최댓값이 아닙니다/)).not.toBeInTheDocument()
 })
 
 test('separates an expired historical window from configured but unreported telemetry', async () => {
@@ -55,9 +55,9 @@ test('separates an expired historical window from configured but unreported tele
   value.telemetry.device!.series = []
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/요청 기간 전체가 장비 이력의 보존 경계 밖입니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/조회 기간이 보존 범위 밖입니다/)).toBeInTheDocument()
   expect(screen.queryByRole('img', { name: '장비 관측: GPU 활성도' })).not.toBeInTheDocument()
-  expect(screen.queryByText(/장비·추론 수집이 구성되지 않았습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/장비 수집이 구성되지 않았습니다/)).not.toBeInTheDocument()
 })
 
 test('labels present reporter staleness without discarding historical observations', async () => {
@@ -65,7 +65,7 @@ test('labels present reporter staleness without discarding historical observatio
   value.telemetry.device!.evidence.freshness = 'STALE'
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/현재 원천 보고가 늦습니다.*과거 조회 기간의 이력과 구분합니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/장비 보고가 지연되고 있습니다/)).toBeInTheDocument()
   expect(screen.getByRole('img', { name: '장비 관측: GPU 활성도' })).toBeInTheDocument()
 })
 
@@ -106,14 +106,14 @@ test('refuses device charts whose response window differs from the demand respon
   value.telemetry.device!.from = '2026-10-19T00:00:00Z'
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/장비 이력의 응답 기간이 수요 응답과 다릅니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/장비 이력의 응답 기간이 다릅니다/)).toBeInTheDocument()
   expect(screen.queryByRole('img', { name: '장비 관측: GPU 활성도' })).not.toBeInTheDocument()
 })
 
 test('refuses a response for a different explicitly selected observation source', async () => {
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(reported())))
   renderApp(`${route}&telemetrySourceId=${uuid(402)}`)
-  expect(await screen.findByText(/장비 이력의 원천이 선택한 관측 원천과 다릅니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/선택한 관측 원천과 다릅니다/)).toBeInTheDocument()
   expect(screen.queryByRole('img', { name: '장비 관측: GPU 활성도' })).not.toBeInTheDocument()
 })
 
@@ -156,7 +156,7 @@ test('keeps old device history visibly tied to its response window after a new-w
   await screen.findByRole('img', { name: '장비 관측: GPU 활성도' })
   await user.click(screen.getByRole('button', { name: '1시간' }))
   await screen.findByText(/갱신하지 못했습니다/)
-  expect(screen.getByText(/장비 이력도 이전 응답 기간의 자료입니다/)).toBeInTheDocument()
+  expect(screen.getByText(/이전 조회 기간의 장비 이력입니다/)).toBeInTheDocument()
   expect(screen.getByRole('img', { name: '장비 관측: GPU 활성도' })).toBeInTheDocument()
   expect(screen.queryByRole('table', { name: '같은 조건의 소비처' })).not.toBeInTheDocument()
 })
@@ -177,7 +177,7 @@ test('shows engine interval means and elapsed-time rates without inventing basel
   figure = within(screen.getByRole('img', { name: '엔진 관측: 첫 토큰 지연 (TTFT)' }).closest('figure')!)
   await user.selectOptions(figure.getByRole('combobox'), String(valid))
   expect(figure.getByText('구간 평균 250 ms')).toBeInTheDocument()
-  expect(figure.getByText(/개별 요청 최댓값이나 분위수가 아닙니다/)).toBeInTheDocument()
+  expect(figure.queryByText(/개별 요청 최댓값이나 분위수가 아닙니다/)).not.toBeInTheDocument()
   await user.selectOptions(metric, JSON.stringify(['histogramMeans', 'vllm:request_time_per_output_token_seconds']))
   figure = within(screen.getByRole('img', { name: '엔진 관측: 요청별 출력 토큰 시간 (TPOT)' }).closest('figure')!)
   await user.selectOptions(figure.getByRole('combobox'), String(valid))
@@ -189,9 +189,9 @@ test('keeps configured but unreported history separate from missing installation
   value.telemetry = inferenceTelemetryFixture({ from, to }, 'not-reported', fixtureNow)
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText('요청 기간의 장비 표본이 없습니다')).toBeInTheDocument()
-  expect(screen.getByText(/원천의 보고 시각이 없습니다/)).toBeInTheDocument()
-  expect(screen.queryByText(/장비·추론 수집이 구성되지 않았습니다/)).not.toBeInTheDocument()
+  expect(await screen.findByText('조회 기간의 이력이 없습니다.')).toBeInTheDocument()
+  expect(screen.getByText(/장비 보고 시각이 없습니다/)).toBeInTheDocument()
+  expect(screen.queryByText(/장비 수집이 구성되지 않았습니다/)).not.toBeInTheDocument()
   expect(screen.queryByRole('img', { name: '장비 관측: GPU 활성도' })).not.toBeInTheDocument()
 })
 
@@ -206,7 +206,7 @@ test('preserves a partial retention boundary instead of rendering a supplied zer
   device.series[0].failedSamples = null
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/요청 기간 일부가 장비 이력의 보존 경계 밖입니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/조회 기간 일부의 이력이 없습니다/)).toBeInTheDocument()
   const chart = screen.getByRole('img', { name: '장비 관측: GPU 활성도' })
   const figure = within(chart.closest('figure')!)
   await user.selectOptions(figure.getByRole('combobox'), String(Date.parse(from) / 1000))
@@ -286,7 +286,7 @@ test('labels partially comparable engine intervals while keeping their valid met
   value.telemetry.device!.series[1].engines[0].intervalState = 'PARTIAL'
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/일부 지표만 비교할 수 있는 구간을 포함합니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/일부 지표만 확인할 수 있습니다/)).toBeInTheDocument()
   await user.selectOptions(screen.getByRole('combobox', { name: '엔진 관측 지표' }), JSON.stringify(['rates', 'vllm:generation_tokens_total']))
   const figure = within(screen.getByRole('img', { name: '엔진 관측: 출력 토큰 /초' }).closest('figure')!)
   await user.selectOptions(figure.getByRole('combobox'), String((Date.parse(from) + 60_000) / 1000))
@@ -299,7 +299,10 @@ test('retains the selected host metric and exact date across a same-context resp
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => {
     calls++
     const value = reported()
-    if (calls > 1) value.generatedAt = '2026-10-21T00:00:01Z'
+    if (calls > 1) {
+      value.generatedAt = '2026-10-21T00:00:01Z'
+      value.telemetry.device!.evidence.latestReceivedAt = value.generatedAt
+    }
     return HttpResponse.json(value)
   }))
   renderApp(route)
@@ -363,7 +366,7 @@ test('consumes the sample-ingestion response with observed mean, rate, zero and 
   figure = within(screen.getByRole('img', { name: '장비 관측: GPU 메모리 보고값' }).closest('figure')!)
   await user.selectOptions(figure.getByRole('combobox'), first)
   expect(figure.getByText('관측 평균 —')).toBeInTheDocument()
-  expect(screen.getByText('지원되지 않는 지표입니다. 0으로 표시하지 않습니다.')).toBeInTheDocument()
+  expect(screen.getByText('지원하지 않는 지표입니다.')).toBeInTheDocument()
   const engine = screen.getByRole('combobox', { name: '엔진 관측 지표' })
   await user.selectOptions(engine, JSON.stringify(['rates', 'vllm:prompt_tokens_total']))
   chart = screen.getByRole('img', { name: '엔진 관측: 입력 토큰 /초' })

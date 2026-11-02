@@ -208,7 +208,7 @@ describe('VM network policy panel', () => {
     })
     mount({ canEdit: false, surface: 'admin', loadPolicy })
     expect(await screen.findByText('실패(차단 설정 확인)')).toBeInTheDocument()
-    expect(screen.getByText(/차단 설정 반영을 확인했습니다. 실제 연결은 별도로 확인해 주세요/)).toBeInTheDocument()
+    expect(screen.queryByText(/차단 설정 반영을 확인했습니다. 실제 연결은 별도로 확인해 주세요/)).not.toBeInTheDocument()
     expect(screen.getByText('mutable rule 적용 실패')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '통신 정책 저장' })).not.toBeInTheDocument()
     expect(screen.getByText('플랫폼 SSH 접속')).toBeInTheDocument()

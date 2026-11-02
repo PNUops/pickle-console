@@ -149,7 +149,7 @@ describe('OpenRouter account credits 관측', () => {
     expect(screen.queryByRole('button', { name: /갱신|새로 고침/ })).not.toBeInTheDocument()
   })
 
-  test('STALE 실패는 마지막 성공과 시도를 보존하고 forecast·paired reset 이유를 말한다', async () => {
+  test('retains stale observed balances and reset reasons after a failed check', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp(`/admin/llm/accounts/${uuid(411)}`)
 
@@ -160,10 +160,9 @@ describe('OpenRouter account credits 관측', () => {
     expect(screen.getByText('잔액').closest('div')).toHaveTextContent('-$1.25')
     expect(screen.getByText('잔액 소진 예상').closest('div')).toHaveTextContent('초기화')
     expect(screen.getByText('미관리 지출').closest('div')).toHaveTextContent('초기화')
-    expect(screen.getByText('Credits 마지막 성공').closest('div')!
+    expect(screen.getByText('금액 관측').closest('div')!
       .querySelector('time[datetime="2026-08-31T00:28:00+09:00"]')).not.toBeNull()
-    expect(screen.getByText('Credits 마지막 시도').closest('div')!
-      .querySelector('time[datetime="2026-08-31T01:20:00+09:00"]')).not.toBeNull()
+    expect(screen.queryByText('Credits 마지막 시도')).not.toBeInTheDocument()
   })
 
   test('UNKNOWN null은 0으로 표시하지 않고 실제 0 관측과 구분한다', async () => {

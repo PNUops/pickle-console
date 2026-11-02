@@ -86,7 +86,6 @@ export function CreditModelPreview({
             ? '기본 출력 단가를 아는 후보가 없어 단가 최댓값을 확인할 수 없습니다.'
             : '현재 카탈로그에는 패턴 조건을 통과하는 후보가 없습니다. 직접 입력한 모델이 목록에 아직 없을 수도 있습니다.'}
       </p>
-      <p className="text-xs text-foreground-muted">기능 권한, 예산과 자격증명 연결, 키 상태와 공급자 지원 등은 별도 호출 조건입니다. 이 후보 수는 호출 허가나 성공을 보장하지 않습니다. 다른 가격 축과 조건별 단가는 가격 상세에서 확인해 주세요.</p>
       {denied.length > 0 ? (
         <p className="text-neutral-600">
           {blocked.length > 0

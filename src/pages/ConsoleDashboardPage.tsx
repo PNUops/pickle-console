@@ -321,7 +321,7 @@ export function ConsoleDashboardPage() {
         </div>
         {/* 로딩·실패 갈래가 없으면 제목만 남은 카드가 서고, 그것이 「알림이
             없습니다」와 구별되지 않는다. 위 「리소스」 카드와 같은 두 갈래다. */}
-        {recentNotifications.showingLegacySnapshot && <p className="px-5 py-2 text-xs text-neutral-500">이전 조회의 일반 알림만 표시하며 사용량 안내는 다시 확인 중입니다.</p>}
+        {recentNotifications.showingLegacySnapshot && <p className="px-5 py-2 text-xs text-neutral-500">일부 알림은 이전 조회 결과예요.</p>}
         {recentNotifications.isPending && (
           <div className="flex justify-center py-10">
             <Spinner label="알림 불러오는 중" />

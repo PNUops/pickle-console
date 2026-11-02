@@ -620,7 +620,7 @@ function LimitsModal({
             </ul>
           </MessageBar>
         )}
-        {canEditToken && <p className="text-xs text-foreground-muted">RPM·TPM·동시 요청을 비우면 서비스 기본값을 사용합니다. 실제 기본값은 서버에서 보고하지 않아 확인할 수 없습니다.</p>}
+        {canEditToken && <p className="text-xs text-foreground-muted">RPM·TPM·동시 요청을 비우면 서비스 기본값을 사용합니다.</p>}
         {canEditToken && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LimitField label="RPM" min={1} value={rpm} onChange={setRpm} error={fieldErrors.rpm} />
           <LimitField label="TPM" tokens min={1} value={tpm} onChange={setTpm} error={fieldErrors.tpm} />
@@ -641,7 +641,7 @@ function LimitsModal({
           />
         </div>}
         {canEditToken && !canEditCredit && <Checkbox label="Chat 권한" checked={chatEnabled === true} disabled={chatEnabled == null}
-          onChange={(event) => setChatEnabled(event.target.checked)} description="Chat만 변경합니다. 숨겨진 유료 기능 목록은 유지하며, 의존 기능이 있으면 서버가 회수를 거절할 수 있습니다." />}
+          onChange={(event) => setChatEnabled(event.target.checked)} />}
         {canEditCredit && (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -236,13 +236,6 @@ function VmPolicyStatus({ policy }: { policy: VmNetworkPolicyView }) {
   return (
     <div className="space-y-2 text-right" aria-live="polite">
       <Badge variant={status.variant}>{status.label}</Badge>
-      {(policy.applyState === 'APPLIED' || policy.applyState === 'FAILED_CLOSED') && (
-        <p className="max-w-sm text-xs text-foreground-muted">
-          {policy.applyState === 'FAILED_CLOSED'
-            ? '차단 설정 반영을 확인했습니다. 실제 연결은 별도로 확인해 주세요.'
-            : '설정 반영을 확인했습니다. 실제 연결은 별도로 확인해 주세요.'}
-        </p>
-      )}
       {(policy.applyState === 'FAILED' || policy.applyState === 'FAILED_CLOSED') && policy.lastError && (
         <p className="max-w-sm text-xs text-danger-600">{policy.lastError}</p>
       )}
