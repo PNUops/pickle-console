@@ -43,7 +43,7 @@ function useDomainWizard(draft: unknown, _common: CommonWizardState): KindWizard
         errors['domain.label'] = '도메인 이름을 입력해 주세요.'
       } else if (!SUBDOMAIN_RE.test(label)) {
         errors['domain.label'] =
-          '이름은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
+          '이름은 소문자와 숫자, 하이픈만 사용해 3~40자로 입력해 주세요. 하이픈으로 시작하거나 끝낼 수는 없어요.'
       } else if (options.data?.reservedSubdomains.includes(label)) {
         // 금칙어 일부는 서버만 알고 있어 그쪽은 422로 돌아온다.
         errors['domain.label'] = '예약된 이름이라 사용할 수 없어요.'
@@ -57,7 +57,7 @@ function useDomainWizard(draft: unknown, _common: CommonWizardState): KindWizard
           label="도메인 이름"
           required
           error={errors['domain.label']}
-          description="소문자·숫자·하이픈, 3~40자. 이 이름이 신청의 이름이 돼요."
+          description="소문자와 숫자, 하이픈으로 3~40자를 입력해 주세요. 이 이름이 신청의 이름이 돼요."
         >
           {/* 고를 루트가 하나뿐이면 고를 것이 없으므로 칸 옆에 그대로 붙여
               둔다 — 입력한 이름이 어디에 붙는지가 칸 안에서 읽힌다. */}

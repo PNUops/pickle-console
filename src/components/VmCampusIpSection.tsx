@@ -109,7 +109,7 @@ export function VmCampusIpSection({
                 <RequestForm vm={vm} />
               ) : (
                 <p className="text-sm text-neutral-500">
-                  캠퍼스 IP 신청·취소는 이 VM의 소유자·편집자만 할 수 있어요.
+                  캠퍼스 IP 신청과 취소는 이 VM의 소유자나 편집자만 할 수 있어요.
                 </p>
               )}
             </>

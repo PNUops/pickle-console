@@ -92,7 +92,7 @@ describe('회원가입 폼 검증', () => {
 
     // 연속 규칙은 같은 입력으로 미충족이 된다 — 판정이 실시간으로 갱신되는지.
     const sequenceRule = () =>
-      screen.getByText('연속된 문자·숫자로만 이루어지지 않기').closest('li')
+      screen.getByText('연속된 문자나 숫자로만 이루어지지 않기').closest('li')
     expect(sequenceRule()).toHaveTextContent('성공')
     await user.clear(screen.getByLabelText('비밀번호'))
     await user.type(screen.getByLabelText('비밀번호'), 'abcdefgh')

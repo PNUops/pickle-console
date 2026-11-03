@@ -66,7 +66,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     expect(screen.getByText('정지됨')).toBeInTheDocument()
     // 읽기 전용: 생성 폼도 삭제 버튼도 없다.
     expect(
-      screen.getByText(/포트포워딩 생성·삭제는 이 VM의 소유자·편집자만/),
+      screen.getByText(/포트포워딩 생성과 삭제는 이 VM의 소유자나 편집자만/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '포트포워딩 만들기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()

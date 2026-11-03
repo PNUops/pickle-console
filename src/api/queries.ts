@@ -2539,7 +2539,7 @@ export type DepartmentView = Schemas['DepartmentView']
 export function fetchProfileOptions(): Promise<ProfileOptionsResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/meta/profile-options')
-    if (!data) throw toApiError(error, '직책·소속 목록을 불러오지 못했어요.')
+    if (!data) throw toApiError(error, '직책과 소속 목록을 불러오지 못했어요.')
     return data
   })
 }

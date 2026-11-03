@@ -179,7 +179,7 @@ function VmNetworkPolicyPanelState({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-neutral-800">VM 통신 정책</h3>
-          <p className="text-xs text-neutral-500">규칙 순서대로 수신·송신 연결을 판정해요.</p>
+          <p className="text-xs text-neutral-500">규칙 순서대로 수신과 송신 연결을 판정해요.</p>
         </div>
         <VmPolicyStatus policy={policyValue} />
       </div>

@@ -109,7 +109,7 @@ export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
           <CreateForwardingForm vm={vm} />
         ) : (
           <p className="text-sm text-neutral-500">
-            포트포워딩 생성·삭제는 이 VM의 소유자·편집자만 할 수 있어요.
+            포트포워딩 생성과 삭제는 이 VM의 소유자나 편집자만 할 수 있어요.
           </p>
         )}
 

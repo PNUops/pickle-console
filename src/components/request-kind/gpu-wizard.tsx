@@ -58,7 +58,7 @@ function useGpuWizard(draft: unknown, common: CommonWizardState): KindWizard {
       </>
     ),
     reviewRows: () => ({ resource: [['GPU 임대 기간', gpuDurationLabel(hours)], ['대상 VM', selected?.name ?? '나중에 선택']] }),
-    notice: <p className="text-sm text-neutral-600">임대는 GPU를 할당받은 순간부터 계산해요. VM 미연결·정지 중에도 임대 시간이 흘러요.</p>,
+    notice: <p className="text-sm text-neutral-600">임대는 GPU를 할당받은 순간부터 계산해요. VM이 연결되지 않았거나 정지해 있어도 임대 시간이 흘러요.</p>,
     payload: () => {
       if (hours == null) throw new Error('GPU 임대 기간을 입력해 주세요.')
       return { type: 'GPU', gpu: { vmId: spec.vmId || null, leaseHours: hours } }

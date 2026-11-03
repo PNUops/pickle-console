@@ -93,7 +93,7 @@ describe('domain request wizard', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     expect(
-      await screen.findByText(/소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요/),
+      await screen.findByText(/소문자와 숫자, 하이픈만 사용해 3~40자로 입력해 주세요/),
     ).toBeInTheDocument()
     expect(createdRequestBodies).toHaveLength(0)
   })

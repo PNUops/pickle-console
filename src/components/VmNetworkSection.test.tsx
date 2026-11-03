@@ -84,7 +84,7 @@ describe('VM 네트워크 탭 — 캠퍼스 IP', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText(/캠퍼스 IP 신청·취소는 이 VM의 소유자·편집자만/),
+      await screen.findByText(/캠퍼스 IP 신청과 취소는 이 VM의 소유자나 편집자만/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '캠퍼스 IP 신청' })).not.toBeInTheDocument()
   })

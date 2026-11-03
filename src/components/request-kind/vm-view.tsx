@@ -42,7 +42,7 @@ function useVmDecisionData(): DecisionData {
       gate: (
         <Alert variant="danger" title="OS 이미지 목록을 불러오지 못했어요">
           <div className="space-y-2">
-            <p>승인·반려를 결정하려면 OS 이미지 목록이 필요해요.</p>
+            <p>승인이나 반려를 결정하려면 OS 이미지 목록이 필요해요.</p>
             <Button
               size="sm"
               variant="secondary"
