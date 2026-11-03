@@ -96,7 +96,7 @@ export function AdminDashboardPage() {
       <PageHeader
         eyebrow="개요"
         title="관리자 대시보드"
-        description={`${user?.name}님, 환영합니다. ${activeOrg?.name ?? '플랫폼 전체'} 운영 현황입니다.`}
+        description={`${user?.name}님, ${activeOrg?.name ?? '플랫폼 전체'} 운영 현황이에요.`}
       />
 
       <nav aria-label="허용된 관리자 업무" className="flex flex-wrap gap-3">
@@ -213,7 +213,7 @@ export function AdminDashboardPage() {
                 <strong className="text-lg font-bold text-primary-700">
                   {pending.data.totalElements}건
                 </strong>{' '}
-                있습니다.
+                있어요.
               </p>
               {pending.data.content.length > 0 && (
                 <ul className="divide-y divide-neutral-100 rounded-lg border border-neutral-200">
@@ -323,7 +323,7 @@ function NodesLiveTiles({
       ]
         .filter((part): part is string => part != null)
         .join(' · ')
-    : '연결된 하이퍼바이저가 없습니다'
+    : '등록된 하이퍼바이저가 없어요'
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -401,7 +401,7 @@ function LiveUsageTile({
             <div className="text-xs font-medium text-neutral-500">{label}</div>
             {!registered ? (
               <p className="text-sm font-semibold text-danger-600">
-                등록된 노드가 없습니다
+                등록된 노드가 없어요
               </p>
             ) : anyReachable ? (
               <p className="text-sm text-neutral-500">측정값 없음</p>
@@ -409,7 +409,7 @@ function LiveUsageTile({
               <p className="text-sm font-semibold text-danger-600">연결 끊김</p>
             ) : (
               <p className="text-sm text-neutral-500">
-                오프라인 노드만 있어 측정값이 없습니다
+                오프라인 노드만 있어 측정값이 없어요
               </p>
             )}
           </>
@@ -425,7 +425,7 @@ function LiveUsageTile({
             />
             {measuredNodeCount < nodeCount && (
               <p className="text-xs text-neutral-600">
-                노드 {nodeCount}대 중 {measuredNodeCount}대에서 읽은 값입니다
+                노드 {nodeCount}대 중 {measuredNodeCount}대에서 읽은 값이에요
               </p>
             )}
             {hint && <p className="text-xs text-neutral-500">{hint}</p>}
@@ -476,7 +476,7 @@ function ResourceCard({ summary }: { summary: OrgDashboardSummary }) {
             resource.capacityDiskGb != null ? `${resource.capacityDiskGb} GiB` : null
           }
           advisory
-          overNote="씬 프로비저닝 풀이라 배치를 막는 한계가 아닌 참고용 수치입니다."
+          overNote="씬 프로비저닝 풀이라 배치를 막는 한계가 아닌 참고용 수치예요."
         />
         <p className="text-sm text-neutral-600">{resource.guidance}</p>
       </CardContent>

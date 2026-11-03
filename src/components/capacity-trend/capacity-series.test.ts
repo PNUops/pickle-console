@@ -22,7 +22,7 @@ describe('allocationSummary', () => {
       { day: '2026-08-10', vcpu: 0, memoryMb: 0, diskGb: 0, vmCount: 0 },
     ]
     expect(hasAllocation(empty)).toBe(false)
-    expect(allocationSummary(empty)).toBe('최근 90일 동안 할당된 자원이 없습니다.')
+    expect(allocationSummary(empty)).toBe('최근 90일 동안의 기록에는 할당된 자원이 없어요.')
   })
 
   test('한 지점에라도 할당이 있으면 비어 있다고 보지 않는다', () => {
@@ -38,14 +38,14 @@ describe('allocationSummary', () => {
     expect(
       allocationSummary([point('2026-05-12', 12, 32_768), point('2026-08-10', 20, 49_152)]),
     ).toBe(
-      '최근 90일 동안 할당 vCPU가 12개에서 20개로 늘었습니다. 메모리는 32 GiB에서 48 GiB로 늘었습니다.',
+      '최근 90일 동안 할당 vCPU가 12개에서 20개로 늘었어요. 메모리는 32 GiB에서 48 GiB로 늘었어요.',
     )
   })
 
   test('줄어든 vCPU만 바뀌었으면 그 문장만 만든다', () => {
     expect(
       allocationSummary([point('2026-05-12', 20, 32_768), point('2026-08-10', 12, 32_768)]),
-    ).toBe('최근 90일 동안 할당 vCPU가 20개에서 12개로 줄었습니다.')
+    ).toBe('최근 90일 동안 할당 vCPU가 20개에서 12개로 줄었어요.')
   })
 
   test('올랐다 되돌아온 구간을 변화 없음으로 말하지 않는다', () => {
@@ -57,7 +57,7 @@ describe('allocationSummary', () => {
         point('2026-08-10', 12, 32_768),
       ]),
     ).toBe(
-      '최근 90일 동안 할당 vCPU가 12개에서 24개 사이를 오간 뒤 12개로 돌아왔습니다. 메모리는 32 GiB에서 64 GiB 사이를 오간 뒤 32 GiB로 돌아왔습니다.',
+      '최근 90일 동안 할당 vCPU가 12개에서 24개 사이를 오간 뒤 12개로 돌아왔어요. 메모리는 32 GiB에서 64 GiB 사이를 오간 뒤 32 GiB로 돌아왔어요.',
     )
   })
 
@@ -68,7 +68,7 @@ describe('allocationSummary', () => {
         point('2026-06-20', 28, 32_768),
         point('2026-08-10', 20, 32_768),
       ]),
-    ).toBe('최근 90일 동안 할당 vCPU가 12개에서 20개로 늘었습니다(기간 중 최대 28개).')
+    ).toBe('최근 90일 동안 할당 vCPU가 12개에서 20개로 늘었어요(기간 중 최대 28개).')
 
     expect(
       allocationSummary([
@@ -76,14 +76,14 @@ describe('allocationSummary', () => {
         point('2026-06-20', 4, 32_768),
         point('2026-08-10', 12, 32_768),
       ]),
-    ).toBe('최근 90일 동안 할당 vCPU가 20개에서 12개로 줄었습니다(기간 중 최소 4개).')
+    ).toBe('최근 90일 동안 할당 vCPU가 20개에서 12개로 줄었어요(기간 중 최소 4개).')
   })
 
   test('변화가 없으면 변화 없음을 알린다', () => {
     expect(
       allocationSummary([point('2026-05-12', 12, 32_768), point('2026-08-10', 12, 32_768)]),
-    ).toBe('최근 90일 동안 할당량 변화가 없습니다.')
-    expect(allocationSummary([])).toBe('최근 90일 동안 기록된 할당 변화가 없습니다.')
+    ).toBe('최근 90일 동안의 기록에서 vCPU와 메모리 할당량은 변하지 않았어요.')
+    expect(allocationSummary([])).toBe('최근 90일 동안 기록된 할당량이 없어요.')
   })
 })
 
