@@ -363,7 +363,7 @@ test('empty search results and reversed requested end dates keep the list filter
   const user = userEvent.setup()
   server.use(refreshSuccessHandler('access-org-viewer', orgViewerUser))
   renderApp(`/admin/requests?org=${uuid(1)}&q=missing-request`)
-  await screen.findByText('표시할 신청이 없습니다.')
+  await screen.findByText('표시할 신청이 없어요.')
   expect(screen.getByLabelText('신청 검색')).toHaveValue('missing-request')
   fireEvent.change(screen.getByLabelText('희망 종료일 이후'), { target: { value: '2026-12-31' } })
   fireEvent.change(screen.getByLabelText('희망 종료일 이전'), { target: { value: '2026-12-01' } })

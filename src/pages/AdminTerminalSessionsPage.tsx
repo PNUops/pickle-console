@@ -47,15 +47,12 @@ function InstitutionTerminalSessions() {
     enabled: canRead,
   })
 
-  if (!canRead) return <Alert variant="danger">웹 터미널 세션을 조회할 권한이 없습니다.</Alert>
+  if (!canRead) return <Alert variant="danger">웹 터미널 세션을 조회할 권한이 없어요.</Alert>
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">웹 터미널 세션</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          터미널 내용은 어디에도 기록되지 않으며, 세션 수명주기만 감사에 남습니다.
-        </p>
       </div>
 
       {sessions.isPending && (
@@ -66,7 +63,7 @@ function InstitutionTerminalSessions() {
       {sessions.isError && <Alert variant="danger">{sessions.error.message}</Alert>}
       {sessions.isSuccess && sessions.data.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          진행 중인 웹 터미널 세션이 없습니다.
+          진행 중인 웹 터미널 세션이 없어요.
         </Card>
       )}
       {sessions.isSuccess && sessions.data.length > 0 && (
@@ -116,12 +113,12 @@ function SessionRow({
     onSuccess: async () => {
       setConfirmOpen(false)
       setError(null)
-      toast.success('세션 강제 종료를 지시했습니다.')
+      toast.success('세션 강제 종료를 요청했어요.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'terminal-sessions'] })
     },
     onError: (err) => {
       setConfirmOpen(false)
-      setError(toApiError(err, '세션을 종료하지 못했습니다.').message)
+      setError(toApiError(err, '세션을 종료하지 못했어요.').message)
     },
   })
 
@@ -165,10 +162,10 @@ function SessionRow({
           >
             <div className="space-y-2 text-sm text-neutral-700">
               <Alert variant="warning">
-                이 세션의 브라우저 연결이 즉시 닫히고 감사에 기록됩니다.
+                이 세션의 브라우저 연결이 즉시 끊겨요.
               </Alert>
               <p>
-                {session.userName}님의 <b>{session.vmName}</b> 터미널 세션을 종료합니다.
+                {session.userName}님의 <b>{session.vmName}</b> 터미널 세션을 강제 종료할까요?
               </p>
             </div>
           </Modal>

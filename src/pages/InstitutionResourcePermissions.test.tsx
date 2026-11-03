@@ -93,9 +93,9 @@ describe('institution resource authority projections', () => {
     server.use(http.get('*/api/v1/admin/gpu-allocations', () => { requests++; return HttpResponse.json(page([])) }))
     const actor = selected(['gpu.observe'], { GPU: { mode: 'LISTED', workspaceIds: [] } })
     const view = renderPage(actor, '/admin/gpus')
-    expect(await screen.findByText('GPU 할당을 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('GPU 할당을 조회할 권한이 없어요.')).toBeInTheDocument()
     view.rerenderActor({ ...actor, institutionAuthority: { ...actor.institutionAuthority!, state: 'INVALID', failure: 'CORRUPT_PAYLOAD' } })
-    expect(screen.getByText('GPU 할당을 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(screen.getByText('GPU 할당을 조회할 권한이 없어요.')).toBeInTheDocument()
     expect(requests).toBe(0)
   })
 
@@ -325,7 +325,7 @@ describe('institution resource authority projections', () => {
     const next = selected(['institution.request-mail.configure'])
     expect(next.role).toBe('ORG_MANAGER')
     view.rerenderActor(next)
-    expect(await screen.findByText('GPU 할당을 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('GPU 할당을 조회할 권한이 없어요.')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(gpuActions).toHaveLength(0)
   })
@@ -359,7 +359,7 @@ describe('institution resource authority projections', () => {
     let requests = 0
     server.use(http.get('*/api/v1/admin/resource-deadlines', () => { requests++; return HttpResponse.json(page([])) }))
     renderPage(selected(['vm.metadata.read']), '/admin/expiry?type=GPU')
-    expect(await screen.findByText('선택한 종류의 자원 기한을 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('선택한 종류의 자원 기한을 조회할 권한이 없어요.')).toBeInTheDocument()
     expect(requests).toBe(0)
   })
 

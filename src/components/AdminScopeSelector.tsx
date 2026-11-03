@@ -27,7 +27,7 @@ export function AdminScopeSelector() {
         {!scope.requiresSelection && <option value="">{scope.tier === 'system' || scope.globalSupport ? '전체 플랫폼' : '기관 필터 없음'}</option>}
         {scope.tier === 'org' && scope.requiresSelection && (
           <option value="" disabled>
-            {scope.options.length === 0 ? '관리 기관이 없습니다' : '기관을 선택하세요'}
+            {scope.options.length === 0 ? '관리 기관이 없어요' : '기관을 골라 주세요'}
           </option>
         )}
         {scope.options.map((org) => (
@@ -40,7 +40,7 @@ export function AdminScopeSelector() {
       </Select>
       {scope.error && (
         <div role="alert" className="space-y-1 text-xs text-danger-700">
-          <p>기관 목록을 불러오지 못했습니다.</p>
+          <p>기관 목록을 불러오지 못했어요.</p>
           <button
             type="button"
             onClick={scope.retry}

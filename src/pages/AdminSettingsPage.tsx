@@ -70,9 +70,6 @@ export function AdminSettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">플랫폼 설정</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          플랫폼 운영 설정입니다. 모든 변경은 감사 로그에 기록됩니다.
-        </p>
       </div>
 
       {message && <Alert variant="info">{message}</Alert>}
@@ -168,11 +165,11 @@ function EditSettingModal({
     mutationFn: (value: unknown) => updateSetting(setting.key, value),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'settings'] })
-      onDone(`'${setting.key}' 설정이 저장되었습니다.`)
+      onDone(`'${setting.key}' 설정이 저장됐어요.`)
     },
     onError: (err) => {
       setConfirmKillSwitch(false)
-      const apiError = toApiError(err, '설정을 수정하지 못했습니다.')
+      const apiError = toApiError(err, '설정을 수정하지 못했어요.')
       const fields = fieldErrorsOf(apiError.problem)
       setFieldError(fields.value ?? null)
       setError(fields.value ? null : apiError.message)
@@ -240,7 +237,7 @@ function EditSettingModal({
         }
       >
         <p className="text-sm text-neutral-700">
-          모든 사용자 SSH 접속이 차단됩니다. 계속할까요?
+          새 SSH 접속이 차단돼요. 계속할까요?
         </p>
       </Modal>
     </>

@@ -158,7 +158,7 @@ describe('관리 기관 scope selector', () => {
     renderApp(`/admin/requests?org=${uuid(1)}`)
 
     expect(
-      await screen.findByRole('heading', { name: '관리 범위를 불러오지 못했습니다' }),
+      await screen.findByRole('heading', { name: '관리 범위를 불러오지 못했어요' }),
     ).toBeInTheDocument()
     expect(screen.queryByText('관리 범위 확인 중')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '관리 범위 다시 시도' }))

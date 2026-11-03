@@ -50,11 +50,11 @@ export function AdminNotificationLogPage() {
       ;(button ?? searchRef.current)?.focus()
     })
   }
-  if (!canRead) return <Alert variant="danger">메일 발송 이력은 시스템 관리자 계층에서만 조회할 수 있습니다.</Alert>
+  if (!canRead) return <Alert variant="danger">메일 발송 이력은 시스템 관리자 계층만 조회할 수 있어요.</Alert>
   return <div className="space-y-6">
     <div><h1 className="text-2xl font-bold text-neutral-900">알림 발송 이력</h1>
-      <p className="mt-1 text-sm text-neutral-600">업무 알림과 가입·인증·비밀번호 재설정 메일의 수신자별 처리 기록입니다. SMTP 인계는 메일함 도착이나 열람을 확인한 결과가 아닙니다.</p>
-      <p className="mt-2 text-xs text-neutral-500">전체 시스템 이력입니다. 기관은 아래 변경 대상 기관 필터로 좁힙니다. 일반 업무 메일은 묶음 대기 후 처리하며, 계정 메일은 서버 메모리 큐의 접수와 처리 결과를 기록합니다.</p>
+      <p className="mt-1 text-sm text-neutral-600">SMTP 인계는 메일함 도착을 뜻하지 않아요.</p>
+      <p className="mt-2 text-xs text-neutral-500">기관은 이 화면의 변경 대상 기관 필터에서 골라 주세요.</p>
       <Button className="mt-3" variant="secondary" loading={log.isFetching} disabled={invalidTarget} onClick={() => void log.refetch()}>현재 발송 상태 조회</Button>
     </div>
     <Card className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="메일 발송 이력 필터">
@@ -67,9 +67,9 @@ export function AdminNotificationLogPage() {
       <FormField label="신청 ID"><Input value={state.requestId ?? ''} onChange={(event) => updateFilter('requestId', event.target.value)} /></FormField>
       <FormField label="발송건 ID"><Input value={state.announcementId ?? ''} onChange={(event) => updateFilter('announcementId', event.target.value)} /></FormField>
     </Card>
-    {invalidTarget && <Alert variant="danger">신청·발송건·기관 ID는 올바른 UUID여야 합니다. 조회 조건을 수정해 주세요.</Alert>}
-    {invalidSelected && <Alert variant="danger">발송 상세 ID가 올바르지 않습니다.<Button variant="secondary" onClick={() => change({ selected: undefined })}>상세 선택 지우기</Button></Alert>}
-    {accepted?.context === context && <OperationResult stage="accepted">발송 {accepted.id}의 재발송을 접수했습니다. 큐 상태와 SMTP 인계 결과는 다시 조회해 확인합니다.</OperationResult>}
+    {invalidTarget && <Alert variant="danger">신청과 발송건, 기관 ID는 UUID 형식으로 입력해 주세요.</Alert>}
+    {invalidSelected && <Alert variant="danger">발송 상세 ID가 올바르지 않아요.<Button variant="secondary" onClick={() => change({ selected: undefined })}>상세 선택 지우기</Button></Alert>}
+    {accepted?.context === context && <OperationResult stage="accepted">발송 {accepted.id}의 재발송 요청을 접수했어요. 발송 상태를 다시 조회해 주세요.</OperationResult>}
     {!invalidTarget && log.isPending && <Spinner label="메일 발송 이력 불러오는 중" />}
     {log.isError && <Alert variant="danger">{log.error.message}<Button variant="secondary" onClick={() => void log.refetch()}>발송 이력 다시 조회</Button></Alert>}
     {log.data && !log.isError && !invalidTarget && <><p className="text-sm">조회된 발송 {log.data.totalElements}건</p><div ref={listRef}><Card>
@@ -81,7 +81,7 @@ export function AdminNotificationLogPage() {
           <TD>{delivery.attempts}회</TD><TD className="text-xs">{formatDateTime(delivery.createdAt)}<span className="block">{delivery.sentAt ? `SMTP 인계 ${formatDateTime(delivery.sentAt)}` : 'SMTP 인계 기록 없음'}</span></TD>
           {canOperate && <TD>{mayResendMail(delivery) ? <Button variant="secondary" size="sm" onClick={() => { setAccepted(null); setResendTarget(delivery) }}>재발송</Button> : <span className="text-xs text-neutral-500">{delivery.cannotResendReason ? mailFailureLabel(delivery.cannotResendReason) : '재발송 대상 아님'}</span>}</TD>}
         </TR>)}
-      </TBody></Table>{log.data.content.length === 0 && <p className="p-8 text-center text-sm text-neutral-500">조건에 맞는 발송 이력이 없습니다.</p>}
+      </TBody></Table>{log.data.content.length === 0 && <p className="p-8 text-center text-sm text-neutral-500">조건에 맞는 발송 이력이 없어요.</p>}
     </Card></div><Pagination page={log.data.page} totalPages={log.data.totalPages} onPageChange={(page) => { setResendTarget(null); setAccepted(null); change({ page, selected: undefined }) }} /></>}
     <Drawer open={!!selected} onClose={closeDetail} title="메일 발송 상세" className="sm:max-w-3xl">
       {selected && <MailDeliveryDetail key={selected} deliveryId={selected} canOperate={canOperate} onResend={setResendTarget} />}
@@ -111,13 +111,12 @@ function MailDeliveryDetail({ deliveryId, canOperate, onResend }: { deliveryId: 
       <div><dt className="text-neutral-500">종류 / 이벤트</dt><dd>{MAIL_SOURCE_LABELS[delivery.sourceKind] ?? delivery.sourceKind} / {delivery.event}</dd></div>
       <div><dt className="text-neutral-500">시도 횟수</dt><dd>{delivery.attempts}회</dd></div>
       <div><dt className="text-neutral-500">최종 오류 또는 생략 사유</dt><dd>{mailFailureLabel(delivery.failureCode)}</dd></div>
-      <div><dt className="text-neutral-500">발송 당시 정책</dt><dd>버전 {delivery.policyRevision ?? '기록 없음'} / {delivery.mailMode ? MAIL_MODE_LABELS[delivery.mailMode] ?? delivery.mailMode : '기록 없음'}</dd></div>
+      <div><dt className="text-neutral-500">발송 당시 정책</dt><dd>{delivery.mailMode ? MAIL_MODE_LABELS[delivery.mailMode] ?? delivery.mailMode : '기록 없음'}</dd></div>
     </dl>
-    <p className="text-xs text-neutral-600">현재 계정 주소나 기관 명단으로 과거 발송 대상을 다시 계산하지 않습니다. SMTP 인계는 수신함 도착을 보장하지 않습니다.</p>
-    {delivery.legacyAddressUnknown && <Alert variant="warning">이 기존 기록에는 당시 주소가 없습니다. 현재 계정 주소를 과거 수신 주소로 간주하지 않습니다.</Alert>}
-    {delivery.sourceKind === 'ACCOUNT' && <Alert variant="info">계정 메일은 서버 메모리 큐에서 처리됩니다. 결과 확인이 필요한 항목은 서버 중단 등으로 SMTP 인계 결과가 확정되지 않은 기록일 수 있습니다. 인증·재설정 토큰과 본문은 이 화면에 보관하지 않으며, 재요청은 해당 계정 화면에서 수행합니다.</Alert>}
-    {delivery.processingUnconfirmed && <Alert variant="warning">현재 서버가 이어서 처리하는 메모리 큐인지 확인되지 않았습니다. 원래 접수·처리 기록은 유지하며, 발송 작업을 자동으로 다시 실행하지 않습니다.</Alert>}
-    {delivery.status === 'UNKNOWN' && <Alert variant="warning">SMTP 처리 결과를 확정할 수 없습니다. 중복 전송을 피하기 위해 이 화면에서 재발송하지 않습니다.</Alert>}
+    {delivery.legacyAddressUnknown && <Alert variant="warning">발송 당시 수신 주소가 기록되지 않았어요.</Alert>}
+    {delivery.sourceKind === 'ACCOUNT' && <Alert variant="info">인증과 비밀번호 재설정 메일은 해당 계정 화면에서 다시 요청해 주세요.</Alert>}
+    {delivery.processingUnconfirmed && <Alert variant="warning">현재 메일 처리 여부를 확인할 수 없어요.</Alert>}
+    {delivery.status === 'UNKNOWN' && <Alert variant="warning">SMTP 처리 결과를 확인할 수 없어 재발송할 수 없어요.</Alert>}
     <nav aria-label="발송 관련 업무" className="flex flex-wrap gap-3 text-sm text-primary-700">
       {delivery.requestId && <Link to={adminPaths.requestDetail(delivery.requestId, delivery.orgId ?? undefined)}>관련 신청</Link>}
       {delivery.orgId && <><Link to={adminPaths.orgOperations(delivery.orgId)}>현재 기관 명단</Link><Link to={adminPaths.orgAudit(delivery.orgId)}>기관 변경 감사</Link></>}
@@ -126,22 +125,22 @@ function MailDeliveryDetail({ deliveryId, canOperate, onResend }: { deliveryId: 
       {delivery.notificationId && <Link to={adminPaths.auditTarget('notification', delivery.notificationId)}>재발송 감사</Link>}
       {resourcePath && <Link to={resourcePath}>관련 리소스 상세</Link>}
     </nav>
-    <section className="space-y-3"><h4 className="font-semibold">SMTP 시도 이력</h4><Table><THead><TR><TH>시도</TH><TH>시작</TH><TH>종료</TH><TH>결과</TH><TH>사유</TH></TR></THead><TBody>{attemptHistory.map((attempt) => <TR key={`${attempt.dispatchId}:${attempt.attemptNo}`}><TD>{attempt.attemptNo}</TD><TD className="text-xs">{formatDateTime(attempt.startedAt)}</TD><TD className="text-xs">{attempt.completedAt ? formatDateTime(attempt.completedAt) : '미완료'}</TD><TD>{mailAttemptOutcomeLabel(attempt.outcome)}</TD><TD>{mailFailureLabel(attempt.failureCode)}</TD></TR>)}</TBody></Table>{attemptHistory.length === 0 && <p className="text-sm text-neutral-500">기록된 개별 시도가 없습니다. 기존 누적 횟수로 시도별 결과를 추정하지 않습니다.</p>}</section>
+    <section className="space-y-3"><h4 className="font-semibold">SMTP 시도 이력</h4><Table><THead><TR><TH>시도</TH><TH>시작</TH><TH>종료</TH><TH>결과</TH><TH>사유</TH></TR></THead><TBody>{attemptHistory.map((attempt) => <TR key={`${attempt.dispatchId}:${attempt.attemptNo}`}><TD>{attempt.attemptNo}</TD><TD className="text-xs">{formatDateTime(attempt.startedAt)}</TD><TD className="text-xs">{attempt.completedAt ? formatDateTime(attempt.completedAt) : '미완료'}</TD><TD>{mailAttemptOutcomeLabel(attempt.outcome)}</TD><TD>{mailFailureLabel(attempt.failureCode)}</TD></TR>)}</TBody></Table>{attemptHistory.length === 0 && <p className="text-sm text-neutral-500">개별 시도 이력이 기록되지 않았어요.</p>}</section>
     {selection && <RequestMailSelectionSnapshot selection={selection} />}
-    {!selection && delivery.requestId && <p className="text-sm text-neutral-500">이 신청의 발송 당시 기관 선정 명단은 기록되지 않았습니다.</p>}
+    {!selection && delivery.requestId && <p className="text-sm text-neutral-500">발송 당시 기관 선정 명단이 기록되지 않았어요.</p>}
     {canOperate && (mayResendMail(delivery) ? <Button variant="secondary" onClick={() => onResend(delivery)}>재발송</Button> : <p className="text-sm">재발송 불가: {mailFailureLabel(delivery.cannotResendReason)}</p>)}
   </div>
 }
 
 export function RequestMailSelectionSnapshot({ selection }: { selection: RequestMailSelection }) {
   return <section className="space-y-3"><h3 className="font-semibold">접수 당시 기관 알림 선정</h3>
-    <p className="text-sm">정책 버전 {selection.policyRevision} · 방식 {MAIL_MODE_LABELS[selection.mailMode] ?? selection.mailMode} · 선정 {formatDateTime(selection.selectedAt)}</p>
-    <p className="text-xs text-neutral-600">당시 신청자: {selection.requester.name} / {selection.requester.email} / {USER_STATUS_LABELS[selection.requester.status as keyof typeof USER_STATUS_LABELS] ?? selection.requester.status}. 현재 기관 명단과 별도로 보존한 기록입니다.</p>
+    <p className="text-sm">방식 {MAIL_MODE_LABELS[selection.mailMode] ?? selection.mailMode} · 선정 {formatDateTime(selection.selectedAt)}</p>
+    <p className="text-xs text-neutral-600">당시 신청자: {selection.requester.name} / {selection.requester.email} / {USER_STATUS_LABELS[selection.requester.status as keyof typeof USER_STATUS_LABELS] ?? selection.requester.status}</p>
     <Table><THead><TR><TH>당시 기관 역할 사용자</TH><TH>계정 / 기관 역할</TH><TH>이메일 선정</TH><TH>콘솔 선정</TH></TR></THead><TBody>{selection.staff.map((member) => <TR key={member.userId}>
       <TD><Link className="text-primary-700 hover:underline" to={adminPaths.users(selection.orgId, member.userId)}>{member.name}</Link><span className="block break-all text-xs">{member.email}</span></TD><TD>{USER_STATUS_LABELS[member.status]} / {USER_ROLE_LABELS[member.role]}</TD>
       <TD>{member.currentMailRecipient ? '선정' : '제외'}<span className="block text-xs">{orgRecipientReason(member.currentMailRecipient ? member.selectionReason : member.exclusionReason)}</span></TD><TD>{member.inAppRecipient ? '선정' : '제외'}</TD>
-    </TR>)}</TBody></Table>{selection.staff.length === 0 && <Alert variant="warning">접수 당시 기관 역할 명단이 0명입니다.</Alert>}
-    {selection.staff.filter((member) => member.currentMailRecipient).length === 0 && <Alert variant="warning">접수 당시 기관 메일 수신자가 0명입니다. 신청자의 본인 확인 메일과는 별개입니다.</Alert>}
+    </TR>)}</TBody></Table>{selection.staff.length === 0 && <Alert variant="warning">접수 당시 기관 담당자가 없었어요.</Alert>}
+    {selection.staff.filter((member) => member.currentMailRecipient).length === 0 && <Alert variant="warning">접수 당시 기관 메일 수신자가 없었어요.</Alert>}
   </section>
 }
 
@@ -152,10 +151,10 @@ function ResendConfirmModal({ delivery, onClose, onDone }: { delivery: MailDeliv
   const resend = useMutation({ mutationFn: () => resendMailDelivery(delivery.id), onSuccess: async () => {
     await Promise.all([queryClient.invalidateQueries({ queryKey: ['admin', 'mail-deliveries'] }), queryClient.invalidateQueries({ queryKey: ['admin', 'mail-delivery', delivery.id] })])
     if (active.current) onDone()
-  }, onError: (err) => { if (active.current) setError(toApiError(err, '메일 재발송을 접수하지 못했습니다.').message) } })
+  }, onError: (err) => { if (active.current) setError(toApiError(err, '메일 재발송을 접수하지 못했어요.').message) } })
   return <Modal open onClose={onClose} title="알림 재발송" footer={<><Button variant="secondary" onClick={onClose}>취소</Button><Button loading={resend.isPending} disabled={!mayResendMail(delivery)} onClick={() => resend.mutate()}>재발송</Button></>}>
-    <div className="space-y-3"><p className="text-sm">발송 당시 확정 주소 <strong className="break-all">{delivery.recipientEmail ?? '기록 없음'}</strong>로 <strong>{delivery.title}</strong>의 재발송을 접수합니다.</p>
-      <p className="text-sm">기존 수신자와 주소를 유지합니다. 접수 이후 큐 처리와 SMTP 인계는 상세에서 확인합니다.</p>
+    <div className="space-y-3"><p className="text-sm">발송 당시 확정 주소 <strong className="break-all">{delivery.recipientEmail ?? '기록 없음'}</strong>에 <strong>{delivery.title}</strong> 메일을 다시 보낼까요?</p>
+      <p className="text-sm">발송 상태는 상세에서 확인해 주세요.</p>
       <p className="text-xs">최종 사유: {mailFailureLabel(delivery.failureCode)}</p>{error && <Alert variant="danger">{error}</Alert>}
     </div>
   </Modal>
