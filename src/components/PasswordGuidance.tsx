@@ -67,8 +67,7 @@ export function PasswordGuidance({ password, id, className }: PasswordGuidancePr
         })}
       </ul>
       <p className="text-xs text-neutral-500">
-        다른 사이트와 같은 비밀번호는 사용하지 마세요. 기억하기 쉬운 세 단어 이상의 문장을
-        권장합니다.
+        다른 사이트와 같은 비밀번호는 사용하지 마세요. 기억하기 쉬운 세 단어 이상의 문장을 사용해 보세요.
       </p>
     </div>
   )

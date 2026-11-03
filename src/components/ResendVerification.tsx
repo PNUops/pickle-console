@@ -18,7 +18,7 @@ export function ResendVerification({ email: fixedEmail }: { email?: string }) {
       const { data, error } = await api.POST('/auth/resend-verification', {
         body: { email: target },
       })
-      if (!data) throw toApiError(error, '재발송에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      if (!data) throw toApiError(error, '인증 메일을 다시 보내지 못했어요. 잠시 후 다시 시도해 주세요.')
       return data
     },
   })
@@ -53,7 +53,7 @@ export function ResendVerification({ email: fixedEmail }: { email?: string }) {
       {mutation.isError && (
         <Alert variant="danger">
           {/* 네트워크 예외 등 비 ApiError도 한국어 메시지로 감싼다. */}
-          {toApiError(mutation.error, '재발송에 실패했습니다. 잠시 후 다시 시도해 주세요.').message}
+          {toApiError(mutation.error, '인증 메일을 다시 보내지 못했어요. 잠시 후 다시 시도해 주세요.').message}
         </Alert>
       )}
       <Button type="submit" variant="secondary" loading={mutation.isPending}>

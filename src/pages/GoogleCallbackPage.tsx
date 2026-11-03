@@ -14,7 +14,7 @@ import { schedulePostLoginOverlay } from '../lib/storage-keys'
 
 /** 구글이 코드 대신 오류를 돌려줄 때 사용자가 읽을 수 있는 문장으로 바꾼다. */
 const GOOGLE_ERRORS: Record<string, string> = {
-  access_denied: '구글 로그인을 취소했습니다.',
+  access_denied: '구글 로그인을 취소했어요.',
 }
 
 /**
@@ -43,7 +43,7 @@ export function GoogleCallbackPage() {
     mounted.current = true
     const unsubscribe = onSessionExpired((expiredGeneration) => {
       if (mounted.current && pendingProfile.current === expiredGeneration) {
-        setError('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.')
+        setError('로그인 유효시간이 지났어요. 다시 로그인해 주세요.')
       }
     })
     return () => {
@@ -58,13 +58,13 @@ export function GoogleCallbackPage() {
 
     const googleError = params.get('error')
     if (googleError) {
-      setError(GOOGLE_ERRORS[googleError] ?? '구글 로그인에 실패했습니다.')
+      setError(GOOGLE_ERRORS[googleError] ?? '구글로 로그인하지 못했어요.')
       return
     }
     const code = params.get('code')
     const state = params.get('state')
     if (!code || !state) {
-      setError('로그인 정보가 없습니다. 처음부터 다시 시도해 주세요.')
+      setError('로그인 정보가 없어요. 처음부터 다시 시도해 주세요.')
       return
     }
 
@@ -85,7 +85,7 @@ export function GoogleCallbackPage() {
         if (!data) {
           setError(
             (isProblem(problem) ? (problem.detail ?? problem.title) : null) ??
-              '구글 로그인에 실패했습니다.',
+              '구글로 로그인하지 못했어요.',
           )
           return
         }
@@ -128,10 +128,10 @@ export function GoogleCallbackPage() {
           navigate(safeInternalPath(takeReturnTo()) ?? homePathFor(role), { replace: true })
           return
         }
-        setError('구글 로그인 응답을 이해하지 못했습니다.')
+        setError('구글 로그인 결과를 확인하지 못했어요. 다시 로그인해 주세요.')
       } catch (err) {
         if (isCurrent()) {
-          setError(toApiError(err, '구글 로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.').message)
+          setError(toApiError(err, '구글로 로그인하지 못했어요. 잠시 후 다시 시도해 주세요.').message)
           if (receivedCredentials) {
             clearAccessToken()
             generation = getSessionGeneration()
@@ -147,14 +147,14 @@ export function GoogleCallbackPage() {
     return (
       <div className="flex w-full flex-col items-center gap-6 text-center">
         <Spinner size="lg" className="text-primary-300" label="로그인 처리 중" />
-        <h1 className="text-2xl font-bold text-white">로그인 중입니다</h1>
+        <h1 className="text-2xl font-bold text-white">로그인하고 있어요</h1>
       </div>
     )
   }
 
   return (
     <div className="w-full">
-      <h1 className="text-center text-2xl font-bold text-white">로그인하지 못했습니다</h1>
+      <h1 className="text-center text-2xl font-bold text-white">로그인하지 못했어요</h1>
       <AuthCard className="mt-8">
         <AuthCardContent>
           <div className="space-y-4">

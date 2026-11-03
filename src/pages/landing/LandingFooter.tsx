@@ -7,7 +7,7 @@ export function LandingFooter() {
     <footer className="border-t border-white/10 bg-neutral-950 text-neutral-400">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <div className="flex flex-col justify-between gap-8 sm:flex-row">
-          <div><Logo tone="inverse" variant="endorsement" /><p className="mt-3 text-sm">부산대학교 구성원을 위한 클라우드 플랫폼입니다.</p></div>
+          <div><Logo tone="inverse" variant="endorsement" /><p className="mt-3 text-sm">부산대학교 구성원을 위한 클라우드 플랫폼이에요.</p></div>
           <nav aria-label="푸터 바로가기" className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
             <TransitionLink to={DOCS_PATH} className="hover:text-white">사용 가이드</TransitionLink>
             <a href={CONTACT_URL} target="_blank" rel="noreferrer" className="hover:text-white">1:1 문의하기 <span className="sr-only">(새 탭)</span></a>

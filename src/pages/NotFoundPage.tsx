@@ -4,7 +4,7 @@ export function NotFoundPage() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
       <p className="text-5xl font-bold text-primary-600">404</p>
-      <h1 className="text-xl font-semibold text-neutral-900">페이지를 찾을 수 없습니다</h1>
+      <h1 className="text-xl font-semibold text-neutral-900">페이지를 찾을 수 없어요</h1>
       <p className="text-sm text-neutral-500">주소가 올바른지 확인해 주세요.</p>
       <Link
         to="/"

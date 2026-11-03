@@ -74,7 +74,7 @@ describe('계정 설정 — 비밀번호 변경', () => {
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
     expect(
-      await screen.findByText('비밀번호는 8자 이상 72자 이하여야 합니다.'),
+      await screen.findByText('비밀번호는 8자 이상 72자 이하여야 해요.'),
     ).toBeInTheDocument()
     expect(screen.queryByText(/비밀번호를 변경했습니다/)).not.toBeInTheDocument()
   })

@@ -246,7 +246,7 @@ describe('VM 도메인 — 내 도메인 연결 (드로어)', () => {
     await user.type(within(drawer).getByLabelText('커스텀 도메인'), 'bad_domain!')
     await user.click(within(drawer).getByRole('button', { name: '도메인 연결' }))
     expect(
-      await within(drawer).findByText(/커스텀 도메인 형식이 올바르지 않습니다/),
+      await within(drawer).findByText(/커스텀 도메인 형식이 올바르지 않아요/),
     ).toBeInTheDocument()
   })
 })

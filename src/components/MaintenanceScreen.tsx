@@ -4,7 +4,7 @@ import { ContactEmail } from './ContactEmail'
 import { Link, useLocation } from 'react-router'
 import { parseGuidePath, publicGuidePath } from '../lib/docs-paths'
 
-const DEFAULT_MESSAGE = '서비스 점검 중입니다. 잠시 후 다시 이용해 주세요.'
+const DEFAULT_MESSAGE = '서비스를 점검하고 있어요. 잠시 후 다시 이용해 주세요.'
 
 /**
  * 점검 모드 전체 화면 — 비관리자 사용자의 콘솔 사용을 차단한다. 점검이 해제되면

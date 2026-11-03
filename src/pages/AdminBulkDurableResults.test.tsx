@@ -335,7 +335,7 @@ test('rejects malformed identifiers and viewer receipt access without reading or
   let reads = 0
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/bulk-changes/operations/:operationId', () => { reads++; return HttpResponse.json({}) }))
   const view = renderApp('/admin/bulk/operations/invalid')
-  await screen.findByText('올바르지 않은 주소입니다. 주소를 확인해 주세요.')
+  await screen.findByText('주소가 올바르지 않아요. 주소를 확인해 주세요.')
   expect(reads).toBe(0)
   view.unmount()
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))

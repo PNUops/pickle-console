@@ -39,7 +39,7 @@ describe('회원가입 폼 검증', () => {
     })
 
     expect(
-      await screen.findByText('@pusan.ac.kr 이메일만 가입할 수 있습니다.'),
+      await screen.findByText('@pusan.ac.kr 이메일로 가입해 주세요.'),
     ).toBeInTheDocument()
   })
 
@@ -55,7 +55,7 @@ describe('회원가입 폼 검증', () => {
     })
 
     expect(
-      await screen.findByText('비밀번호는 8자 이상 72자 이하여야 합니다.'),
+      await screen.findByText('비밀번호는 8자 이상 72자 이하여야 해요.'),
     ).toBeInTheDocument()
   })
 
@@ -115,7 +115,7 @@ describe('회원가입 폼 검증', () => {
       passwordConfirm: 'different-pw-123',
     })
 
-    expect(await screen.findByText('비밀번호가 일치하지 않습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('비밀번호가 일치하지 않아요.')).toBeInTheDocument()
   })
 
   test('가입 성공 시 인증 메일 안내 화면과 재발송 버튼을 보여준다', async () => {

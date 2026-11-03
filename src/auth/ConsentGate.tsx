@@ -27,14 +27,14 @@ export function ConsentGate({ pending }: { pending: TermsVersionView[] }) {
       await refreshProfile()
     },
     onError: async (err) => {
-      const apiError = toApiError(err, '약관 동의를 기록하지 못했습니다.')
+      const apiError = toApiError(err, '약관 동의를 저장하지 못했어요.')
       if (apiError.code === 'CONSENT_VERSION_MISMATCH') {
         // The documents were revised again between load and submit. Reload the
         // profile so the gate re-renders with the new pendingConsents versions
         // — otherwise it would loop, resubmitting the stale versions the 409
         // rejects. Require a fresh agreement to the updated documents.
         setAgreed({})
-        setError('약관이 갱신되었습니다. 새 내용을 확인한 뒤 다시 동의해 주세요.')
+        setError('약관이 바뀌었어요. 새 내용을 확인하고 다시 동의해 주세요.')
         await refreshProfile()
         return
       }
@@ -46,9 +46,9 @@ export function ConsentGate({ pending }: { pending: TermsVersionView[] }) {
     <div className="mx-auto flex min-h-screen w-full max-w-lg items-center px-4 py-12">
       <Card className="w-full">
         <CardContent className="space-y-4 py-8">
-          <h1 className="text-xl font-bold text-neutral-900">약관 재동의가 필요합니다</h1>
+          <h1 className="text-xl font-bold text-neutral-900">변경된 내용을 확인해 주세요</h1>
           <p className="text-sm text-neutral-600">
-            약관이 개정되었습니다. 계속 이용하시려면 아래 문서에 다시 동의해 주세요.
+            계속 이용하려면 아래 문서를 확인하고 동의해 주세요.
           </p>
           {error && <Alert variant="danger">{error}</Alert>}
           <ul className="space-y-3">
@@ -69,7 +69,7 @@ export function ConsentGate({ pending }: { pending: TermsVersionView[] }) {
                       >
                         {doc.title}
                       </Link>
-                      <span className="text-neutral-500"> (v{doc.version})에 동의합니다.</span>
+                      <span className="text-neutral-500"> (v{doc.version})에 동의해요.</span>
                     </span>
                   }
                 />

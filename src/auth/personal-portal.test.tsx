@@ -219,7 +219,7 @@ test('personal console entry preserves pending consent before the profile gate',
     http.get('*/api/v1/me', () => HttpResponse.json({ ...sysAdminProfile, pendingConsents: currentTerms, profileComplete: false })),
   )
   renderApp('/console/requests/new')
-  await screen.findByRole('heading', { name: '약관 재동의가 필요합니다' })
+  await screen.findByRole('heading', { name: '변경된 내용을 확인해 주세요' })
   expect(screen.queryByRole('heading', { name: '직책과 소속을 입력해 주세요' })).not.toBeInTheDocument()
   expect(screen.queryByRole('navigation', { name: '콘솔 메뉴' })).not.toBeInTheDocument()
 })
