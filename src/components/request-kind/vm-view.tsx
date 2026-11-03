@@ -40,9 +40,9 @@ function useVmDecisionData(): DecisionData {
     return {
       status: 'blocked',
       gate: (
-        <Alert variant="danger" title="OS 이미지 목록을 불러오지 못했습니다">
+        <Alert variant="danger" title="OS 이미지 목록을 불러오지 못했어요">
           <div className="space-y-2">
-            <p>승인·반려를 결정하려면 OS 이미지 목록이 필요합니다.</p>
+            <p>승인·반려를 결정하려면 OS 이미지 목록이 필요해요.</p>
             <Button
               size="sm"
               variant="secondary"
@@ -124,7 +124,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
       if (!Number.isInteger(Number(diskGb)) || Number(diskGb) < 1)
         errors['vm.grantedDiskGb'] = '디스크는 1 GiB 이상으로 입력해 주세요.'
       else if (image && Number(diskGb) < image.minDiskGb)
-        errors['vm.grantedDiskGb'] = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 합니다.`
+        errors['vm.grantedDiskGb'] = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 해요.`
       if (!image && !aliasImage || observedPlacement?.image.selectableNow === false) errors['vm.grantedImageId'] = '현재 신청 가능한 OS 이미지를 선택해 주세요.'
       if (nodeId && (!placement.isSuccess || placementText !== debouncedPlacement || !selectedNode))
         errors['vm.nodeId'] = '현재 배치 후보를 조회한 뒤 노드를 다시 확인해 주세요.'
@@ -158,7 +158,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
     fields: (fieldErrors) => (
       <>
         <p className="text-sm text-neutral-500">
-          요청 사양으로 미리 채워져 있습니다. 필요하면 조정한 뒤 승인해 주세요.
+          요청 사양으로 미리 채워져 있어요. 필요하면 조정한 뒤 승인해 주세요.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FormField label="vCPU" required error={fieldErrors['vm.grantedVcpu']}>
@@ -202,7 +202,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         <FormField
           label="사용 종료일"
           error={fieldErrors.grantedEndDate}
-          description="비우면 만료되지 않습니다. 사용 시작일은 승인하는 날로 정해집니다."
+          description="비우면 만료되지 않아요. 사용 시작일은 승인하는 날로 정해져요."
         >
           <Input
             type="date"
@@ -213,7 +213,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         {!bulk && <FormField
           label="호스트 이름 확정"
           error={fieldErrors['vm.grantedSlug']}
-          description="SSH 접속과 게스트 OS의 호스트 이름으로 쓰입니다. 신청자의 희망값이 채워져 있고, 비우면 자동으로 정해집니다."
+          description="SSH 접속과 게스트 OS의 호스트 이름으로 쓰여요. 신청자의 희망값이 채워져 있고, 비우면 자동으로 정해져요."
         >
           <Input
             value={grantedSlug}
@@ -222,7 +222,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
             maxLength={40}
           />
         </FormField>}
-        <FormField label="배치 노드" error={fieldErrors['vm.nodeId']} description="자동 배치 또는 현재 활성 노드의 선택 OS 이미지 후보를 고릅니다.">
+        <FormField label="배치 노드" error={fieldErrors['vm.nodeId']} description="자동 배치 또는 현재 활성 노드의 선택 OS 이미지 후보를 골라요.">
           <Select value={nodeId} onChange={(event) => setNodeId(event.target.value)} disabled={placement.isFetching || placementText !== debouncedPlacement}>
             <option value="">자동 배치</option>
             {nodeId && !selectedNode && <option value={nodeId} disabled>이전 선택 노드 (현재 후보 확인 필요)</option>}
@@ -233,16 +233,16 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
         </FormField>
         {placement.isFetching && <Spinner label="배치 후보 확인 중" />}
         {placement.isError && <Alert variant="warning">{placement.error.message}<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
-        {placement.isSuccess && placementText === debouncedPlacement && !observedPlacement && <Alert variant="warning">현재 입력의 배치 정보를 확인할 수 없습니다.<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
-        {observedPlacement && <p className="text-xs text-neutral-500">{observedPlacement.image.name} revision {observedPlacement.image.version} / {formatDateTime(observedPlacement.observedAt)} 조회. 한 대 기준의 현재 조건이며 대상 전체의 용량을 예약하지 않습니다.</p>}
-        {observedPlacement && !observedPlacement.image.selectableNow && <Alert variant="warning">현재 선택한 OS 이미지는 신청 불가로 조회되었습니다. 다른 이미지를 선택해 주세요.</Alert>}
-        {observedPlacement?.image.selectableNow && !observedPlacement.fitsAnyOneNow && <Alert variant="warning">현재 한 대를 배치할 수 있는 후보가 없습니다. 실제 배치 시점에 다시 확인하며 대상자별 생성이 실패할 수 있습니다.</Alert>}
-        <FormField label="승인 의견" description="신청자에게 전달됩니다. (선택)">
+        {placement.isSuccess && placementText === debouncedPlacement && !observedPlacement && <Alert variant="warning">현재 입력의 배치 정보를 확인할 수 없어요.<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
+        {observedPlacement && <p className="text-xs text-neutral-500">{observedPlacement.image.name} revision {observedPlacement.image.version} / {formatDateTime(observedPlacement.observedAt)} 조회. 한 대 기준의 현재 조건이며 대상 전체의 용량을 예약하지 않아요.</p>}
+        {observedPlacement && !observedPlacement.image.selectableNow && <Alert variant="warning">현재 선택한 OS 이미지는 신청 불가로 조회됐어요. 다른 이미지를 선택해 주세요.</Alert>}
+        {observedPlacement?.image.selectableNow && !observedPlacement.fitsAnyOneNow && <Alert variant="warning">현재 한 대를 배치할 수 있는 후보가 없어요. 실제 배치 시점에 다시 확인하며 대상자별 생성이 실패할 수 있어요.</Alert>}
+        <FormField label="승인 의견" description="신청자에게 전달돼요. (선택)">
           <Textarea
             value={approveComment}
             onChange={(event) => setApproveComment(event.target.value)}
             maxLength={2000}
-            placeholder="요청 사양 그대로 승인합니다."
+            placeholder="요청 사양 그대로 승인해요."
           />
         </FormField>
       </>
@@ -253,11 +253,11 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
       { label: '호스트 이름', requested: bulk ? '대상자별 자동 생성' : request.vm?.desiredSlug ?? '자동 생성', granted: bulk ? '대상자별 자동 생성' : grantedSlug.trim() || '자동 생성' },
     ],
     nodeName: nodeId ? selectedNode?.nodeName ?? '현재 후보 확인 필요' : '자동 배치',
-    confirmBody: <p className="text-sm text-neutral-600">승인과 부여 내용이 저장된 뒤 대상자별 등록과 실제 VM 생성 상태를 확인할 수 있습니다.</p>,
+    confirmBody: <p className="text-sm text-neutral-600">승인과 부여 내용이 저장된 뒤 대상자별 등록과 실제 VM 생성 상태를 확인할 수 있어요.</p>,
 
     successMessage: bulk
-      ? '승인 내용이 저장되었습니다. 대상자별 등록 상태와 VM 상세에서 실제 생성 결과를 확인해 주세요.'
-      : '승인 내용이 저장되었습니다. VM 생성 진행과 실제 완료는 가상머신 상세에서 확인해 주세요.',
+      ? '승인 내용이 저장됐어요. 대상자별 등록 상태와 VM 상세에서 실제 생성 결과를 확인해 주세요.'
+      : '승인 내용이 저장됐어요. VM 생성 진행과 실제 완료는 가상머신 상세에서 확인해 주세요.',
   }
 }
 
@@ -292,8 +292,8 @@ export const vmRequestView: RequestKindView = {
       </Field>
       {data.vm != null && data.vm.flavorId == null && (
         <div className="sm:col-span-2">
-          <Alert variant="warning" title="준비된 사양을 쓰지 않는 신청입니다">
-            신청자가 사양을 직접 적었습니다. 아래 사유를 보고 부여 사양을 정해 주세요.
+          <Alert variant="warning" title="준비된 사양을 쓰지 않는 신청이에요">
+            신청자가 사양을 직접 적었어요. 아래 사유를 보고 부여 사양을 정해 주세요.
           </Alert>
         </div>
       )}

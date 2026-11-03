@@ -88,8 +88,8 @@ function limitText(value: number | null | undefined): string {
 /** 승인 폼 옆에 붙는 희망값 안내 — 없으면 없다고 말한다. */
 function requestedNote(value: number | null | undefined): string {
   return value == null
-    ? '신청자가 희망값을 적지 않았습니다. 비우면 서비스 기본값이 적용됩니다.'
-    : `신청 희망값 ${value.toLocaleString('ko-KR')}. 비우면 서비스 기본값이 적용됩니다.`
+    ? '희망값 없음. 비우면 서비스 기본값이 적용돼요.'
+    : `신청 희망값 ${value.toLocaleString('ko-KR')}. 비우면 서비스 기본값이 적용돼요.`
 }
 
 /** 비워 둔 한도는 오류가 아니다 — 적어 넣은 값만 검사한다. */
@@ -98,7 +98,7 @@ function limitError(raw: string, label: string, max: number, min = 1): string | 
   if (!value) return undefined
   if (!/^\d+$/.test(value)) return `${label}는 ${min} 이상의 정수로 입력하거나 비워 두세요.`
   const parsed = Number(value)
-  if (parsed < min) return `${label}는 ${min} 이상이어야 합니다.`
+  if (parsed < min) return `${label}는 ${min} 이상이어야 해요.`
   if (parsed > max) return `${label}는 ${max.toLocaleString('ko-KR')} 이하로 입력해 주세요.`
   return undefined
 }
@@ -287,15 +287,15 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       if (creditLimitError) errors['llmKey.grantedCreditLimit'] = creditLimitError
       // 리셋 창은 0보다 큰 금액 위에서만 뜻이 있다 — 서버가 같은 규칙으로 막는다.
       if (!creditLimitError && creditReset && !(Number(creditLimit) > 0)) {
-        errors['llmKey.grantedCreditLimit'] = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
+        errors['llmKey.grantedCreditLimit'] = '리셋 창을 두려면 0보다 큰 금액 한도가 필요해요.'
       }
       if (!creditLimitError && Number(creditLimit) > 0) {
         if (accountData.loading) {
-          errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
+          errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오는 중이에요. 잠시 후 다시 시도해 주세요.'
         } else if (accountData.failed) {
-          errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오지 못해 유료 모델을 승인할 수 없습니다.'
+          errors['llmKey.openrouterAccountId'] = '사업 계정 목록을 불러오지 못해 유료 모델을 승인할 수 없어요.'
         } else if (accountData.accounts.length === 0) {
-          errors['llmKey.openrouterAccountId'] = '관리용 키까지 확인된 활성 사업 계정이 필요합니다.'
+          errors['llmKey.openrouterAccountId'] = '관리용 키까지 확인된 활성 사업 계정이 필요해요.'
         } else if (!effectiveAccount) {
           errors['llmKey.openrouterAccountId'] = '어느 사업 계정으로 결제할지 선택해 주세요.'
         }
@@ -303,20 +303,20 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       const budgetRequired = Number(creditLimit) > 0 || !!creditReset || parsedCreditModels.length > 0
         || parsedDeniedModels.length > 0 || passthroughEndpoints.some((endpoint) => endpoint !== 'chat')
       if (budgetRequired && !accountData.paidAllowed) {
-        errors['llmKey.grantedCreditLimit'] = '유료 정책에는 같은 기관·공간 범위의 승인 또는 명단 지급과 키 예산 업무가 같은 부여에 있어야 합니다.'
+        errors['llmKey.grantedCreditLimit'] = '유료 정책에는 같은 기관·공간 범위의 승인 또는 명단 지급과 키 예산 업무가 같은 부여에 있어야 해요.'
       }
       const modelsError = creditModelRulesError(parsedRules)
       if (modelsError) {
         errors['llmKey.creditModelRules'] = modelsError
       } else if (parsedCreditModels.length > 0 && !(Number(creditLimit) > 0)) {
         errors['llmKey.grantedCreditLimit'] =
-          '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
+          '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요해요.'
       }
       // Deny-only rules remain valid without a positive credit limit.
       // 요청 하나가 토큰 하나보다 적게 쓸 수는 없다 — 서버가 같은 규칙으로 막는다.
       if (!rpmError && !tpmError && rpm.trim() && tpm.trim()) {
         if (Number(tpm) < Number(rpm))
-          errors['llmKey.grantedTpm'] = '분당 토큰 수는 분당 요청 수보다 작을 수 없습니다.'
+          errors['llmKey.grantedTpm'] = '분당 토큰 수는 분당 요청 수보다 작을 수 없어요.'
       }
       return errors
     },
@@ -350,7 +350,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
     fields: (fieldErrors) => (
       <>
         {!accountData.paidAllowed && <div className="space-y-3">
-          <Alert>유료 정책을 부여할 같은 원천의 예산 업무가 없습니다. 신청한 유료 조건을 자동으로 줄이지 않습니다. 반려하거나 유료 기능을 모두 닫는 부여안을 직접 선택해 주세요.</Alert>
+          <Alert>유료 정책을 부여할 같은 원천의 예산 업무가 없어요. 신청한 유료 조건을 자동으로 줄이지 않아요. 반려하거나 유료 기능을 모두 닫는 부여안을 직접 선택해 주세요.</Alert>
           <Checkbox checked={freeApprovalSelected} label="유료 기능 없이 승인" onChange={(event) => {
             const free = event.target.checked
             setFreeApprovalSelected(free)
@@ -362,12 +362,12 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             setPassthroughEndpoints(free ? (spec?.reqPassthroughEndpoints ?? []).filter((endpoint) => endpoint === 'chat') : spec?.reqPassthroughEndpoints ?? [])
             setChatlessAcknowledged(null)
           }} />
-          {freeApprovalSelected && <p className="text-sm">금액 0, 리셋 없음, 사업 계정 미지정으로 승인합니다. 유료 모델 허용·차단 목록과 Chat 외 기능은 모두 닫습니다.</p>}
+          {freeApprovalSelected && <p className="text-sm">금액 0, 리셋 없음, 사업 계정 미지정으로 승인해요. 유료 모델 허용·차단 목록과 Chat 외 기능은 모두 닫아요.</p>}
           {!freeApprovalSelected && <p className="text-sm">현재 부여안 기능: {passthroughText(passthroughEndpoints)}</p>}
         </div>}
         <details open className="min-w-0 space-y-4 rounded border border-line p-3">
           <summary className="cursor-pointer font-medium">TOKEN 토큰 한도</summary>
-          <p className="text-xs text-foreground-muted">접어도 입력값과 승인 내용은 유지됩니다. RPM·TPM·동시 요청의 실제 서비스 기본값은 서버에서 보고하지 않아 확인할 수 없습니다.</p>
+          <p className="text-xs text-foreground-muted">RPM·TPM·동시 요청의 실제 서비스 기본값은 확인할 수 없어요.</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 분당 요청 수"
@@ -386,7 +386,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           <FormField
             label="부여 분당 토큰 수"
             error={fieldErrors['llmKey.grantedTpm']}
-            description={spec?.reqTpm == null ? '희망값 없음. 비우면 서비스 기본값이 적용됩니다.' : `신청 희망값 ${formatTokenDecision(spec.reqTpm)}. 비우면 서비스 기본값이 적용됩니다.`}
+            description={spec?.reqTpm == null ? '희망값 없음. 비우면 서비스 기본값이 적용돼요.' : `신청 희망값 ${formatTokenDecision(spec.reqTpm)}. 비우면 서비스 기본값이 적용돼요.`}
           >
             <Input
               type="number"
@@ -400,7 +400,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           <FormField
             label="부여 일일 토큰 수"
             error={fieldErrors['llmKey.grantedDailyTokens']}
-            description={spec?.reqDailyTokens == null ? '희망값 없음. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.' : `신청 희망값 ${formatTokenDecision(spec.reqDailyTokens)}. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.`}
+            description={spec?.reqDailyTokens == null ? '희망값 없음. 비우면 일일 한도가 없어요. 0이면 토큰을 사용할 수 없어요.' : `신청 희망값 ${formatTokenDecision(spec.reqDailyTokens)}. 비우면 일일 한도가 없어요. 0이면 토큰을 사용할 수 없어요.`}
           >
             <Input
               type="number"
@@ -414,9 +414,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           <FormField
             label="부여 동시 요청 수"
             error={fieldErrors['llmKey.grantedConcurrency']}
-            // 신청서에 대응하는 칸이 아예 없는 유일한 항목이다 — 승인자가 정하지
-            // 않으면 아무도 정하지 않는다는 사실을 여기서 말해 둔다.
-            description="신청서에 대응하는 항목이 없어 승인자만 정합니다. 비우면 서비스 기본값이 적용됩니다."
+            description="비우면 서비스 기본값이 적용돼요."
           >
             <Input
               type="number"
@@ -431,13 +429,13 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         </details>
         <details open className="min-w-0 space-y-4 rounded border border-line p-3">
           <summary className="cursor-pointer font-medium">CREDIT 유료 모델 정책</summary>
-          <p className="text-xs text-foreground-muted">접어도 금액·계정·모델 규칙은 유지됩니다. 신청하지 않은 축도 권한이 있으면 직접 부여할 수 있습니다.</p>
+          <p className="text-xs text-foreground-muted">신청하지 않은 축도 권한이 있으면 직접 부여할 수 있어요.</p>
         <fieldset disabled={!accountData.paidAllowed} className="min-w-0 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 금액 한도 (USD)"
             error={fieldErrors['llmKey.grantedCreditLimit']}
-            description="유료 모델(OpenRouter 경유)에 쓸 수 있는 금액입니다. 비우거나 0이면 유료 모델을 쓸 수 없습니다."
+            description="유료 모델(OpenRouter 경유)에 쓸 수 있는 금액이에요. 비우거나 0이면 유료 모델을 쓸 수 없어요."
           >
             <Input
               type="number"
@@ -450,7 +448,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
           </FormField>
           <FormField
             label="금액 한도 리셋 창"
-            description="비우면 리셋 없는 총액 상한입니다. 리셋 창은 UTC 자정에 초기화됩니다."
+            description="비우면 리셋 없는 총액 상한이에요. 리셋 창은 UTC 자정에 초기화돼요."
           >
             <Select
               value={creditReset}
@@ -498,13 +496,13 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         {CATALOGUE_MISSING.some((name) => passthroughEndpoints.includes(name)) ? (
           <p className="text-sm text-neutral-500">
             리랭크, TTS, STT 모델은 위 모델 목록에 나오지 않아 가격을 여기서 볼 수 없지만 호출마다
-            요금이 붙습니다. 쓸 수 있는 유료 모델을 제한한다면 해당 모델 ID를 직접 적어야 합니다.
+            요금이 붙어요. 쓸 수 있는 유료 모델을 제한한다면 해당 모델 ID를 직접 적어야 해요.
           </p>
         ) : null}
         {!accountDefaultsTouched && hasAccountDefaults ? (
           <p className="text-sm text-neutral-500">
-            {effectiveAccount?.name} 계정의 기본값에서 채웠습니다. 이 승인에만 적용되며,
-            계정 기본값을 나중에 바꿔도 발급된 키는 그대로입니다.
+            {effectiveAccount?.name} 계정의 기본값에서 채웠어요. 이 승인에만 적용되며,
+            계정 기본값을 나중에 바꿔도 발급된 키는 그대로예요.
           </p>
         ) : null}
         {accountDefaultsTouched && hasAccountDefaults ? (
@@ -527,7 +525,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         <FormField
           label="사용 종료일"
           error={fieldErrors.grantedEndDate}
-          description="비우면 만료되지 않습니다. 사용 시작일은 승인하는 날로 정해집니다."
+          description="비우면 만료되지 않아요. 사용 시작일은 승인하는 날로 정해져요."
         >
           <Input
             type="date"
@@ -535,12 +533,12 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             onChange={(event) => setEndDate(event.target.value)}
           />
         </FormField>
-        <FormField label="승인 의견" description="신청자에게 전달됩니다. (선택)">
+        <FormField label="승인 의견" description="신청자에게 전달돼요. (선택)">
           <Textarea
             value={approveComment}
             onChange={(event) => setApproveComment(event.target.value)}
             maxLength={2000}
-            placeholder="기본 한도로 승인합니다."
+            placeholder="기본 한도로 승인해요."
           />
         </FormField>
       </>
@@ -582,7 +580,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         </ul>
         {creditValue(creditLimit) ? (
           <Alert variant="warning">
-            이 키가 어느 사업 계정으로 결제되는지는 발급 뒤 바꿀 수 없습니다. 옮기려면 새 키를 발급해 전환해야 합니다.
+            이 키가 어느 사업 계정으로 결제되는지는 발급 뒤 바꿀 수 없어요. 옮기려면 새 키를 발급해 전환해야 해요.
           </Alert>
         ) : null}
         {judgement ? (
@@ -591,14 +589,14 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
         {chatless ? (
           <>
             <Alert variant="warning">
-              Chat 없이 승인하면 이 키로 텍스트 생성과 에이전트 연결을 쓸 수 없습니다.
+              Chat 없이 승인하면 이 키로 텍스트 생성과 에이전트 연결을 쓸 수 없어요.
             </Alert>
             <Checkbox
               checked={chatlessAcknowledged === chatlessKey}
               onChange={(event) =>
                 setChatlessAcknowledged(event.target.checked ? chatlessKey : null)
               }
-              label="Chat 없이 승인합니다"
+              label="Chat 없이 승인해요"
             />
           </>
         ) : null}
@@ -608,18 +606,17 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             onChange={(event) =>
               setAcknowledged(event.target.checked ? acknowledgementKey : null)
             }
-            label="초과 배정임을 확인했습니다"
+            label="초과 배정임을 확인했어요"
           />
         ) : null}
         {bulk ? (
           <p>
-            대상자별 키는 차례로 만들어지고, 가입하지 않은 대상자의 키는 가입할 때
-            만들어집니다. 평문 키는 대상자가 각자 발급받습니다.
+            평문 키는 대상자가 각자 발급받아요.
           </p>
         ) : (
           <p>
-            승인하면 키가 만들어지지만 아직 쓸 수 없습니다. 평문 키는 신청자가 직접
-            발급받습니다.
+            승인하면 키가 만들어지지만 아직 쓸 수 없어요. 평문 키는 신청자가 직접
+            발급받아요.
           </p>
         )}
       </div>
@@ -629,9 +626,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       (!judgement?.needsAcknowledgement || acknowledged === acknowledgementKey) &&
       (!chatless || chatlessAcknowledged === chatlessKey),
 
-    successMessage: bulk
-      ? '신청을 승인했습니다. 대상자별 LLM API 키가 차례로 만들어집니다.'
-      : '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
+    successMessage: '신청을 승인했어요.',
   }
 }
 
@@ -654,9 +649,9 @@ function approvalAccountField({
   }
   if (data.failed) {
     return (
-      <Alert variant="warning" title="사업 계정 목록을 불러오지 못했습니다">
+      <Alert variant="warning" title="사업 계정 목록을 불러오지 못했어요">
         <div className="space-y-2">
-          <p>자체 서빙 모델만 주는 승인은 계속할 수 있지만, 유료 모델은 목록을 확인할 때까지 막힙니다.</p>
+          <p>자체 서빙 모델만 주는 승인은 계속할 수 있지만, 유료 모델은 목록을 확인해야 승인할 수 있어요.</p>
           {error && <p className="font-medium text-danger-800">{error}</p>}
           <Button size="sm" variant="secondary" onClick={data.retry}>다시 시도</Button>
         </div>
@@ -665,14 +660,14 @@ function approvalAccountField({
   }
   if (data.accounts.length === 0) {
     return (
-      <MessageBar variant="warning" title="유료 모델을 결제할 사업 계정이 없습니다">
+      <MessageBar variant="warning" title="유료 모델을 결제할 사업 계정이 없어요">
         <Link
           to={adminPaths.llmAccounts(request.orgId ?? undefined)}
           className="font-semibold underline underline-offset-2"
         >
           OpenRouter 사업 계정 관리
         </Link>
-        에서 관리용 키를 먼저 등록하세요. 자체 서빙 모델만 주는 승인은 계속할 수 있습니다.
+        에서 관리용 키를 먼저 등록하세요. 자체 서빙 모델만 주는 승인은 계속할 수 있어요.
         {error && <p className="mt-1 font-medium text-warning-900">{error}</p>}
       </MessageBar>
     )
@@ -680,7 +675,7 @@ function approvalAccountField({
   if (data.accounts.length === 1) {
     return (
       <MessageBar title="사업 계정 자동 선택">
-        연결할 수 있는 사업 계정이 {data.accounts[0].name} 하나뿐이라 금액을 부여하면 자동으로 선택됩니다.
+        연결할 수 있는 사업 계정이 {data.accounts[0].name} 하나뿐이라 금액을 부여하면 자동으로 선택돼요.
       </MessageBar>
     )
   }
@@ -688,7 +683,7 @@ function approvalAccountField({
     <FormField
       label="OpenRouter 사업 계정"
       error={error}
-      description="금액을 부여할 때만 필요합니다. 한 번 정해지면 바꿀 수 없습니다."
+      description="금액을 부여할 때만 필요해요. 한 번 정해지면 바꿀 수 없어요."
     >
       <Select value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error != null}>
         <option value="">사업 계정 선택</option>

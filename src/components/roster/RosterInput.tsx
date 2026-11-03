@@ -24,7 +24,7 @@ import {
   type RosterEntry,
 } from './roster-entries'
 
-export const ROSTER_PASTE_HINT = '한 줄에 한 명씩, 엑셀에서 복사한 행을 그대로 붙여넣어도 됩니다.'
+export const ROSTER_PASTE_HINT = '한 줄에 한 명씩, 엑셀에서 복사한 행을 그대로 붙여넣어도 돼요.'
 
 /**
  * A pasted roster and its per-line preview. The text is the parent's, so the
@@ -67,7 +67,7 @@ export function RosterInput({
     onSuccess: (entries, text) => setPreview({ text, entries }),
     // A 429 carries the server's own wording (which limit, when to retry), so it is shown as is.
     onError: (err, text) =>
-      setFailure({ text, message: toApiError(err, '명단을 확인하지 못했습니다.').message }),
+      setFailure({ text, message: toApiError(err, '명단을 확인하지 못했어요.').message }),
   })
 
   const shown = preview?.text === value ? preview.entries : null

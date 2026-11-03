@@ -31,7 +31,7 @@ export function recipientBody({
 /** Requests take at most this many recipients, as on the server. */
 export const MAX_RECIPIENTS = 200
 
-export const MAX_RECIPIENTS_MESSAGE = `대상자는 한 번에 ${MAX_RECIPIENTS}명까지 지정할 수 있습니다.`
+export const MAX_RECIPIENTS_MESSAGE = `대상자는 한 번에 ${MAX_RECIPIENTS}명까지 지정할 수 있어요.`
 
 /** Recipient states that are still moving toward a resource. */
 const IN_FLIGHT = new Set(['QUEUED', 'CREATING'])
@@ -47,7 +47,7 @@ export function recipientPollInterval(request: RequestDetail | undefined): numbe
     : false
 }
 
-const JOIN_DESCRIPTION = '가입하면 만들어집니다.'
+const JOIN_DESCRIPTION = '가입 대기'
 
 /**
  * The people a resolved roster names, as picker candidates. A member becomes
@@ -72,7 +72,7 @@ export function rosterCandidates(entries: RosterEntry[]): {
       candidate = { key: `i:${resolution.invitationId}`, label, description: JOIN_DESCRIPTION, awaitsJoin: true }
     } else if (status === 'REGISTERED') {
       // The server names only a member's account, so this one says what submitting does.
-      candidate = { key: `s:${studentNo.toUpperCase()}`, studentNo, label, description: '제출하면 구성원으로 추가됩니다.' }
+      candidate = { key: `s:${studentNo.toUpperCase()}`, studentNo, label, description: '제출하면 구성원으로 추가돼요.' }
     } else if (status === 'NEW') {
       candidate = {
         key: `s:${studentNo.toUpperCase()}`,

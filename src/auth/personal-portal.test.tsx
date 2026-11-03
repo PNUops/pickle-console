@@ -195,7 +195,7 @@ test('an administrator without a workspace can create one and submit a personal 
   await user.click(screen.getByRole('button', { name: '다음' }))
   expect(screen.queryByRole('button', { name: '제출하고 승인' })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '신청 제출' }))
-  await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+  await screen.findByRole('heading', { name: '신청이 접수됐어요' })
   expect(createdRequestBodies).toHaveLength(1)
   expect(createdRequestBodies[0].approval).toBeUndefined()
   expect(createdRequestBodies[0].workspaceId).toBe(workspaceStore[0].detail.id)

@@ -20,7 +20,7 @@ function useDomainApproveForm(request: RequestDetail): DecisionFormApi {
             사용 기한은 도메인이 발급되는 날부터 스스로 센다. */}
         <p className="text-sm text-neutral-600">
           승인하면 <span className="font-mono">{askedFqdn(request)}</span> 이름이 바로 발급되고,
-          신청자가 레코드를 넣을 수 있게 됩니다. 사용 기한은 발급 시점부터 다시 셉니다.
+          신청자가 레코드를 넣을 수 있게 돼요. 사용 기한은 발급 시점부터 다시 계산해요.
         </p>
         <FormField label="검토 의견" error={errors.comment}>
           <Textarea
@@ -38,8 +38,8 @@ function useDomainApproveForm(request: RequestDetail): DecisionFormApi {
       grantedEndDate: null,
       comment: comment.trim() || null,
     }),
-    confirmBody: <p>{askedFqdn(request)} 이름을 발급합니다.</p>,
-    successMessage: '도메인 신청을 승인했습니다.',
+    confirmBody: <p>{askedFqdn(request)} 이름을 발급해요.</p>,
+    successMessage: '도메인 신청을 승인했어요.',
   }
 }
 

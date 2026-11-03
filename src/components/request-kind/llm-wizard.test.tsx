@@ -40,7 +40,7 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
 
     expect(document.body.textContent ?? '').not.toMatch(/한도로 씁니다/)
     // 무엇을 고르는지는 그대로 말한다 — 지운 것은 계량 방식뿐이다.
-    expect(screen.getByText(/학교가 직접 서빙합니다/)).toBeInTheDocument()
+    expect(screen.getByText(/학교에서 제공하며 사용 금액이 들지 않아요/)).toBeInTheDocument()
   })
 
   /**
@@ -93,7 +93,7 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
     expect(screen.getByText('한도 확정 안내')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
 
     expect(createdRequestBodies.at(-1)).toEqual({
       type: 'LLM_API_KEY',
@@ -133,7 +133,7 @@ describe('LLM API 키 신청 위저드 — 축을 골라야 한다', () => {
 
     expect(await screen.findByText('1M (1백만 토큰)')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
 
     expect(createdRequestBodies.at(-1)).toMatchObject({
       type: 'LLM_API_KEY',
@@ -175,7 +175,7 @@ describe('LLM API 키 신청 위저드 — 쓸 모델', () => {
     expect(screen.getByText('Pickle LLM, 유료 모델')).toBeInTheDocument()
     expect(screen.getByText('$20')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
 
     expect(createdRequestBodies.at(-1)!.llmKey).toMatchObject({
       useCampusModels: true,
@@ -193,7 +193,7 @@ describe('LLM API 키 신청 위저드 — 필요한 기능', () => {
 
     expect(screen.getByRole('checkbox', { name: /^Chat/ })).toBeChecked()
     expect(screen.queryByRole('checkbox', { name: /웹 검색/ })).not.toBeInTheDocument()
-    expect(screen.getByText(/은 유료 모델을 선택하면 고를 수 있습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/은 유료 모델을 선택하면 고를 수 있어요/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('checkbox', { name: /유료 모델/ }))
     for (const name of [/웹 검색/, /PDF OCR/, /이미지 생성/, /임베딩/]) {
@@ -224,7 +224,7 @@ describe('LLM API 키 신청 위저드 — 필요한 기능', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByText('Chat')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
     expect(createdRequestBodies.at(-1)!.llmKey).toMatchObject({
       reqPassthroughEndpoints: ['chat'],
     })
@@ -243,7 +243,7 @@ describe('LLM API 키 신청 위저드 — 필요한 기능', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByText('Chat, PDF OCR, 임베딩')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
     expect(createdRequestBodies.at(-1)!.llmKey).toMatchObject({
       reqPassthroughEndpoints: ['chat', 'pdf_ocr', 'embeddings'],
     })
@@ -292,7 +292,7 @@ describe('LLM API 키 신청 위저드 — 한도 검증', () => {
     // 0은 "비움"이 아니다 — 비우려면 비워야 한다.
     await user.type(screen.getByLabelText('희망 일일 토큰 수'), '0')
     await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText('일일 토큰 수는 1 이상이어야 합니다.')).toBeInTheDocument()
+    expect(screen.getByText('일일 토큰 수는 1 이상이어야 해요.')).toBeInTheDocument()
     // 막힌 단계에서는 다음 단계의 입력이 나오지 않는다.
     expect(screen.queryByLabelText('사용 목적')).not.toBeInTheDocument()
 
@@ -329,7 +329,7 @@ describe('LLM API 키 신청 위저드 — 초안', () => {
     await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '다음' }))
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
 
     const body = createdRequestBodies.at(-1)!
     expect(body).not.toHaveProperty('vm')

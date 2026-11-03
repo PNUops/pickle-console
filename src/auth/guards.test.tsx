@@ -84,6 +84,6 @@ describe('계정 전환 시 캐시 격리', () => {
     expect(
       screen.queryByRole('link', { name: '캡스톤 프로젝트 백엔드 서버 운영' }),
     ).not.toBeInTheDocument()
-    expect(await screen.findByText('표시할 신청이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('표시할 신청이 없어요.')).toBeInTheDocument()
   })
 })

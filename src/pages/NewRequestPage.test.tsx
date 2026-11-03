@@ -201,7 +201,7 @@ describe('VM 신청 위저드 — 사양', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
     await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
 
     const body = createdRequestBodies.at(-1)!
     expect(body.vm!.flavorId).toBeNull()
@@ -230,7 +230,7 @@ describe('VM 신청 위저드 — 사양', () => {
     expect(screen.getByText('1 vCPU, 1.5 GiB 메모리, 32 GiB 디스크')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
     expect(createdRequestBodies.at(-1)!.vm!.reqMemoryMb).toBe(1536)
   })
 
@@ -258,7 +258,7 @@ describe('VM 신청 위저드 — 사양', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
     await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
 
     const body = createdRequestBodies.at(-1)!
     expect(body.vm!.specReason).toBe(
@@ -328,7 +328,7 @@ describe('VM 신청 위저드 — 사용 기간', () => {
     const field = screen.getByLabelText('사용 종료일')
     fireEvent.change(field, { target: { value: '2020-01-01' } })
     await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getByText('종료일은 오늘 이후여야 합니다.')).toBeInTheDocument()
+    expect(screen.getByText('종료일은 오늘 이후여야 해요.')).toBeInTheDocument()
   })
 
   // 무기한은 값이 없는 상태가 아니라 고른 값이다. 빠뜨린 종료일과 겹치면 실수로 낸
@@ -349,7 +349,7 @@ describe('VM 신청 위저드 — 사용 기간', () => {
     expect(screen.getByText('무기한')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
     const body = createdRequestBodies.at(-1)!
     expect(body.reqIndefinite).toBe(true)
     expect(body.reqEndDate).toBeNull()
@@ -397,7 +397,7 @@ describe('VM 신청 위저드 — 서버가 되돌려준 오류', () => {
       expect(slug).toHaveFocus()
     })
     expect(screen.getByText('이미 사용 중인 이름입니다.')).toBeInTheDocument()
-    expect(screen.getByText(/되돌아왔습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/되돌아왔어요/)).toBeInTheDocument()
     // 원시 경로가 그대로 새지 않는다.
     expect(screen.queryByText(/vm\.desiredSlug/)).not.toBeInTheDocument()
   })
@@ -443,7 +443,7 @@ describe('VM 신청 위저드 — 호스트 이름 즉시 검사', () => {
     renderWizard()
     await user.type(await screen.findByLabelText('호스트 이름'), 'Capstone_API')
 
-    expect(screen.getByText(/한글과 공백, 대문자는 쓸 수 없습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/한글과 공백, 대문자는 쓸 수 없어요/)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '신청 내용' })).not.toBeInTheDocument()
   })
 
@@ -452,7 +452,7 @@ describe('VM 신청 위저드 — 호스트 이름 즉시 검사', () => {
     renderWizard()
     await user.type(await screen.findByLabelText('호스트 이름'), 'admin')
 
-    expect(await screen.findByText(/예약된 이름이라 쓸 수 없습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/예약된 이름이라 쓸 수 없어요/)).toBeInTheDocument()
   })
 
   test('규칙은 입력하기 전부터 보인다', async () => {
@@ -466,11 +466,11 @@ describe('VM 신청 위저드 — 호스트 이름 즉시 검사', () => {
     renderWizard()
     const slug = await screen.findByLabelText('호스트 이름')
     await user.type(slug, 'AB')
-    expect(screen.getByText(/한글과 공백, 대문자는 쓸 수 없습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/한글과 공백, 대문자는 쓸 수 없어요/)).toBeInTheDocument()
 
     await user.clear(slug)
     await user.type(slug, 'capstone-api')
-    expect(screen.queryByText(/한글과 공백, 대문자는 쓸 수 없습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/한글과 공백, 대문자는 쓸 수 없어요/)).not.toBeInTheDocument()
   })
 })
 
@@ -539,7 +539,7 @@ describe('VM 신청 위저드 — 제출', () => {
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
 
     expect(
-      await screen.findByRole('heading', { name: '신청이 접수되었습니다' }),
+      await screen.findByRole('heading', { name: '신청이 접수됐어요' }),
     ).toBeInTheDocument()
 
     expect(createdRequestBodies).toHaveLength(1)
@@ -572,7 +572,7 @@ describe('VM 신청 위저드 — 제출', () => {
     await fillRequestStep(user)
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
 
-    await screen.findByRole('heading', { name: '신청이 접수되었습니다' })
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
     // 라우터가 메모리에 있어 window.location은 움직이지 않는다. 그것을 읽는 단언은
     // 빈 문자열을 검사하느라 무엇이 남아 있든 통과한다.
     //
@@ -599,6 +599,6 @@ describe('신청 위저드 — 사양 안내 문구', () => {
     await user.click(screen.getByRole('radio', { name: /컴퓨팅 최적화/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    expect(screen.getByText(/예약된 이름이라 쓸 수 없습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/예약된 이름이라 쓸 수 없어요/)).toBeInTheDocument()
   })
 })
