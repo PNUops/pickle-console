@@ -644,7 +644,7 @@ describe('VM 상세 — 웹 터미널 열기', () => {
       renderVm(uuid(56))
 
       await userEvent.click(await screen.findByRole('button', { name: '웹 터미널 열기' }))
-      expect(await screen.findByText(/팝업 차단을 해제/)).toBeInTheDocument()
+      expect(await screen.findByText(/이 사이트의 팝업을 허용/)).toBeInTheDocument()
     } finally {
       open.mockRestore()
       closeTerminalWindows()

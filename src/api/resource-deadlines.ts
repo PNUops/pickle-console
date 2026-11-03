@@ -11,7 +11,7 @@ export type AdminDeadlineQuery = NonNullable<operations['listAdminResourceDeadli
 export function fetchAdminResourceDeadlines(params: AdminDeadlineQuery): Promise<AdminDeadlinePage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/resource-deadlines', { params: { query: params } })
-    if (!data) throw toApiError(error, '자원 기한을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '자원 기한을 불러오지 못했어요.')
     return data
   })
 }

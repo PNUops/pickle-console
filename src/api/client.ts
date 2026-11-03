@@ -133,7 +133,7 @@ async function fetchWithAuth(input: Request): Promise<Response> {
   const authorityGeneration = getAuthorityGeneration()
   const response = await sendWithRefresh(input)
   if (new URL(input.url).pathname.startsWith('/api/v1/admin/') && authorityGeneration !== getAuthorityGeneration()) {
-    throw new ApiError(null, '관리 업무가 변경되었습니다. 현재 권한으로 다시 조회해 주세요.')
+    throw new ApiError(null, '관리 업무가 바뀌었어요. 다시 조회해 주세요.')
   }
   if (!input.signal.aborted && generation === getSessionGeneration()) {
     signalMaintenance(response, generation, input.signal)

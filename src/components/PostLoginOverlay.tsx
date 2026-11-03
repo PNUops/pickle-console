@@ -58,7 +58,7 @@ export function PostLoginOverlay() {
     >
       <Logo tone="inverse" className="pointer-events-none" />
       <p className="max-w-full break-words text-lg font-semibold text-white">
-        환영합니다{user ? `, ${user.name}님` : ''}
+        {user ? `${user.name}님, 환영해요` : '환영해요'}
       </p>
     </div>
   )

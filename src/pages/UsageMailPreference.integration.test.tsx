@@ -66,7 +66,7 @@ test('missing preference does not become an unchecked known setting', async () =
   listFixture()
   server.use(http.get('*/api/v1/me/notification-preferences', () => HttpResponse.json({ usageMailEnabled: null })))
   normalPage()
-  await screen.findByText('메일 설정 응답을 확인하지 못했습니다.')
+  await screen.findByText('메일 설정 응답을 확인하지 못했어요.')
   expect(screen.queryByRole('checkbox', { name: '사용량 알림 메일 받기' })).not.toBeInTheDocument()
   expect(screen.getByText('키 사용량 알림')).toBeInTheDocument()
 })

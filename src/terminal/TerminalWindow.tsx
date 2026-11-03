@@ -125,8 +125,8 @@ export function TerminalWindow({ vmId }: { vmId: string }) {
   if (opener.shutdown) {
     return (
       <WindowNotice
-        title="세션이 종료되었습니다"
-        body="콘솔에서 로그아웃되어 터미널 연결이 끊어졌습니다. 다시 로그인한 뒤 콘솔에서 열어 주세요."
+        title="세션이 종료됐어요"
+        body="다시 로그인한 뒤 콘솔에서 터미널을 열어 주세요."
       />
     )
   }
@@ -134,8 +134,8 @@ export function TerminalWindow({ vmId }: { vmId: string }) {
   if (!opener.attached) {
     return (
       <WindowNotice
-        title="콘솔에서 열어 주세요"
-        body="이 터미널 창은 콘솔의 '웹 터미널 열기'로 열어야 합니다. 주소를 직접 입력했거나 콘솔 탭이 닫혀 접속 티켓을 받을 수 없습니다."
+        title="터미널을 연결할 수 없어요"
+        body="콘솔에서 웹 터미널을 다시 열어 주세요."
       />
     )
   }

@@ -37,7 +37,7 @@ export interface TerminalWindowTarget {
 const windows = new Map<string, OpenWindow>()
 let installed = false
 
-const MINT_FALLBACK_MESSAGE = '터미널 접속 티켓을 발급하지 못했습니다.'
+const MINT_FALLBACK_MESSAGE = '터미널 연결을 준비하지 못했어요.'
 
 /** 팝업 크기 — 부모 창 기준으로 가운데 정렬한다. */
 const WIDTH = 1024
