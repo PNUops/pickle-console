@@ -71,7 +71,7 @@ test('shared workspace URL restores all conditions and filtering resets page and
   expect(screen.getByLabelText('워크스페이스 정렬')).toHaveValue('members-desc')
   expect(await screen.findByRole('button', { name: '수업05' })).toBeInTheDocument()
   await user.type(screen.getByLabelText('워크스페이스 이름 검색'), '없는값')
-  await screen.findByText('조회 조건에 맞는 워크스페이스가 없습니다.')
+  await screen.findByText('조건에 맞는 워크스페이스가 없어요.')
   expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.has('page')).toBe(false)
   expect(new URL(currentPath(), 'https://pickle.invalid').searchParams.has('workspaceId')).toBe(false)
 })
@@ -81,7 +81,7 @@ test('workspace selection outside its scoped source and malformed IDs do not fet
   let reads = 0
   server.use(http.get('*/api/v1/admin/workspaces/:workspaceId', () => { reads += 1; return HttpResponse.json({}) }))
   const view = renderApp(`/admin/workspaces?org=${uuid(1)}&workspaceId=${uuid(21)}`)
-  await screen.findByText('현재 관리 범위의 목록에 이 워크스페이스가 없습니다.')
+  await screen.findByText('현재 관리 범위의 목록에 이 워크스페이스가 없어요.')
   expect(reads).toBe(0)
   view.unmount()
   renderApp('/admin/workspaces?workspaceId=invalid')
@@ -103,7 +103,7 @@ test.each([
     expect(within(drawer).queryByText('조회 전용')).not.toBeInTheDocument()
     expect(within(drawer).getByRole('button', { name: '정보 수정' })).toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: '워크스페이스 삭제' })).not.toBeInTheDocument()
-    expect(within(drawer).getByText('남은 리소스를 먼저 정리해야 워크스페이스를 삭제할 수 있습니다.')).toBeInTheDocument()
+    expect(within(drawer).getByText('남은 리소스를 먼저 정리해야 워크스페이스를 삭제할 수 있어요.')).toBeInTheDocument()
   } else {
     expect(within(drawer).queryByRole('button', { name: /수정|저장|삭제|구성원 추가/ })).not.toBeInTheDocument()
   }

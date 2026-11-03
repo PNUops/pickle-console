@@ -96,7 +96,7 @@ export function AdminDriftPage() {
       {findings.isError && <Alert variant="danger">{findings.error.message}</Alert>}
       {findings.isSuccess && findings.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          {status === 'OPEN' ? '미해결 드리프트가 없습니다.' : '해결된 드리프트가 없습니다.'}
+          {status === 'OPEN' ? '미해결 드리프트가 없어요.' : '해결된 드리프트가 없어요.'}
         </Card>
       )}
       {findings.isSuccess && findings.data.content.length > 0 && (
@@ -152,7 +152,7 @@ export function AdminDriftPage() {
                             size="sm"
                             onClick={() => setResolveTarget(finding)}
                           >
-                            해결 처리
+                            해결로 표시
                           </Button>
                         )}
                       </TD>
@@ -201,24 +201,24 @@ function ResolveModal({
     mutationFn: () => resolveDriftFinding(finding.id, note.trim() || undefined),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'drift-findings'] })
-      onDone('드리프트를 해결 처리했습니다.')
+      onDone('드리프트를 해결한 것으로 표시했어요.')
     },
     onError: (err) =>
-      setError(toApiError(err, '드리프트를 해결 처리하지 못했습니다.').message),
+      setError(toApiError(err, '드리프트를 해결한 것으로 표시하지 못했어요.').message),
   })
 
   return (
     <Modal
       open
       onClose={onClose}
-      title="드리프트 해결 처리"
+      title="드리프트 해결 표시"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
             취소
           </Button>
           <Button loading={resolve.isPending} onClick={() => resolve.mutate()}>
-            해결 처리
+            해결로 표시
           </Button>
         </>
       }
@@ -232,7 +232,7 @@ function ResolveModal({
             rows={3}
             value={note}
             onChange={(event) => setNote(event.target.value)}
-            placeholder="예: 잔여 게스트를 수동 정리했습니다."
+            placeholder="예: 잔여 게스트를 수동으로 정리했어요."
           />
         </label>
       </div>

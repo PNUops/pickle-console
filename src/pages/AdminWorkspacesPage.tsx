@@ -125,7 +125,7 @@ function AdminWorkspacesPageContent() {
       {workspaces.isError && <Alert variant="danger">{workspaces.error.message}</Alert>}
       {workspaces.isSuccess && filtered.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          {workspaces.data.length === 0 ? '표시할 워크스페이스가 없습니다.' : '조회 조건에 맞는 워크스페이스가 없습니다.'}
+          {workspaces.data.length === 0 ? '표시할 워크스페이스가 없어요.' : '조건에 맞는 워크스페이스가 없어요.'}
         </Card>
       )}
       {workspaces.isSuccess && filtered.length > 0 && (
@@ -187,7 +187,7 @@ function AdminWorkspacesPageContent() {
                 onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} onDeleted={close} />
               : workspaces.isPending ? <Spinner label="관리 범위의 대상 확인 중" />
               : workspaces.isError ? <Alert variant="danger">{workspaces.error.message}</Alert>
-                : !selectedInScope ? <Alert variant="danger">현재 관리 범위의 목록에 이 워크스페이스가 없습니다.</Alert>
+                : !selectedInScope ? <Alert variant="danger">현재 관리 범위의 목록에 이 워크스페이스가 없어요.</Alert>
                   : <WorkspaceDetailBody key={selectedId} workspaceId={selectedId} tab={state.tab}
                     onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} onDeleted={close} />
         )}
@@ -259,8 +259,8 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
       </TabPanel>
 
       <TabPanel id="members" idPrefix="workspace-detail-" active={tab === 'members'} className="space-y-2">
-        {workspace.members == null ? <p className="text-sm text-neutral-500">구성원 관계는 현재 업무로 제공되지 않습니다.</p> : workspace.members.length === 0 ? (
-          <p className="text-sm text-neutral-500">구성원이 없습니다.</p>
+        {workspace.members == null ? <p className="text-sm text-neutral-500">구성원 정보를 조회할 권한이 없어요.</p> : workspace.members.length === 0 ? (
+          <p className="text-sm text-neutral-500">구성원이 없어요.</p>
         ) : (
           <Table className="min-w-[38rem] sm:min-w-0">
             <THead>
@@ -302,7 +302,7 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
         <WorkspaceResources workspaceId={workspaceId} />
       </TabPanel>
       <TabPanel id="invitations" idPrefix="workspace-detail-" active={tab === 'invitations'}>
-        {canReadInvitations ? <AdminWorkspacePendingInvitations key={`${workspace.id}:${workspace.canInviteMembers}`} workspace={workspace} /> : <Alert>이 역할에서는 대기 초대 정보를 조회할 수 없습니다.</Alert>}
+        {canReadInvitations ? <AdminWorkspacePendingInvitations key={`${workspace.id}:${workspace.canInviteMembers}`} workspace={workspace} /> : <Alert>대기 초대 정보를 조회할 권한이 없어요.</Alert>}
       </TabPanel>
     </div>
   )
@@ -336,7 +336,7 @@ function WorkspaceResources({ workspaceId }: { workspaceId: string }) {
     <p className="text-neutral-500">목록 기준</p>
     <ul className="space-y-2">{kinds.map((kind, index) => <li key={kind.type} className="flex flex-wrap items-center gap-2">
       {kind.to && readable[index] ? <Link to={kind.to} className="text-primary-700 hover:underline">{kind.label} 목록</Link> : <span>{kind.label}</span>}
-      {!readable[index] ? <span>제공되지 않음</span> : counts[index].isPending ? <Spinner label={`${kind.label} 수 확인 중`} /> : counts[index].isError ? <span className="text-danger-700">개수를 확인하지 못했습니다.</span> : <span>조회 범위 {counts[index].data}개</span>}
+      {!readable[index] ? <span>제공되지 않음</span> : counts[index].isPending ? <Spinner label={`${kind.label} 수 확인 중`} /> : counts[index].isError ? <span className="text-danger-700">개수를 확인하지 못했어요.</span> : <span>조회 범위 {counts[index].data}개</span>}
     </li>)}</ul>
     {canQueryWork(user, REQUEST_READ_WORK, { orgId: activeOrgId, workspaceId }, SYS_READERS) && <Link to={adminPaths.requests(activeOrgId, workspaceId)} className="inline-flex text-primary-700 hover:underline">이 워크스페이스의 신청 보기</Link>}
   </div>

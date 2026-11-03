@@ -38,7 +38,7 @@ describe('관리자 웹 터미널 세션', () => {
     const dialog = await screen.findByRole('dialog', { name: '웹 터미널 세션 강제 종료' })
     await user.click(within(dialog).getByRole('button', { name: '강제 종료' }))
 
-    expect(await screen.findByText('세션 강제 종료를 지시했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('세션 강제 종료를 요청했어요.')).toBeInTheDocument()
     // 목록 갱신 후 해당 세션이 사라진다.
     await screen.findByText('ai-train')
     expect(screen.queryByText('algo-judge')).not.toBeInTheDocument()
@@ -56,7 +56,7 @@ describe('관리자 웹 터미널 세션', () => {
     renderAsSysAdmin()
 
     expect(
-      await screen.findByText('진행 중인 웹 터미널 세션이 없습니다.'),
+      await screen.findByText('진행 중인 웹 터미널 세션이 없어요.'),
     ).toBeInTheDocument()
   })
 })

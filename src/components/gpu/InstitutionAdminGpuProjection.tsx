@@ -31,7 +31,6 @@ export function InstitutionAdminGpuInfo({ allocation }: { allocation: GpuAllocat
   const period = permissions.forRow(allocation, 'gpu.period', ['SYS_MANAGER', 'SYS_ADMIN'])
   const metadata = allocation.metadataVisible === true
   return <Card><CardHeader><CardTitle>GPU 정보</CardTitle></CardHeader><CardContent>
-    {!metadata && <p className="mb-4 text-sm text-neutral-500">허용된 작업에 필요한 참조만 표시합니다. GPU와 대기열의 세부 정보는 조회 권한이 필요합니다.</p>}
     <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Field label="워크스페이스">{allocation.workspaceName ?? '워크스페이스 정보 없음'}</Field>
       <Field label="GPU">{metadata ? allocation.gpu?.model ?? '미할당' : HIDDEN}</Field>

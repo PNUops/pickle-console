@@ -63,8 +63,8 @@ export function AdminWorkspaceOverviewControls({ workspace: source, onDeleted }:
       {canUseRowWork(user, { ...workspace, workspaceId: workspace.id }, 'workspace.terminate', SYS_ADMIN) && <WorkspaceTerminationImpactButton workspaceId={workspace.id} admin />}
       {workspace.canDelete && <Button variant="danger" onClick={() => { setError(null); setDeleting(true) }}>워크스페이스 삭제</Button>}
     </div>
-    {workspace.deleteBlockedReason === 'PERSONAL' && <p className="text-sm text-foreground-muted">개인 워크스페이스의 구성원과 유형은 변경할 수 없으며 계정 탈퇴 시 함께 정리됩니다.</p>}
-    {workspace.deleteBlockedReason === 'REMAINING_RESOURCES' && <p className="text-sm text-foreground-muted">남은 리소스를 먼저 정리해야 워크스페이스를 삭제할 수 있습니다.</p>}
+    {workspace.deleteBlockedReason === 'PERSONAL' && <p className="text-sm text-foreground-muted">개인 워크스페이스의 구성원과 유형은 바꿀 수 없어요. 회원 탈퇴를 하면 함께 정리돼요.</p>}
+    {workspace.deleteBlockedReason === 'REMAINING_RESOURCES' && <p className="text-sm text-foreground-muted">남은 리소스를 먼저 정리해야 워크스페이스를 삭제할 수 있어요.</p>}
     {editing && workspace.canUpdateInfo && <EditWorkspaceModal workspace={workspace} onClose={() => setEditing(false)} saveInfo={async (body) => { const result = await updateAdminWorkspace(workspace.id, body); refresh(); return result }} />}
     {deleting && workspace.canDelete && <WorkspaceTerminationDialog workspaceId={workspace.id} admin expectedName={workspace.name} onClose={() => setDeleting(false)} onConfirm={(fingerprint) => remove.mutateAsync(fingerprint)} />}
 
@@ -94,15 +94,15 @@ export function AdminWorkspaceMemberActions({ workspace: source, member }: { wor
     refresh()
     if (!active.current) return
     setError(null)
-    setReceipt(`${member.userId} · ${WORKSPACE_ROLE_LABELS[result.role]} 역할로 변경했습니다.`)
-  }, onError: (err) => { if (active.current) setError(toApiError(err, '구성원 역할을 변경하지 못했습니다.').message) } })
+    setReceipt(`${WORKSPACE_ROLE_LABELS[result.role]} 역할로 변경했어요.`)
+  }, onError: (err) => { if (active.current) setError(toApiError(err, '구성원 역할을 변경하지 못했어요.').message) } })
   const remove = useMutation({ mutationFn: () => removeAdminWorkspaceMember(workspace.id, member.userId), onSuccess: () => {
     refresh()
     if (!active.current) return
     setRemoveConfirm(false)
     setError(null)
-    setReceipt(`${member.userId} 구성원을 제거했습니다.`)
-  }, onError: (err) => { if (active.current) { setRemoveConfirm(false); setError(toApiError(err, '구성원을 제거하지 못했습니다.').message) } } })
+    setReceipt(`구성원을 제거했어요.`)
+  }, onError: (err) => { if (active.current) { setRemoveConfirm(false); setError(toApiError(err, '구성원을 제거하지 못했어요.').message) } } })
   return <div className="space-y-2">
     {error && <Alert variant="danger">{error}</Alert>}
     {receipt && <p role="status" className="break-all text-xs">이번 변경: {receipt}</p>}

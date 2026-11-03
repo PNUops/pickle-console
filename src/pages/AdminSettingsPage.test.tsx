@@ -63,12 +63,12 @@ describe('플랫폼 설정', () => {
     // 끄는 방향은 위험 확인을 요구한다.
     const confirm = await screen.findByRole('dialog', { name: 'SSH 게이트웨이 비활성화' })
     expect(
-      within(confirm).getByText('모든 사용자 SSH 접속이 차단됩니다. 계속할까요?'),
+      within(confirm).getByText('새 SSH 접속이 차단돼요. 계속할까요?'),
     ).toBeInTheDocument()
     await user.click(within(confirm).getByRole('button', { name: '비활성화' }))
 
     expect(
-      await screen.findByText("'ssh_gateway_enabled' 설정이 저장되었습니다."),
+      await screen.findByText("'ssh_gateway_enabled' 설정이 저장됐어요."),
     ).toBeInTheDocument()
     const updatedRow = screen.getByText('ssh_gateway_enabled').closest('tr')!
     expect(within(updatedRow).getByText('비활성')).toBeInTheDocument()

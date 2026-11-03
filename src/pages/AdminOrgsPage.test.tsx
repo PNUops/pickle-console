@@ -52,7 +52,7 @@ describe('기관 비활성화·숨김 토글', () => {
     const dialog = await screen.findByRole('dialog', { name: '기관 수정' })
     // 의미론 안내가 함께 보인다
     expect(
-      within(dialog).getByText(/신규 VM 신청 대상에서만 제외/),
+      within(dialog).getByText(/비활성화하면 새 신청 대상에서 제외/),
     ).toBeInTheDocument()
     await user.selectOptions(within(dialog).getByLabelText('기관 상태'), 'DISABLED')
     await user.click(within(dialog).getByLabelText('일반 사용자에게 숨김'))

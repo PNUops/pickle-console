@@ -74,7 +74,7 @@ test('a late administrator mutation cannot affect the next allocation controls',
   response.resolve()
   await waitFor(() => expect(client.isMutating()).toBe(0))
   expect(screen.getByRole('dialog', { name: 'GPU 회수' })).toBeInTheDocument()
-  expect(screen.queryByText('대기 우선순위 변경 요청을 접수했습니다.')).not.toBeInTheDocument()
+  expect(screen.queryByText('대기 우선순위 변경 요청을 접수했어요.')).not.toBeInTheDocument()
 })
 
 test('switching workspace leaves the unscoped detail and removes the previous allocation', async () => {
@@ -95,7 +95,7 @@ test('administrator scope changes hide a detail from another organization', asyn
   renderRoute(`/admin/gpus/${uuid(901)}`, true)
   await screen.findByRole('heading', { name: '학습 GPU' })
   await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
-  expect(await screen.findByText('선택한 기관의 GPU 할당이 아닙니다.')).toBeInTheDocument()
+  expect(await screen.findByText('선택한 기관의 GPU 할당이 아니에요.')).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '학습 GPU' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '회수' })).not.toBeInTheDocument()
 })

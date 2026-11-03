@@ -172,8 +172,7 @@ export function AdminLayout() {
     ? scope.error
       ? (
           <EmptyState
-            title="관리 범위를 불러오지 못했습니다"
-            description="기관 목록을 다시 불러온 뒤 선택한 관리 범위를 확인합니다."
+            title="관리 범위를 불러오지 못했어요"
             action={<Button onClick={scope.retry}>관리 범위 다시 시도</Button>}
           />
         )
@@ -181,8 +180,7 @@ export function AdminLayout() {
       ? <LoadingBlock label="관리 범위 확인 중" />
       : (
           <EmptyState
-            title={scope.options.length === 0 ? '관리할 기관이 없습니다' : '관리 기관을 선택하세요'}
-            description="왼쪽 관리 범위에서 기관을 선택하면 해당 기관의 운영 화면을 엽니다."
+            title={scope.options.length === 0 ? '관리할 기관이 없어요' : '관리 기관을 골라 주세요'}
           />
         )
     : undefined
