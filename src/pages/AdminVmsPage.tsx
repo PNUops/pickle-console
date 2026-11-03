@@ -147,8 +147,7 @@ function AdminVmsPageContent() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">VM 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          {activeOrg?.name ?? '플랫폼 전체'} 가상머신을 조회하고 삭제 예약과 취소 등
-          관리 작업을 수행합니다.
+          {activeOrg?.name ?? '플랫폼 전체'}
         </p>
       </div>
 
@@ -231,7 +230,7 @@ function AdminVmsPageContent() {
       {vms.isError && <Alert variant="danger">{vms.error.message}</Alert>}
       {vms.isSuccess && vms.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          표시할 VM이 없습니다.
+          표시할 VM이 없어요.
         </Card>
       )}
       {vms.isSuccess && vms.data.content.length > 0 && (
