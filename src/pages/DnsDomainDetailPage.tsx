@@ -186,11 +186,11 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
     <>
       {released && (
         <Alert variant="warning">
-          해제한 이름입니다.{' '}
+          해제한 이름이에요.{' '}
           {domain.reservedUntil
             ? `${formatDateTime(domain.reservedUntil)}까지 `
             : '예약이 끝나기 전까지 '}
-          되살릴 수 있고, 그 뒤에는 다른 사용자가 쓸 수 있습니다. 레코드는 함께 돌아오지 않습니다.
+          되살릴 수 있고, 그 뒤에는 다른 사용자가 쓸 수 있어요. 레코드는 함께 돌아오지 않아요.
         </Alert>
       )}
 
@@ -208,8 +208,8 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
           <h2 className="text-base font-semibold text-neutral-900">사용 기한</h2>
           {/* Keep the renewal deadline and the consequence of letting it expire. */}
           <p className="text-sm text-neutral-600">
-            {formatDateTime(domain.renewDueAt)}까지입니다. 연장하지 않으면 레코드가 삭제되고
-            이름은 예약 상태로 바뀝니다.
+            {formatDateTime(domain.renewDueAt)}까지예요. 연장하지 않으면 레코드가 삭제되고
+            이름은 예약 상태로 바뀌어요.
           </p>
           {renew.isError && <Alert variant="danger">{renew.error.message}</Alert>}
           {canEdit && (
@@ -226,8 +226,8 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
         <Card className="space-y-3 border-danger-200 p-6">
           <h2 className="text-base font-semibold text-neutral-900">도메인 해제</h2>
           <p className="text-sm text-neutral-600">
-            레코드를 지우고 이름을 해제합니다. 예약 기간 동안은 되살릴 수 있고, 그 기간에도 이
-            이름은 워크스페이스의 도메인 개수에 계속 포함됩니다.
+            레코드를 지우고 이름을 해제해요. 예약 기간 동안은 되살릴 수 있고, 그 기간에도 이
+            이름은 워크스페이스의 도메인 개수에 계속 포함돼요.
           </p>
           <div>
             <Button variant="danger" onClick={() => setReleasing(true)}>
@@ -250,8 +250,7 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
         <Card className="space-y-3 p-6">
           <h2 className="text-base font-semibold text-neutral-900">도메인 되살리기</h2>
           <p className="text-sm text-neutral-600">
-            이름을 다시 씁니다. 사용 기한은 되살린 날부터 새로 시작하고, 레코드는 돌아오지 않으니
-            다시 넣어야 합니다.
+            사용 기한은 되살린 날부터 새로 시작해요. 레코드는 돌아오지 않으니 다시 넣어 주세요.
           </p>
           {revive.isError && <Alert variant="danger">{revive.error.message}</Alert>}
           <div>
@@ -272,7 +271,7 @@ function DomainOverview({ domain, canEdit }: { domain: DnsDomain; canEdit: boole
           onClose={() => setReleasing(false)}
           loading={release.isPending}
         >
-          <p>이 이름의 레코드가 모두 지워지고 주소가 더 이상 열리지 않습니다.</p>
+          <p>이 이름의 레코드를 모두 삭제해요.</p>
           {release.isError && <Alert variant="danger">{release.error.message}</Alert>}
         </ConfirmNameModal>
       )}
@@ -349,7 +348,7 @@ function RecordSetEditor({
   if (released) {
     return (
       <Alert variant="info">
-        해제한 이름에는 레코드를 넣을 수 없습니다. 같은 이름으로 다시 만들면 편집할 수 있습니다.
+        해제한 이름에는 레코드를 넣을 수 없어요. 이름을 되살린 뒤 다시 넣어 주세요.
       </Alert>
     )
   }
@@ -371,7 +370,7 @@ function RecordSetEditor({
       <Card className="space-y-4 p-6">
         <h2 className="text-base font-semibold text-neutral-900">레코드</h2>
         {rows.length === 0 ? (
-          <p className="text-sm text-neutral-500">아직 레코드가 없습니다.</p>
+          <p className="text-sm text-neutral-500">아직 레코드가 없어요.</p>
         ) : (
           <dl className="space-y-3">
             {(records.data ?? []).map((set) => (
@@ -398,16 +397,16 @@ function RecordSetEditor({
         {/* Says the save replaces everything before the press. Learning it
             afterwards leaves no way back to a deleted row. */}
         <p className="mt-1 text-sm text-neutral-500">
-          저장하면 이 표가 그대로 반영됩니다. 표에서 지운 줄은 존에서도 지워집니다.
+          저장하면 이 표 전체로 레코드를 교체해요. 표에서 지운 줄도 삭제돼요.
         </p>
       </div>
 
       {save.isError && <Alert variant="danger">{save.error.message}</Alert>}
       {ttlInvalid && <Alert variant="danger">TTL은 숫자로 적어 주세요.</Alert>}
-      {empty && <Alert variant="danger">값이 비어 있는 줄이 있습니다.</Alert>}
+      {empty && <Alert variant="danger">값이 비어 있는 줄이 있어요.</Alert>}
 
       {rows.length === 0 && (
-        <p className="text-sm text-neutral-500">아직 레코드가 없습니다. 줄을 더해 주세요.</p>
+        <p className="text-sm text-neutral-500">아직 레코드가 없어요. 줄을 더해 주세요.</p>
       )}
 
       <div className="space-y-3">
@@ -499,11 +498,11 @@ function RecordStateNote({ set }: { set?: DnsRecordSet }) {
   if (set.status === 'FAILED') {
     return (
       <p className="text-xs text-danger-700">
-        반영하지 못했습니다{set.lastError ? ` — ${set.lastError}` : ''}
+        반영하지 못했어요{set.lastError ? ` — ${set.lastError}` : ''}
       </p>
     )
   }
-  return <p className="text-xs text-neutral-500">반영을 기다리는 중입니다.</p>
+  return <p className="text-xs text-neutral-500">반영을 기다리는 중이에요.</p>
 }
 
 let draftRowSeq = 0

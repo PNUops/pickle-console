@@ -66,22 +66,22 @@ export function foldDomainStatus(axes: DomainAxes): FoldedDomainStatus {
       label: '예약 중',
       tone: 'neutral',
       hint: axes.reservedUntil
-        ? `${KST_MONTH_DAY.format(new Date(axes.reservedUntil))}에 이름이 풀립니다. 그 전에는 다시 연결할 수 있습니다.`
-        : '곧 이름이 풀립니다. 그 전에는 다시 연결할 수 있습니다.',
+        ? `예약 기한은 ${KST_MONTH_DAY.format(new Date(axes.reservedUntil))}까지예요. 그 전에는 다시 연결할 수 있어요.`
+        : '해제된 이름이에요. 예약 기간에는 다시 연결할 수 있어요.',
     }
   }
   // 실패 축은 여정 순서(소유 확인 → DNS 레코드 → 인증서 → 라우트)로 지목한다.
   if (axes.status === 'FAILED') {
-    return failed('소유 확인에 실패했습니다. DNS 레코드를 확인해 주세요.')
+    return failed('소유 확인에 실패했어요. DNS 레코드를 확인해 주세요.')
   }
   if (axes.dnsStatus === 'FAILED') {
-    return failed('DNS 레코드 등록에 실패했습니다.')
+    return failed('DNS 레코드 등록에 실패했어요.')
   }
   if (axes.certificate?.status === 'FAILED') {
-    return failed('인증서 발급에 실패했습니다.')
+    return failed('인증서 발급에 실패했어요.')
   }
   if (axes.route?.status === 'FAILED') {
-    return failed('라우트 적용에 실패했습니다.')
+    return failed('라우트 적용에 실패했어요.')
   }
   // 사용자 조치 대기 — 커스텀 도메인의 DNS 레코드 등록 전.
   if (axes.kind === 'CUSTOM' && axes.status === 'PENDING') {
@@ -89,24 +89,24 @@ export function foldDomainStatus(axes: DomainAxes): FoldedDomainStatus {
       key: 'awaiting-records',
       label: '레코드 대기',
       tone: 'warning',
-      hint: '안내된 DNS 레코드 2개를 추가하면 자동으로 확인됩니다.',
+      hint: '안내된 DNS 레코드 2개를 추가하면 자동으로 확인돼요.',
     }
   }
   if (axes.status === 'VERIFYING') {
-    return connecting('소유 확인을 진행하고 있습니다. 잠시 후 자동으로 갱신됩니다.')
+    return connecting('소유 확인을 진행하고 있어요.')
   }
   // 커스텀 도메인은 소유 확인 뒤 개별 인증서가 발급된다 — 아직 없으면 발급 중.
   if (
     axes.certificate?.status === 'RENEWING' ||
     (axes.kind === 'CUSTOM' && axes.certificate == null)
   ) {
-    return connecting('인증서를 발급하고 있습니다. 보통 몇 분 안에 끝납니다.')
+    return connecting('인증서 발급을 기다리고 있어요.')
   }
   if (axes.dnsStatus === 'PENDING') {
-    return connecting('DNS 레코드를 등록하고 있습니다. 잠시 후 자동으로 갱신됩니다.')
+    return connecting('DNS 레코드 등록을 기다리고 있어요.')
   }
   if (axes.route == null || axes.route.status !== 'APPLIED') {
-    return connecting('공개 설정을 적용하고 있습니다. 잠시 후 자동으로 갱신됩니다.')
+    return connecting('공개 설정 반영을 기다리고 있어요.')
   }
   return { key: 'connected', label: '연결됨', tone: 'success', hint: null }
 }
