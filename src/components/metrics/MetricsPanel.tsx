@@ -128,7 +128,7 @@ export function MetricsPanel<T extends MetricsPayload>({
         )}
         {metrics.isError && data && !isHypervisorUnreadable(metrics.error) && (
           <Alert variant="warning">
-            사용량을 불러오지 못했습니다. <ObservationMoment value={data.fetchedAt} />의 이전 조회 값입니다.
+            사용량을 불러오지 못했어요. <ObservationMoment value={data.fetchedAt} />의 이전 조회 값이에요.
           </Alert>
         )}
 

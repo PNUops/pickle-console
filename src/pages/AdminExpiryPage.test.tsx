@@ -322,7 +322,7 @@ describe('Resource deadline projection', () => {
     const dialog = await screen.findByRole('dialog', { name: '기간 연장 — algo-judge' })
     fireEvent.change(within(dialog).getByLabelText(/새 종료일/), { target: { value: '2099-01-01' } })
     await userEvent.setup().click(within(dialog).getByRole('button', { name: '연장' }))
-    await screen.findByText('새 종료일을 저장했습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.')
+    await screen.findByText('새 종료일을 저장했어요. 중지된 VM은 VM 관리에서 다시 시작해 주세요.')
     expect(vm.endDate).toBe('2099-01-01')
     await act(async () => { await router.navigate(-1) })
     await screen.findByText('총 0개 자원')

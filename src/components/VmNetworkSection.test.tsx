@@ -58,9 +58,9 @@ describe('VM 네트워크 탭 — 캠퍼스 IP', () => {
     await screen.findByRole('heading', { name: 'web-lab' })
     // 개정된 안내: 교내 IP(10.x) 연결 + 기본 차단·신청 포트만 개방 + 공인 IP는 별도.
     expect(
-      await screen.findByText(/승인되면 VM이 캠퍼스 네트워크의 교내 IP\(10\.x\)로 연결됩니다/),
+      await screen.findByText(/승인되면 VM이 캠퍼스 네트워크의 교내 IP\(10\.x\)로 연결돼요/),
     ).toBeInTheDocument()
-    expect(screen.getByText(/신청한 포트만 개방됩니다/)).toBeInTheDocument()
+    expect(screen.getByText(/신청한 포트만 개방돼요/)).toBeInTheDocument()
 
     await user.type(
       await screen.findByLabelText('신청 목적'),

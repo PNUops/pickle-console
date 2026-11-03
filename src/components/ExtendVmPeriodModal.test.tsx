@@ -74,7 +74,7 @@ test('describes the submitted period when the draft changes during a held write'
   await user.click(dialog.getByRole('checkbox', { name: /무기한/ }))
   expect(dialog.queryByLabelText(/새 종료일/)).not.toBeInTheDocument()
   release()
-  await waitFor(() => expect(done).toHaveBeenCalledWith('새 종료일을 저장했습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.'))
+  await waitFor(() => expect(done).toHaveBeenCalledWith('새 종료일을 저장했어요. 중지된 VM은 VM 관리에서 다시 시작해 주세요.'))
   expect(done).toHaveBeenCalledTimes(1)
   expect(body).toEqual({ endDate: localDateStr(30) })
 })

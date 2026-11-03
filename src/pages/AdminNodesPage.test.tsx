@@ -195,7 +195,7 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     renderNodes()
 
     const notice = await screen.findByText(
-      /하이퍼바이저가 응답하지 않습니다/,
+      /하이퍼바이저 사용량을 불러오지 못했어요/,
     )
     expect(notice.closest('[role="alert"]')).toBeNull()
     expect(notice).not.toHaveTextContent('다시 시도하는 중입니다')
@@ -222,9 +222,9 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     )
     renderNodes()
 
-    await screen.findByText(/하이퍼바이저가 응답하지 않습니다/)
+    await screen.findByText(/하이퍼바이저 사용량을 불러오지 못했어요/)
     // 아무 조작 없이 다음 조회 주기에 스스로 되돌아온다.
     expect(await screen.findByRole('heading', { name: 'CPU' })).toBeInTheDocument()
-    expect(screen.queryByText(/하이퍼바이저가 응답하지 않습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/하이퍼바이저 사용량을 불러오지 못했어요/)).not.toBeInTheDocument()
   })
 })

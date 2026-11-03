@@ -55,10 +55,10 @@ export function normalizeNetwork(value: string, ipv4Only = false): { cidr: strin
     throw new Error('IP 또는 CIDR 형식을 확인해 주세요.')
   }
   const family = address.includes(':') ? 6 : 4
-  if (family === 6 && ipv4Only) throw new Error('IPv4 주소만 입력할 수 있습니다.')
+  if (family === 6 && ipv4Only) throw new Error('IPv4 주소만 입력할 수 있어요.')
   const bits = family === 4 ? 32 : 128
   const prefix = rawPrefix === undefined ? bits : Number(rawPrefix)
-  if (prefix > bits) throw new Error(`CIDR 범위는 0–${bits}이어야 합니다.`)
+  if (prefix > bits) throw new Error(`CIDR 범위는 0–${bits}이어야 해요.`)
   const parsed = family === 4 ? parseIPv4(address) : parseIPv6(address)
   const mask = ((1n << BigInt(prefix)) - 1n) << BigInt(bits - prefix)
   if ((parsed.value & mask) !== parsed.value) {
@@ -95,7 +95,7 @@ function parseIPv6(address: string) {
     ...right.map((part) => Number.parseInt(part, 16)),
   ]
   const value = groups.reduce((acc, part) => (acc << 16n) + BigInt(part), 0n)
-  if (value >> 32n === 0xffffn) throw new Error('IPv4 주소를 IPv6 형식으로 바꾸어 입력할 수 없습니다.')
+  if (value >> 32n === 0xffffn) throw new Error('IPv4 주소를 IPv6 형식으로 바꾸어 입력할 수 없어요.')
   let bestStart = -1
   let bestLength = 1
   for (let start = 0; start < groups.length; start += 1) {
@@ -117,7 +117,7 @@ function parseIPv6(address: string) {
 
 export function parseSourcePolicy(draft: SourcePolicyDraft, ipv4Only = false): SourcePolicyValue {
   const lines = draft.cidrsText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-  if (lines.length > MAX_SOURCE_CIDRS) throw new Error(`출발지는 ${MAX_SOURCE_CIDRS}개까지 입력할 수 있습니다.`)
+  if (lines.length > MAX_SOURCE_CIDRS) throw new Error(`출발지는 ${MAX_SOURCE_CIDRS}개까지 입력할 수 있어요.`)
   const allowedCidrs: string[] = []
   for (const [index, line] of lines.entries()) {
     let cidr: string
@@ -126,7 +126,7 @@ export function parseSourcePolicy(draft: SourcePolicyDraft, ipv4Only = false): S
     } catch (error) {
       throw new Error(`${index + 1}번째 주소: ${error instanceof Error ? error.message : '주소를 확인해 주세요.'}`, { cause: error })
     }
-    if (allowedCidrs.includes(cidr)) throw new Error(`${index + 1}번째 주소가 중복됩니다.`)
+    if (allowedCidrs.includes(cidr)) throw new Error(`${index + 1}번째 주소가 중복돼요.`)
     allowedCidrs.push(cidr)
   }
   return { allowedCidrs }
@@ -152,7 +152,7 @@ export function appendCampusPreset(
     if (!allowedCidrs.includes(cidr)) allowedCidrs.push(cidr)
   }
   if (allowedCidrs.length > MAX_SOURCE_CIDRS) {
-    throw new Error(`교내 주소를 추가하면 출발지가 ${MAX_SOURCE_CIDRS}개를 넘습니다.`)
+    throw new Error(`교내 주소를 추가하면 출발지가 ${MAX_SOURCE_CIDRS}개를 넘어요.`)
   }
   return { cidrsText: allowedCidrs.join('\n') }
 }
@@ -164,7 +164,7 @@ export function parseVmRule(draft: VmRuleDraft, ipv4Only = false): VmRuleValue {
   let portEnd: number | null = null
   const ports = draft.ports.trim()
   if (ports) {
-    if (draft.protocol !== 'TCP' && draft.protocol !== 'UDP') throw new Error('TCP와 UDP에만 포트를 지정할 수 있습니다.')
+    if (draft.protocol !== 'TCP' && draft.protocol !== 'UDP') throw new Error('TCP와 UDP에만 포트를 지정할 수 있어요.')
     const match = /^(\d{1,5})(?:\s*-\s*(\d{1,5}))?$/.exec(ports)
     if (!match) throw new Error('포트 번호 또는 범위를 입력해 주세요. (예: 443, 8000-8010)')
     portStart = Number(match[1])

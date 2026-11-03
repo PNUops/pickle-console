@@ -31,7 +31,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     renderPublishTab(uuid(56))
 
     expect(await screen.findByText(
-      'SSH 게이트웨이 주소가 준비되지 않아 로컬 포워딩 명령을 표시할 수 없습니다.',
+      'SSH 게이트웨이 주소를 확인할 수 없어 로컬 포워딩 명령을 표시하지 못해요.',
     )).toBeInTheDocument()
     expect(screen.queryByText(/ssh -L/)).not.toBeInTheDocument()
   })
@@ -72,7 +72,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
     // SSH 로컬 포워딩 안내가 함께 보인다.
     expect(
-      screen.getByText('본인만 접속한다면 SSH 로컬 포워딩으로 충분합니다'),
+      screen.getByText('SSH 로컬 포워딩 (본인 접속용)'),
     ).toBeInTheDocument()
   })
 
@@ -141,7 +141,7 @@ describe('VM 도메인·포트 탭 — 포트포워딩', () => {
     const port = await screen.findByLabelText('대상 포트')
     await user.type(port, '70000')
     await user.click(screen.getByRole('button', { name: '포트포워딩 만들기' }))
-    expect(await screen.findByText('포트는 1–65535 범위여야 합니다.')).toBeInTheDocument()
+    expect(await screen.findByText('포트는 1–65535 범위여야 해요.')).toBeInTheDocument()
   })
 
   test('적용 실패 매핑은 실패 배지를 보이고 완만한 폴링으로 회복을 반영한다', async () => {

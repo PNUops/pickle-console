@@ -227,10 +227,10 @@ export const DELETION_BANNER_TITLES: Record<
   components['schemas']['VmDeletionResponse']['kind'],
   string
 > = {
-  SELF: '삭제가 접수된 VM입니다',
-  ADMIN: '관리자 삭제가 접수된 VM입니다',
+  SELF: 'VM 삭제 접수',
+  ADMIN: '관리자 VM 삭제 접수',
   // 사용자 콘솔에는 강제 여부를 노출하지 않는다 — ADMIN과 동일 문구가 의도된 동작.
-  FORCE: '관리자 삭제가 접수된 VM입니다',
+  FORCE: '관리자 VM 삭제 접수',
 }
 
 export type ProvisioningTaskStatus =

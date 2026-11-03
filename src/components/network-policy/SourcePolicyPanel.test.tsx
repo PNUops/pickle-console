@@ -69,7 +69,7 @@ describe('source policy panel', () => {
       expectedRevision: 0,
       allowedCidrs: ['192.0.2.7/32'],
     }))
-    expect(await screen.findByText('저장된 CIDR 목록만 새 연결을 허용합니다.')).toBeInTheDocument()
+    expect(await screen.findByText('저장된 CIDR 목록만 새 연결을 허용해요.')).toBeInTheDocument()
   })
 
   test('keeps local edits and blocks retry after a revision conflict', async () => {
@@ -91,7 +91,7 @@ describe('source policy panel', () => {
     await user.type(textarea, '203.0.113.0/24')
     await user.click(screen.getByRole('button', { name: '출발지 정책 저장' }))
 
-    expect(await screen.findByText(/입력은 보존했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/입력은 보존했어요/)).toBeInTheDocument()
     expect(textarea).toHaveValue('203.0.113.0/24')
     expect(screen.getByRole('button', { name: '출발지 정책 저장' })).toBeDisabled()
     expect(savePolicy).toHaveBeenCalledTimes(1)
@@ -116,7 +116,7 @@ describe('source policy panel', () => {
     await user.type(textarea, '203.0.113.0/24')
 
     await client.invalidateQueries({ queryKey: ['test', 'source-policy'] })
-    expect(await screen.findByText(/편집 중 다른 변경이 저장되었습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/편집 중 다른 변경이 저장됐어요/)).toBeInTheDocument()
     expect(textarea).toHaveValue('203.0.113.0/24')
     expect(screen.getByRole('button', { name: '출발지 정책 저장' })).toBeDisabled()
     expect(savePolicy).not.toHaveBeenCalled()

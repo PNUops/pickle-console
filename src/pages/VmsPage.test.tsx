@@ -112,7 +112,7 @@ describe('VM 상세', () => {
 
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
     expect(screen.getByText('생성 중')).toBeInTheDocument()
-    expect(screen.getByText(/생성이 끝나면 상태가 자동으로 갱신됩니다/)).toBeInTheDocument()
+    expect(screen.getByText(/생성이 끝나면 상태가 자동으로 갱신돼요/)).toBeInTheDocument()
     expect(screen.getByText('할당 전')).toBeInTheDocument()
   })
 
@@ -122,7 +122,7 @@ describe('VM 상세', () => {
 
     await screen.findByRole('heading', { name: 'capstone-team3-api' })
     expect(await screen.findByText('실행 중')).toBeInTheDocument()
-    expect(screen.queryByText(/생성이 끝나면 상태가 자동으로 갱신됩니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/생성이 끝나면 상태가 자동으로 갱신돼요/)).not.toBeInTheDocument()
     expect(screen.getByText('10.10.0.55')).toBeInTheDocument()
   })
 
