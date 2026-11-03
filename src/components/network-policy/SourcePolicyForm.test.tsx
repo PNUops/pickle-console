@@ -20,7 +20,7 @@ describe('source access policy form', () => {
   test('saves an explicit empty policy with a visible consequence', async () => {
     const user = userEvent.setup()
     const save = mount()
-    expect(screen.getByText('이대로 저장하면 새 연결을 모두 차단합니다.')).toBeInTheDocument()
+    expect(screen.getByText('이대로 저장하면 새 연결을 모두 차단해요.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '출발지 정책 저장' }))
     expect(save).toHaveBeenCalledWith({ allowedCidrs: [] })
   })
@@ -30,7 +30,7 @@ describe('source access policy form', () => {
     const save = mount({ campusPresetCidrs: ['10.0.0.0/8', '192.0.2.7'] })
     await user.type(screen.getByLabelText('허용할 출발지'), '192.0.2.7\n2001:DB8::/32')
     await user.click(screen.getByRole('button', { name: '교내 주소 목록 추가' }))
-    expect(screen.queryByText('이대로 저장하면 새 연결을 모두 차단합니다.')).not.toBeInTheDocument()
+    expect(screen.queryByText('이대로 저장하면 새 연결을 모두 차단해요.')).not.toBeInTheDocument()
     expect(screen.getByLabelText('허용할 출발지')).toHaveValue(
       '192.0.2.7/32\n2001:db8::/32\n10.0.0.0/8',
     )
@@ -69,7 +69,7 @@ describe('source access policy form', () => {
   test('does not offer a campus snapshot when the server has no confirmed preset', () => {
     mount({ campusPresetCidrs: null })
     expect(screen.getByRole('button', { name: '교내 주소 목록 추가' })).toBeDisabled()
-    expect(screen.getByText('확인된 교내 주소 목록이 없어 선택할 수 없습니다.')).toBeInTheDocument()
+    expect(screen.getByText('확인된 교내 주소 목록이 없어 선택할 수 없어요.')).toBeInTheDocument()
   })
 
   test.each(['user', 'admin'] as const)('prevents submission without resource permission on %s surface', (surface) => {

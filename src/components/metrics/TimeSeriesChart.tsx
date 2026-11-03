@@ -291,7 +291,7 @@ export function TimeSeriesChart({
             id={noticeId}
             className="flex h-full items-center justify-center px-2 text-center text-sm text-neutral-500"
           >
-            이 브라우저에서는 차트를 그릴 수 없습니다.
+            이 브라우저에서는 차트를 그릴 수 없어요.
           </p>
         )}
         {hovered && (

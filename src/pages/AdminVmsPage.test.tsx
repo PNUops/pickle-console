@@ -295,7 +295,7 @@ describe('SSH·웹 터미널 차단 토글', () => {
     await user.type(within(dialog).getByPlaceholderText(/감사 기록/), '남용 신고 확인')
     await user.click(within(dialog).getByRole('button', { name: '차단' }))
 
-    expect(await screen.findByText('SSH·웹 터미널 접속을 차단했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('이 VM의 접속 차단을 설정했어요.')).toBeInTheDocument()
     expect(await screen.findByText('SSH·터미널 차단됨')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '차단 해제' })).toBeEnabled()
   })
@@ -322,7 +322,7 @@ describe('VM detail period changes', () => {
     })
     await user.click(within(dialog).getByRole('button', { name: '연장' }))
 
-    expect(await screen.findByText(/새 종료일을 저장했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/새 종료일을 저장했어요/)).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '기간 연장 — algo-judge' })).not.toBeInTheDocument()
   })
 })

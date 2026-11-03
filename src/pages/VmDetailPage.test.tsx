@@ -101,7 +101,7 @@ describe('VM 상세 — 전원 제어', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'VM 강제 종료' })
     expect(
-      within(dialog).getByText(/파일 시스템과 데이터가 손상될 수 있습니다/),
+      within(dialog).getByText(/파일 시스템과 데이터가 손상될 수 있어요/),
     ).toBeInTheDocument()
 
     await user.click(within(dialog).getByRole('button', { name: '강제 종료' }))
@@ -114,7 +114,7 @@ describe('VM 상세 — 전원 제어', () => {
     renderVm(uuid(58))
 
     await screen.findByRole('heading', { name: 'stuck-vm' })
-    expect(screen.getByText('관리자 확인 중입니다')).toBeInTheDocument()
+    expect(screen.getByText('관리자 확인이 필요해요')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '재부팅' })).not.toBeInTheDocument()
@@ -132,7 +132,7 @@ describe('VM 상세 — 진행 패널', () => {
     expect(screen.getByText(/단계 6\/10 · cloud-init 설정 중$/)).toBeInTheDocument()
     // 시도 횟수로 사용자가 할 수 있는 것이 없다 — 재시도 중이라는 사실은 알림이 말한다.
     expect(screen.queryByText(/시도 \d+회/)).not.toBeInTheDocument()
-    expect(screen.getByText('관리자 개입이 필요합니다')).toBeInTheDocument()
+    expect(screen.getByText('관리자 개입이 필요해요')).toBeInTheDocument()
     expect(
       screen.getByText(/Proxmox API 응답 시간 초과 \(qm set 5058\)/),
     ).toBeInTheDocument()
@@ -187,7 +187,7 @@ describe('VM 상세 — 삭제 흐름', () => {
     const dialog = await screen.findByRole('dialog', { name: 'VM 삭제' })
     expect(
       within(dialog).getByText(
-        /플랫폼은 VM 데이터를 백업하지 않습니다\. 데이터 보호와 백업은 사용자 책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다\./,
+        /플랫폼은 VM 데이터를 백업하지 않아요\. 데이터 보호와 백업은 사용자 책임이며, 삭제된 VM의 데이터는 복구할 수 없어요\./,
       ),
     ).toBeInTheDocument()
     expect(
@@ -204,7 +204,7 @@ describe('VM 상세 — 삭제 흐름', () => {
     await user.click(confirm)
 
     // 접수 후: 삭제 예정 배너 + 삭제 중 상태, 사용자에게 취소 버튼은 없다.
-    expect(await screen.findByText('삭제가 접수된 VM입니다')).toBeInTheDocument()
+    expect(await screen.findByText('VM 삭제 접수')).toBeInTheDocument()
     expect(screen.getByText('삭제 중')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /취소/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'VM 삭제' })).not.toBeInTheDocument()
@@ -216,8 +216,8 @@ describe('VM 상세 — 삭제 흐름', () => {
     renderVm(uuid(60))
 
     await screen.findByRole('heading', { name: 'retiring-vm' })
-    expect(screen.getByText('삭제가 접수된 VM입니다')).toBeInTheDocument()
-    expect(screen.getByText(/영구 파기될 예정입니다/)).toBeInTheDocument()
+    expect(screen.getByText('VM 삭제 접수')).toBeInTheDocument()
+    expect(screen.getByText(/영구 파기될 예정이에요/)).toBeInTheDocument()
     expect(
       screen.getByText(/복구가 필요하면 관리자에게 문의하세요/),
     ).toBeInTheDocument()
@@ -246,20 +246,20 @@ describe('VM 상세 — 삭제 흐름', () => {
     renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
-    expect(await screen.findByText('즉시 파기됩니다. 취소할 수 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('파기 요청을 접수했어요. 취소할 수 없어요.')).toBeInTheDocument()
     expect(screen.queryByText(/보안상의 사유로/)).not.toBeInTheDocument()
     // The title withholds it too: the same sentence an administrator deletion
     // gets is the intended behaviour.
-    expect(screen.getByText('관리자 삭제가 접수된 VM입니다')).toBeInTheDocument()
+    expect(screen.getByText('관리자 VM 삭제 접수')).toBeInTheDocument()
   })
 
-  test('ERROR VM은 삭제만 가능하며 접수 즉시 삭제된다', async () => {
+  test('requests cleanup without a grace period for a failed VM', async () => {
     const user = userEvent.setup()
     renderVm(VM_METRICS_UNAVAILABLE_ID, 'settings')
 
     await screen.findByRole('heading', { name: 'broken-vm' })
-    expect(screen.getByText(/생성에 실패한 VM입니다/)).toBeInTheDocument()
-    expect(screen.getByText(/접수 즉시 삭제됩니다/)).toBeInTheDocument()
+    expect(screen.getByText(/생성에 실패한 VM이에요/)).toBeInTheDocument()
+    expect(screen.getByText(/유예 기간 없이 파기를 요청해요/)).toBeInTheDocument()
     // 전원 제어는 어떤 버튼도 노출되지 않는다.
     expect(screen.queryByRole('button', { name: '시작' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
@@ -269,7 +269,7 @@ describe('VM 상세 — 삭제 흐름', () => {
     await user.type(within(dialog).getByRole('textbox'), 'broken-vm')
     await user.click(within(dialog).getByRole('button', { name: '즉시 삭제' }))
 
-    expect(await screen.findByText('기록 조회만 가능합니다.')).toBeInTheDocument()
+    expect(await screen.findByText('기록 조회만 가능해요.')).toBeInTheDocument()
     expect(screen.getByText('삭제됨')).toBeInTheDocument()
   })
 })
@@ -313,7 +313,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText(/비밀번호 열람이 제한되어 있습니다/),
+      await screen.findByText(/비밀번호를 열람하려면 더 높은 VM 접근 등급이 필요해요/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '비밀번호 보기' })).not.toBeInTheDocument()
     // 참여자는 설정을 바꿀 수 없으므로 재생성 버튼도 없다 (settingsEditAllowed=false).
@@ -341,7 +341,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText('비밀번호 SSH 허용과 열람 최소 역할은 설정 탭에서 바꿉니다.'),
+      await screen.findByText('비밀번호 SSH 허용과 열람 최소 역할은 설정 탭에서 바꿔요.'),
     ).toBeInTheDocument()
   })
 
@@ -351,7 +351,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     await screen.findByRole('button', { name: '비밀번호 보기' })
-    expect(screen.queryByText(/설정 탭에서 바꿉니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/설정 탭에서 바꿔요/)).not.toBeInTheDocument()
   })
 
   test('저장된 비밀번호가 없다는 안내는 권한을 말하지 않는다', async () => {
@@ -361,7 +361,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
     renderVm(uuid(56))
 
     await screen.findByRole('heading', { name: 'algo-judge' })
-    expect(await screen.findByText('저장된 비밀번호가 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('저장된 비밀번호가 없어요.')).toBeInTheDocument()
     expect(screen.queryByText(/편집자 이상만/)).not.toBeInTheDocument()
   })
 
@@ -373,7 +373,7 @@ describe('VM 상세 — 비밀번호 (v0.8.0)', () => {
     await user.click(screen.getByRole('button', { name: '비밀번호 재생성' }))
 
     const dialog = await screen.findByRole('dialog', { name: '비밀번호 재생성' })
-    expect(within(dialog).getByText('기존 비밀번호가 즉시 무효화됩니다.')).toBeInTheDocument()
+    expect(within(dialog).getByText('기존 비밀번호가 즉시 무효화돼요.')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '재생성' }))
 
     // 재생성 성공 → 결과 모달에 새 비밀번호가 표시된다.
@@ -503,7 +503,7 @@ describe('VM 상세 — 접속', () => {
     renderVm(uuid(56))
 
     expect(await screen.findByText(
-      'SSH 게이트웨이 주소가 준비되지 않아 접속 명령을 표시할 수 없습니다.',
+      'SSH 게이트웨이 주소를 확인할 수 없어 접속 명령을 표시하지 못해요.',
     )).toBeInTheDocument()
     expect(screen.queryByText(/ssh -i .*@/)).not.toBeInTheDocument()
     expect(screen.queryByText('접속 방법 보기')).not.toBeInTheDocument()
@@ -514,7 +514,7 @@ describe('VM 상세 — 접속', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText('아직 이 가상머신의 SSH 키를 발급받지 않았습니다.'),
+      await screen.findByText('아직 이 가상머신의 SSH 키를 발급받지 않았어요.'),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'SSH 키 발급 및 다운로드' }),
@@ -564,7 +564,7 @@ describe('VM 상세 — 접속', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '키 재발급' }))
     expect(
-      await screen.findByText(/기존 키는 즉시 무효화됩니다/),
+      await screen.findByText(/기존 키는 즉시 무효화돼요/),
     ).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: '재발급하고 내려받기' }))
 
@@ -611,7 +611,7 @@ describe('VM 상세 — 웹 터미널 열기', () => {
 
     await screen.findByRole('heading', { name: 'web-lab' })
     expect(await screen.findByRole('button', { name: '웹 터미널 열기' })).toBeDisabled()
-    expect(screen.getByText('가상머신이 실행 중일 때만 열 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByText('가상머신이 실행 중일 때만 열 수 있어요.')).toBeInTheDocument()
   })
 
   test('버튼을 누르면 팝업 창을 연다 (콘솔 라우트 이동이 아니다)', async () => {
@@ -680,14 +680,14 @@ describe('VM 상세 — VM 설정', () => {
     await user.click(screen.getByRole('checkbox', { name: '비밀번호 SSH 허용' }))
     const dialog = await screen.findByRole('dialog', { name: '비밀번호 SSH 허용' })
     expect(
-      within(dialog).getByText(/누가 접속했는지 개인을 식별할 수 없습니다/),
+      within(dialog).getByText(/누가 접속했는지 개인을 식별할 수 없어요/),
     ).toBeInTheDocument()
     // 비밀번호 경로는 접근 목록을 검사하지 않는다 — 회수해도 막히지 않음을 알린다.
     expect(
-      within(dialog).getByText(/이 경로는 접근 권한 목록을 검사하지 않습니다/),
+      within(dialog).getByText(/이 경로는 접근 권한 목록을 검사하지 않아요/),
     ).toBeInTheDocument()
     expect(
-      within(dialog).getByText(/접근 권한을 회수한 뒤에도 접속할 수 있습니다/),
+      within(dialog).getByText(/접근 권한을 회수한 뒤에도 접속할 수 있어요/),
     ).toBeInTheDocument()
 
     await user.click(within(dialog).getByRole('button', { name: '허용' }))
@@ -719,7 +719,7 @@ describe('VM 상세 — VM 설정', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText('『소유자』만 변경할 수 있습니다.'),
+      await screen.findByText('『소유자』 이상 등급이 변경할 수 있어요.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: '비밀번호 열람 최소 역할' })).toBeDisabled()
   })
@@ -815,7 +815,7 @@ describe('VM 상세 — 모니터링', () => {
     expect(screen.queryByText('표로 보기')).not.toBeInTheDocument()
     // 잰 값이 있는 구간에는 '값이 없다'는 안내를 붙이지 않는다.
     expect(
-      screen.queryByText('이 구간 동안 VM이 실행되지 않아 측정된 값이 없습니다.'),
+      screen.queryByText('이 구간에는 측정된 사용량 값이 없어요.'),
     ).not.toBeInTheDocument()
   })
 
@@ -825,10 +825,10 @@ describe('VM 상세 — 모니터링', () => {
 
     const chart = await screen.findByRole('img', { name: 'CPU' })
     expect(chart).toHaveAccessibleDescription(
-      '이 브라우저에서는 차트를 그릴 수 없습니다.',
+      '이 브라우저에서는 차트를 그릴 수 없어요.',
     )
     expect(
-      within(chart).getByText('이 브라우저에서는 차트를 그릴 수 없습니다.'),
+      within(chart).getByText('이 브라우저에서는 차트를 그릴 수 없어요.'),
     ).toBeInTheDocument()
   })
 
@@ -860,7 +860,7 @@ describe('VM 상세 — 모니터링', () => {
     renderVm(uuid(56), 'monitoring')
 
     expect(
-      await screen.findByText('이 구간 동안 VM이 실행되지 않아 측정된 값이 없습니다.'),
+      await screen.findByText('이 구간에는 측정된 사용량 값이 없어요.'),
     ).toBeInTheDocument()
     // 안내가 차트를 대신하지는 않는다 — 시간 축이 있는 빈 차트는 그대로 둔다.
     expect(screen.getByRole('heading', { name: 'CPU' })).toBeInTheDocument()
@@ -892,7 +892,7 @@ describe('VM 상세 — 모니터링', () => {
     renderVm(VM_NOT_PROVISIONED_ID, 'monitoring')
 
     expect(
-      await screen.findByText('VM이 준비되면 사용량 데이터가 표시됩니다.'),
+      await screen.findByText('VM이 준비되면 사용량 데이터가 표시돼요.'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'CPU' })).not.toBeInTheDocument()
   })
@@ -903,7 +903,7 @@ describe('VM 상세 — 모니터링', () => {
     // 화면에서는 내부 어휘다 — 그래서 수신자별 문구다.
     renderVm(VM_METRICS_UNAVAILABLE_ID, 'monitoring')
 
-    const notice = await screen.findByText(/지금은 사용량을 불러올 수 없습니다/)
+    const notice = await screen.findByText(/지금은 사용량을 불러올 수 없어요/)
     expect(screen.queryByText(/하이퍼바이저/)).not.toBeInTheDocument()
     // 잴 수 없다는 사실은 장애 경보가 아니다 — 붉은 경보로 띄우지 않는다.
     expect(notice.closest('[role="alert"]')).toBeNull()

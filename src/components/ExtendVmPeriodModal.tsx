@@ -37,13 +37,13 @@ export function ExtendVmPeriodModal({
       if (!active.current) return
       onDone(
         body.clearEndDate
-          ? '종료일을 지워 무기한으로 저장했습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.'
-          : '새 종료일을 저장했습니다. 중지된 VM은 VM 관리에서 다시 시작해 주세요.',
+          ? '종료일을 지워 무기한으로 저장했어요. 중지된 VM은 VM 관리에서 다시 시작해 주세요.'
+          : '새 종료일을 저장했어요. 중지된 VM은 VM 관리에서 다시 시작해 주세요.',
       )
     },
     onError: (err) => {
       if (!active.current) return
-      const apiError = toApiError(err, '사용 기간을 변경하지 못했습니다.')
+      const apiError = toApiError(err, '사용 기간을 변경하지 못했어요.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       setError(apiError.message)
     },
@@ -65,7 +65,7 @@ export function ExtendVmPeriodModal({
       <form onSubmit={submit} className="space-y-4" noValidate>
         <p className="text-sm text-neutral-600">
           현재 종료일: <strong>{vm.endDate ?? '무기한'}</strong>. 새 종료일 당일까지 사용할
-          수 있으며, 만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
+          수 있으며, 만료로 중지된 VM은 연장 후 다시 시작할 수 있어요.
         </p>
         {error && Object.keys(fieldErrors).length === 0 && (
           <Alert variant="danger">{error}</Alert>
@@ -83,7 +83,7 @@ export function ExtendVmPeriodModal({
         )}
         <Checkbox
           label="무기한"
-          description="종료일을 지웁니다. 만료로 자동 중지되지 않습니다."
+          description="종료일을 지워요. 만료로 자동 중지되지 않아요."
           checked={indefinite}
           onChange={(event) => setIndefinite(event.target.checked)}
         />

@@ -27,7 +27,7 @@ describe('VM communication policy form', () => {
     const save = mount()
     expect(screen.getByText('기본 수신').nextElementSibling).toHaveTextContent('차단')
     expect(screen.getByText('기본 송신').nextElementSibling).toHaveTextContent('허용')
-    expect(screen.getByText('같은 워크스페이스의 VM도 수신 허용 규칙이 필요합니다.')).toBeInTheDocument()
+    expect(screen.getByText('같은 워크스페이스의 VM도 수신 허용 규칙이 필요해요.')).toBeInTheDocument()
     const system = screen.getByRole('region', { name: '필수 규칙' })
     expect(within(system).getByText('변경 불가')).toBeInTheDocument()
     expect(within(system).getByText('SSH와 웹 터미널 접속 허용')).toBeInTheDocument()

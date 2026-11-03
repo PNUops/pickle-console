@@ -70,7 +70,7 @@ export function SshUsageGuide({ hostname, sshHost, keyFile, className }: SshUsag
 
       {/* 안내 본문은 OS별로 갈라지는 단일 흐름 — 활성 탭이 곧 패널이다. */}
       <TabPanel id={tab} active idPrefix={uid} className="space-y-4">
-        <Step title="1. 개인키 파일을 안전한 위치로 옮깁니다">
+        <Step title="1. 개인키 파일 옮기기">
           {isWindows ? (
             <Code>{`move %USERPROFILE%\\Downloads\\${file} %USERPROFILE%\\.ssh\\`}</Code>
           ) : (
@@ -78,7 +78,7 @@ export function SshUsageGuide({ hostname, sshHost, keyFile, className }: SshUsag
           )}
         </Step>
 
-        <Step title="2. 개인키 파일 권한을 제한합니다">
+        <Step title="2. 개인키 파일 권한 제한">
           {isWindows ? (
             <Code>{`icacls "${keyPath}" /inheritance:r /grant:r "%USERNAME%:R"`}</Code>
           ) : (
@@ -86,18 +86,18 @@ export function SshUsageGuide({ hostname, sshHost, keyFile, className }: SshUsag
           )}
         </Step>
 
-        <Step title="3. SSH로 접속합니다">
+        <Step title="3. SSH 접속">
           <Code>{`ssh -i ${keyPath} -o IdentitiesOnly=yes ${host}@${gateway}`}</Code>
         </Step>
 
         <Step title="자주 접속한다면 ~/.ssh/config에 등록하세요">
           <Code>{`Host ${host}\n  HostName ${gateway}\n  User ${host}\n  IdentityFile ${keyPath}\n  IdentitiesOnly yes`}</Code>
           <p className="text-xs text-neutral-500">
-            등록 후에는 <span className="font-mono">ssh {host}</span> 만으로 접속할 수 있습니다.
+            등록 후에는 <span className="font-mono">ssh {host}</span> 만으로 접속할 수 있어요.
           </p>
           <p className="text-xs text-neutral-500">
             <span className="font-mono">IdentitiesOnly yes</span> 는 꼭 넣어 주세요. 없으면 다른
-            키까지 함께 제시되어 접속이 거부될 수 있습니다.
+            키까지 함께 제시되어 접속이 거부될 수 있어요.
           </p>
         </Step>
       </TabPanel>

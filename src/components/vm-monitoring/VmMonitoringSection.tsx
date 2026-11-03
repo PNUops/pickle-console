@@ -12,7 +12,7 @@ import { TimeSeriesChart } from '../metrics/TimeSeriesChart'
 /** 아직(또는 더는) 하이퍼바이저에 실체가 없는 VM — 그릴 자료가 아니라 안내다. */
 function notProvisionedNotice(data: VmMetrics) {
   if (data.available) return null
-  return <Alert variant="info">VM이 준비되면 사용량 데이터가 표시됩니다.</Alert>
+  return <Alert variant="info">VM이 준비되면 사용량 데이터가 표시돼요.</Alert>
 }
 
 /**
@@ -28,8 +28,8 @@ export default function VmMonitoringSection({ vmId }: { vmId: string }) {
       // ['vms'] 무효화(전원 제어 등)에 함께 걸리도록 vms 하위 키를 쓴다.
       queryKey={(timeframe: MetricsTimeframe) => ['vms', vmId, 'metrics', timeframe]}
       queryFn={(timeframe: MetricsTimeframe) => fetchVmMetrics(vmId, timeframe)}
-      emptyMessage="아직 쌓인 사용량 데이터가 없습니다. 잠시 후 다시 확인해 주세요."
-      blankWindowMessage="이 구간 동안 VM이 실행되지 않아 측정된 값이 없습니다."
+      emptyMessage="아직 쌓인 사용량 데이터가 없어요. 잠시 후 다시 확인해 주세요."
+      blankWindowMessage="이 구간에는 측정된 사용량 값이 없어요."
       unavailableNotice={notProvisionedNotice}
     >
       {({ data, times, axisFormat }) => (

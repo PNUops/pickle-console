@@ -126,10 +126,10 @@ describe('VM network policy panel', () => {
     }))
     expect(savePolicy).toHaveBeenCalledTimes(1)
     expect(peer).toHaveValue('198.51.100.0/24')
-    expect(screen.queryByText(/작성 중인 규칙은 보존했습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/작성 중인 규칙은 보존했어요/)).not.toBeInTheDocument()
     expect(submit).toBeDisabled()
     await act(async () => rejectSave?.(conflict))
-    expect(await screen.findByText(/작성 중인 규칙은 보존했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/작성 중인 규칙은 보존했어요/)).toBeInTheDocument()
     expect(peer).toHaveValue('198.51.100.0/24')
     expect(loadPolicy).toHaveBeenCalledTimes(initialLoads)
     expect(screen.getByRole('button', { name: '통신 정책 저장' })).toBeDisabled()
@@ -202,7 +202,7 @@ describe('VM network policy panel', () => {
     rerenderVm(vmTwo)
     await waitFor(() => expect(screen.queryByLabelText('VM 통신 정책')).not.toBeInTheDocument())
     rerenderVm(uuid(58))
-    await waitFor(() => expect(screen.queryByText('VM 통신 정책을 불러오지 못했습니다')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('VM 통신 정책을 불러오지 못했어요')).not.toBeInTheDocument())
   })
 
   test('shows read-only rules and distinguishes failed-closed readback from packet success', async () => {

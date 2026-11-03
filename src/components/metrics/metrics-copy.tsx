@@ -22,11 +22,11 @@ export interface MetricsCopy {
 
 export const METRICS_COPY: Record<MetricsAudience, MetricsCopy> = {
   owner: {
-    unreadable: '지금은 사용량을 불러올 수 없습니다.',
-    unreadableStale: (moment) => <>사용량을 불러오지 못했습니다. {moment}의 이전 조회 값입니다.</>,
+    unreadable: '지금은 사용량을 불러올 수 없어요.',
+    unreadableStale: (moment) => <>사용량을 불러오지 못했어요. {moment}의 이전 조회 값이에요.</>,
   },
   admin: {
-    unreadable: '하이퍼바이저가 응답하지 않습니다.',
-    unreadableStale: (moment) => <>하이퍼바이저가 응답하지 않습니다. {moment}의 이전 조회 값입니다.</>,
+    unreadable: '하이퍼바이저 사용량을 불러오지 못했어요.',
+    unreadableStale: (moment) => <>하이퍼바이저 사용량을 불러오지 못했어요. {moment}의 이전 조회 값이에요.</>,
   },
 }
