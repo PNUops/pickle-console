@@ -542,7 +542,7 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
 
   test('잘못된 key id와 존재하지 않는 deep link 오류를 표시한다', async () => {
     const invalid = renderDetail('access-sys-admin', sysAdminUser, 'not-a-uuid')
-    expect(await screen.findByRole('alert')).toHaveTextContent('올바르지 않은 주소')
+    expect(await screen.findByRole('alert')).toHaveTextContent('주소가 올바르지 않아요')
 
     invalid.unmount()
     renderDetail('access-sys-admin', sysAdminUser, uuid(999))

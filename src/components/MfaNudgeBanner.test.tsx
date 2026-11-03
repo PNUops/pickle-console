@@ -17,7 +17,7 @@ describe('2FA 권유 배너와 관리자 계정 설정', () => {
 
     await screen.findByRole('heading', { name: '관리자 대시보드' })
     expect(
-      screen.getByText(/2단계 인증\(2FA\) 등록을 권장합니다/),
+      screen.getByText(/2단계 인증으로 관리자 계정을 보호해 주세요/),
     ).toBeInTheDocument()
     // 링크는 화면이 아니라 등록 마법사를 가리킨다 — 계정 설정에서 `?enroll=2fa`가 모달을 연다.
     expect(screen.getByRole('link', { name: '지금 등록하기' })).toHaveAttribute(
@@ -28,7 +28,7 @@ describe('2FA 권유 배너와 관리자 계정 설정', () => {
     // 강제가 아니라 권유 — 닫으면 사라진다.
     await user.click(screen.getByRole('button', { name: '2단계 인증 권유 닫기' }))
     await waitFor(() =>
-      expect(screen.queryByText(/2단계 인증\(2FA\) 등록을 권장합니다/)).not.toBeInTheDocument(),
+      expect(screen.queryByText(/2단계 인증으로 관리자 계정을 보호해 주세요/)).not.toBeInTheDocument(),
     )
   })
 
@@ -38,7 +38,7 @@ describe('2FA 권유 배너와 관리자 계정 설정', () => {
 
     await screen.findByRole('heading', { name: '관리자 대시보드' })
     expect(
-      screen.queryByText(/2단계 인증\(2FA\) 등록을 권장합니다/),
+      screen.queryByText(/2단계 인증으로 관리자 계정을 보호해 주세요/),
     ).not.toBeInTheDocument()
   })
 

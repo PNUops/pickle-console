@@ -81,13 +81,13 @@ export const PASSWORD_RULE_ORDER: (keyof PasswordRuleStatus)[] = [
 export function passwordRuleError(password: string): string | null {
   const status = passwordRuleStatus(password)
   if (!status.length) {
-    return `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상 ${PASSWORD_MAX_LENGTH}자 이하여야 합니다.`
+    return `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상 ${PASSWORD_MAX_LENGTH}자 이하여야 해요.`
   }
   if (!status.byteLimit) {
-    return `비밀번호가 너무 깁니다. 한글 등 다국어 문자를 포함하면 더 짧게 입력해 주세요. (UTF-8 ${PASSWORD_MAX_BYTES}바이트 이하)`
+    return `비밀번호가 너무 길어요. 한글 등 다국어 문자를 포함하면 더 짧게 입력해 주세요. (UTF-8 ${PASSWORD_MAX_BYTES}바이트 이하)`
   }
-  if (!status.noRepetition) return '같은 문자가 반복되는 비밀번호는 사용할 수 없습니다.'
-  if (!status.noSequence) return '연속된 문자·숫자로만 이루어진 비밀번호는 사용할 수 없습니다.'
+  if (!status.noRepetition) return '같은 문자가 반복되는 비밀번호는 사용할 수 없어요.'
+  if (!status.noSequence) return '연속된 문자·숫자로만 이루어진 비밀번호는 사용할 수 없어요.'
   return null
 }
 
@@ -135,7 +135,7 @@ export function isUuid(value: string | undefined | null): value is string {
 }
 
 /** 주소의 식별자가 UUID 형식이 아닐 때 상세 화면이 공통으로 쓰는 문구. */
-export const INVALID_ID_MESSAGE = '올바르지 않은 주소입니다. 주소를 확인해 주세요.'
+export const INVALID_ID_MESSAGE = '주소가 올바르지 않아요. 주소를 확인해 주세요.'
 
 /** Mirrors the contract regex for desiredSubdomain (openapi.yaml CreateRequest, 3~40자). */
 export const SUBDOMAIN_RE = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/
@@ -154,4 +154,4 @@ export function normalizeCustomDomain(value: string): string {
 
 /** HOSTNAME_RE 불일치 시 신청서·공개 폼이 공통으로 쓰는 필드 오류 문구. */
 export const CUSTOM_DOMAIN_FORMAT_MESSAGE =
-  '커스텀 도메인 형식이 올바르지 않습니다. (예: myapp.example.com)'
+  '커스텀 도메인 형식이 올바르지 않아요. (예: myapp.example.com)'

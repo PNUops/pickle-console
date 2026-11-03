@@ -98,7 +98,7 @@ export function LoginPage() {
   const asApiError = (err: unknown) =>
     err instanceof ApiError
       ? err
-      : new ApiError(null, '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+      : new ApiError(null, '로그인하지 못했어요. 잠시 후 다시 시도해 주세요.')
 
   /**
    * 이메일 칸에서 Enter 를 쳐도 빈 비밀번호로 로그인이 날아가지 않는다. 대신
@@ -217,15 +217,12 @@ export function LoginPage() {
           낸 사람의 흐름 한가운데다. */}
       <NoticePopupHost />
       <h1 className="text-center text-2xl font-bold text-white">로그인</h1>
-      <p className="mt-2 text-center text-sm text-neutral-400">
-        부산대학교 계정으로 로그인해 주세요.
-      </p>
       {systemStatus?.maintenance ? (
         // 점검 중에는 평소 공지를 누르고 점검을 말한다. 셸이 같은 우선순위를 쓰고,
         // 여기서만 공지를 띄우면 로그인해도 점검 화면에 부딪힐 사람에게 들어오라고
         // 권하는 화면이 된다.
         <Alert variant="warning" className="mt-6 whitespace-pre-line">
-          {systemStatus.maintenanceMessage ?? '서비스 점검 중입니다.'}
+          {systemStatus.maintenanceMessage ?? '서비스를 점검하고 있어요.'}
         </Alert>
       ) : (
         systemStatus?.bannerMessage && (
@@ -243,11 +240,11 @@ export function LoginPage() {
             />
             {googleStart.isError && (
               <Alert variant="danger">
-                {toApiError(googleStart.error, '구글 로그인을 시작하지 못했습니다.').message}
+                {toApiError(googleStart.error, '구글 로그인을 시작하지 못했어요.').message}
               </Alert>
             )}
             <p className="text-center text-xs text-neutral-400">
-              @pusan.ac.kr 계정만 사용할 수 있습니다.
+              @pusan.ac.kr 계정으로 로그인해 주세요.
             </p>
             <AuthDivider />
           </div>

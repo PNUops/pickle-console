@@ -62,7 +62,7 @@ export function ProfileGate({ user }: { user: UserProfile }) {
       await refreshProfile()
     },
     onError: (err) => {
-      const apiError = toApiError(err, '프로필을 저장하지 못했습니다.')
+      const apiError = toApiError(err, '프로필을 저장하지 못했어요.')
       const mapped = fieldErrorsOf(apiError.problem)
       setFieldErrors(mapped)
       if (Object.keys(mapped).length === 0) setError(apiError.message)
@@ -84,8 +84,7 @@ export function ProfileGate({ user }: { user: UserProfile }) {
             cannot undo, and they have to know that before choosing.
           */}
           <Alert variant="info">
-            직책과 학번과 소속은 저장한 뒤에는 직접 바꿀 수 없습니다. 변경이 필요하면 문의를
-            거쳐 관리자가 처리합니다.
+            직책과 학번, 소속은 저장한 뒤 직접 바꿀 수 없어요. 변경이 필요하면 관리자에게 문의해 주세요.
           </Alert>
           {error && <Alert variant="danger">{error}</Alert>}
           <ProfileFields

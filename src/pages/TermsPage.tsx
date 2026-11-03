@@ -23,7 +23,7 @@ export function TermsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-12">
       {!isKnown ? (
-        <Alert variant="danger">요청한 문서를 찾을 수 없습니다.</Alert>
+        <Alert variant="danger">요청한 문서를 찾을 수 없어요.</Alert>
       ) : doc.isPending ? (
         <Spinner label="문서를 불러오는 중" />
       ) : doc.isError ? (

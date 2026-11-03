@@ -39,7 +39,7 @@ export function ConsentCheckboxes({
               >
                 {doc.title}
               </TransitionLink>
-              <span className="text-neutral-500">에 동의합니다.</span>
+              <span className="text-neutral-500">에 동의해요.</span>
             </span>
           }
         />

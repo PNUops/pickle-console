@@ -289,6 +289,6 @@ describe('프로필 게이트', () => {
 
     // 이것을 말하지 않으면 화면 자체가 함정이다. 여기서 고른 값은 본인이 되돌릴 수
     // 없고, 되돌리는 데 사람이 필요하다는 것을 고르기 전에 알아야 한다.
-    expect(screen.getByText(/직접 바꿀 수 없습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/직접 바꿀 수 없어요/)).toBeInTheDocument()
   })
 })

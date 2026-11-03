@@ -37,16 +37,16 @@ export function ResetPasswordPage() {
       return
     }
     if (newPassword !== confirm) {
-      setFieldErrors({ confirm: '새 비밀번호가 일치하지 않습니다.' })
+      setFieldErrors({ confirm: '새 비밀번호가 일치하지 않아요.' })
       return
     }
     setSubmitting(true)
     try {
       await confirmPasswordReset({ token, newPassword })
-      toast.success('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.')
+      toast.success('비밀번호를 바꿨어요. 새 비밀번호로 로그인해 주세요.')
       navigate('/login', { replace: true })
     } catch (err) {
-      const apiError = toApiError(err, '비밀번호를 변경하지 못했습니다.')
+      const apiError = toApiError(err, '비밀번호를 바꾸지 못했어요.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       setError(apiError)
     } finally {
@@ -59,8 +59,8 @@ export function ResetPasswordPage() {
       <div className="w-full">
         <AuthCard>
           <AuthCardContent>
-            <Alert variant="danger" title="잘못된 링크입니다">
-              재설정 토큰이 없습니다. 메일의 링크를 다시 확인해 주세요.
+            <Alert variant="danger" title="링크를 확인해 주세요">
+              메일의 재설정 링크를 다시 열어 주세요.
             </Alert>
             <p className="mt-4 text-center text-sm text-neutral-400">
               <TransitionLink to="/forgot-password" className="font-medium text-primary-300 hover:underline">
@@ -80,8 +80,8 @@ export function ResetPasswordPage() {
       <AuthCard className="mt-8">
         <AuthCardContent>
           {expired ? (
-            <Alert variant="danger" title="재설정 링크가 만료되었습니다">
-              링크가 만료되었거나 이미 사용되었습니다. 재설정을 다시 요청해 주세요.
+            <Alert variant="danger" title="재설정 링크가 만료됐어요">
+              링크가 만료됐거나 이미 사용됐어요. 재설정을 다시 요청해 주세요.
             </Alert>
           ) : (
             <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>

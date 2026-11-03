@@ -39,7 +39,7 @@ export function MfaNudgeBanner() {
       className="flex items-start gap-3 border-b border-info-200 bg-info-50 px-4 py-2 text-sm text-info-800 sm:px-6"
     >
       <span className="min-w-0 flex-1">
-        관리자 계정에는 2단계 인증(2FA) 등록을 권장합니다.{' '}
+        2단계 인증으로 관리자 계정을 보호해 주세요.{' '}
         <Link to={accountPath} className="font-medium underline hover:text-info-900">
           지금 등록하기
         </Link>

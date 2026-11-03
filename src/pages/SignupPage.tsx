@@ -40,7 +40,7 @@ function validate(values: {
     errors.name = '이름을 입력해 주세요.'
   }
   if (!PUSAN_EMAIL_RE.test(values.email)) {
-    errors.email = '@pusan.ac.kr 이메일만 가입할 수 있습니다.'
+    errors.email = '@pusan.ac.kr 이메일로 가입해 주세요.'
   }
   // 서버와 같은 규칙(길이·바이트·반복·연속)으로 제출 전에 막는다.
   const passwordError = passwordRuleError(values.password)
@@ -48,7 +48,7 @@ function validate(values: {
     errors.password = passwordError
   }
   if (values.passwordConfirm !== values.password) {
-    errors.passwordConfirm = '비밀번호가 일치하지 않습니다.'
+    errors.passwordConfirm = '비밀번호가 일치하지 않아요.'
   }
   return errors
 }
@@ -85,7 +85,7 @@ export function SignupPage() {
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     if (!allAgreed) {
-      setConsentError('이용약관과 개인정보처리방침에 모두 동의해야 가입할 수 있습니다.')
+      setConsentError('이용약관과 개인정보처리방침에 모두 동의해 주세요.')
       return
     }
 
@@ -119,7 +119,7 @@ export function SignupPage() {
       }
       setFormError(
         (isProblem(error) ? (error.detail ?? error.title) : null) ??
-          '회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+          '가입하지 못했어요. 잠시 후 다시 시도해 주세요.',
       )
     } finally {
       setSubmitting(false)
@@ -142,9 +142,9 @@ export function SignupPage() {
             </span>
             <h1 className="text-xl font-bold text-white">인증 메일을 확인해 주세요</h1>
             <p className="text-sm leading-relaxed text-neutral-300">
-              <strong>{email}</strong> 주소로 인증 메일을 보냈습니다.
+              <strong>{email}</strong> 주소로 인증 메일을 보냈어요.
               <br />
-              메일의 링크를 열면 가입이 완료됩니다. 링크는 24시간 동안 유효합니다.
+              24시간 안에 메일의 링크를 열면 가입이 완료돼요.
             </p>
             <div className="flex justify-center">
               <ResendVerification email={email} />
@@ -168,7 +168,7 @@ export function SignupPage() {
       <NoticePopupHost />
       <h1 className="text-center text-2xl font-bold text-white">회원가입</h1>
       <p className="mt-2 text-center text-sm text-neutral-400">
-        부산대학교 이메일(@pusan.ac.kr)로만 가입할 수 있습니다.
+        부산대학교 이메일(@pusan.ac.kr)로 가입해 주세요.
       </p>
       <AuthCard className="mt-8">
         <AuthCardContent>
@@ -180,12 +180,9 @@ export function SignupPage() {
             />
             {googleStart.isError && (
               <Alert variant="danger">
-                {toApiError(googleStart.error, '구글 로그인을 시작하지 못했습니다.').message}
+                {toApiError(googleStart.error, '구글 로그인을 시작하지 못했어요.').message}
               </Alert>
             )}
-            <p className="text-center text-xs text-neutral-400">
-              @pusan.ac.kr 계정만 가입할 수 있습니다.
-            </p>
             <AuthDivider />
           </div>
           <form onSubmit={(event) => void submit(event)} className="mt-4 space-y-4" noValidate>
@@ -239,7 +236,7 @@ export function SignupPage() {
               */}
               {terms.isError && (
                 <Alert variant="danger">
-                  약관을 불러오지 못했습니다.{' '}
+                  약관을 불러오지 못했어요.{' '}
                   <button
                     type="button"
                     className="underline underline-offset-2"
@@ -267,7 +264,7 @@ export function SignupPage() {
                       >
                         {doc.title}
                       </TransitionLink>
-                      <span className="text-neutral-500">에 동의합니다.</span>
+                      <span className="text-neutral-500">에 동의해요.</span>
                     </span>
                   }
                 />

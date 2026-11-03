@@ -149,7 +149,7 @@ export const resourceTypes: ResourceType[] = [
     icon: 'server',
     title: '가상머신',
     status: 'live',
-    description: '리눅스 서버를 신청하고, 접속과 서비스 공개를 콘솔에서 관리합니다.',
+    description: '리눅스 서버를 신청하고 접속과 서비스 공개를 관리해요.',
     details: [
       'SSH와 웹 터미널 접속',
       '서브도메인과 커스텀 도메인, 자동 TLS',
@@ -162,7 +162,7 @@ export const resourceTypes: ResourceType[] = [
     icon: 'chip',
     title: 'LLM API 키',
     status: 'live',
-    description: 'OpenAI 호환 API로 모델을 호출하고, 키와 사용량을 콘솔에서 관리합니다.',
+    description: 'OpenAI 호환 API로 모델을 호출하고 키와 사용량을 관리해요.',
     details: [
       '자체 서빙 모델의 일일 토큰 한도',
       '유료 모델의 승인된 금액 한도',
@@ -175,7 +175,7 @@ export const resourceTypes: ResourceType[] = [
     icon: 'globe',
     title: '도메인',
     status: 'live',
-    description: 'VM 없이 이름을 발급받아 외부 서버나 호스팅 서비스에 연결합니다.',
+    description: 'VM 없이 도메인을 발급받아 외부 서버나 호스팅 서비스에 연결해요.',
     details: [
       'A, AAAA, CNAME, TXT 레코드 편집',
       '워크스페이스에서 이름과 사용 기한 관리',
@@ -202,18 +202,18 @@ export interface Step {
 export const steps: Step[] = [
   {
     title: '신청',
-    description: '쓰려는 리소스 종류를 골라 사용 목적과 사양을 적어 제출합니다.',
+    description: '필요한 리소스를 골라 사용 목적과 사양을 적어요.',
   },
   {
     title: '검토',
-    description: '기관 관리자가 리소스 여유와 신청 내용을 검토합니다. 반려 시 사유가 안내됩니다.',
+    description: '기관 관리자가 신청을 검토해요. 반려되면 사유를 확인할 수 있어요.',
   },
   {
     title: '승인',
-    description: '승인과 동시에 리소스가 자동으로 준비되고, 완료되면 알림이 도착합니다.',
+    description: '승인된 리소스가 준비되면 알림을 받아요.',
   },
   {
     title: '사용',
-    description: '가상머신은 SSH나 웹 터미널로 접속하고, LLM API 키는 발급된 키로 바로 호출합니다.',
+    description: '가상머신은 SSH나 웹 터미널로 접속해요. LLM API는 키를 발급받아 호출해요.',
   },
 ]
