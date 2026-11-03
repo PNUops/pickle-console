@@ -46,12 +46,12 @@ describe('guide content and navigation', () => {
     await userEvent.setup().click(screen.getByRole('link', { name: '서비스 소개 →' }))
     expect(await screen.findByRole('heading', { level: 1, name: '서비스 소개' })).toBeInTheDocument()
     const introduction = screen.getByRole('article', { name: '서비스 소개' })
-    expect(introduction).toHaveTextContent('부산대학교의 컴퓨팅 리소스')
+    expect(introduction).toHaveTextContent('부산대학교 구성원')
     expect(introduction).not.toHaveTextContent('공식 명칭')
     expect(introduction).not.toHaveTextContent('PNU Cloud라는 이름')
     expect(introduction).not.toHaveTextContent('시스템 구성과 공개 코드')
     expect(introduction).not.toHaveTextContent('테스트 계정과 이용 데이터가 삭제됩니다')
-    expect(introduction).toHaveTextContent('별도로 백업')
+    expect(introduction).toHaveTextContent('백업은 사용자가 준비')
   })
 
   test.each(guideArticles.map((article) => [article.slug, article.title]))('renders %s and resolves every guide link', async (slug, title) => {
@@ -132,7 +132,7 @@ describe('guide content and navigation', () => {
     expect(within(drawer).queryByRole('link', { name: 'LLM API 신청과 키 발급' })).not.toBeInTheDocument()
     await user.clear(within(drawer).getByRole('searchbox'))
     await user.type(within(drawer).getByRole('searchbox'), 'no-such-guide')
-    expect(within(drawer).getByRole('status')).toHaveTextContent('검색 결과가 없습니다')
+    expect(within(drawer).getByRole('status')).toHaveTextContent('검색 결과가 없어요')
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog', { name: '문서 목차' })).not.toBeInTheDocument()
     expect(document.activeElement).toBe(trigger)
@@ -182,7 +182,7 @@ describe('guide content and navigation', () => {
 
   test('handles unknown articles inside the guide layout', async () => {
     renderApp('/docs/missing')
-    expect(await screen.findByRole('heading', { level: 1, name: '문서를 찾을 수 없습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '문서를 찾을 수 없어요' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '사용 가이드 홈으로 이동' })).toHaveAttribute('href', '/docs')
   })
 

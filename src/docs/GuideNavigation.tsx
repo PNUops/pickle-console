@@ -22,7 +22,7 @@ export function GuideNavigation({ slug, onNavigate, className }: { slug: string;
         <Link to={guidePathFor(location)} state={state} onClick={onNavigate}
           className="rounded-sm hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600">사용 가이드</Link>
       </h2>
-      {query.trim() && <p role="status" className="px-3 text-xs text-neutral-500">{results.length ? `${results.length}개 문서` : '검색 결과가 없습니다. 다른 검색어를 입력해 주세요.'}</p>}
+      {query.trim() && <p role="status" className="px-3 text-xs text-neutral-500">{results.length ? `${results.length}개 문서` : '검색 결과가 없어요. 다른 검색어를 입력해 주세요.'}</p>}
       {guideGroups.map((group) => {
         const articles = results.filter((article) => article.group === group)
         if (!articles.length) return null

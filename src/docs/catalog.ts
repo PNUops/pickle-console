@@ -9,11 +9,11 @@ import { LLM_API_BASE_URL } from '../lib/llm-api'
 
 const displayedLlmArticles = LLM_API_BASE_URL ? llmArticles : llmArticles.map((article) => ({
   ...article,
-  summary: '개발 환경에서 LLM API 연결이 비활성화되어 있습니다.',
+  summary: '개발 환경에서 LLM API 연결이 비활성화되어 있어요.',
   sections: [{
     id: 'unavailable',
     title: '개발 환경',
-    body: '개발 환경에서 LLM API 연결이 비활성화되어 있습니다.',
+    body: '개발 환경에서 LLM API 연결이 비활성화되어 있어요.',
   }],
 }))
 

@@ -15,7 +15,7 @@ export function DocsPage() {
   const index = guideArticles.findIndex((entry) => entry.slug === slug)
   const previous = guideArticles[index - 1]
   const next = guideArticles[index + 1]
-  const title = article?.title ?? (slug ? '문서를 찾을 수 없습니다' : '사용 가이드')
+  const title = article?.title ?? (slug ? '문서를 찾을 수 없어요' : '사용 가이드')
 
   useEffect(() => {
     document.title = slug ? `${title} | 사용 가이드 | Pickle` : '사용 가이드 | Pickle'
@@ -48,7 +48,7 @@ export function DocsPage() {
               {article && <p className="mb-2 text-sm text-neutral-500">{article.group}</p>}
               <h1 ref={headingRef} tabIndex={-1} className="scroll-mt-20 text-2xl font-semibold text-neutral-900 outline-none">{title}</h1>
               <p className="mt-3 text-sm leading-7 text-neutral-600">
-                {article?.summary ?? (slug ? '주소를 확인하거나 문서 목차에서 필요한 안내를 선택해 주세요.' : '처음 신청할 리소스를 고르고, 승인 후 연결부터 공유와 이용 종료까지 확인하세요.')}
+                {article?.summary ?? (slug ? '주소를 확인하거나 문서 목차에서 필요한 안내를 선택해 주세요.' : '리소스 신청부터 접속과 공유, 사용 종료까지 안내해요.')}
               </p>
             </header>
             {article ? (

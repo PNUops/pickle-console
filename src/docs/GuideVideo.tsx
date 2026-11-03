@@ -29,7 +29,7 @@ export function GuideVideo({ src, poster, captionsSrc, title, caption, width, he
       >
         <source src={src} type="video/mp4" />
         <track src={captionsSrc} kind="captions" srcLang="ko" label="한국어" default={false} />
-        <p>영상을 재생할 수 없으면 <a href={src}>MP4 파일을 내려받아 확인합니다.</a></p>
+        <p>영상을 재생할 수 없으면 <a href={src}>MP4 파일을 내려받아 주세요.</a></p>
       </video>
       <figcaption id={captionId}>{caption}</figcaption>
     </figure>
