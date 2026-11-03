@@ -136,10 +136,10 @@ describe('VM 접근 탭 — 부여·변경·회수', () => {
 
     const dialog = await screen.findByRole('dialog', { name: '접근 권한 회수' })
     expect(
-      within(dialog).getByText(/이미 열람한 초기 비밀번호는 그대로 남습니다/),
+      within(dialog).getByText(/이미 열람한 초기 비밀번호는 회수되지 않아요/),
     ).toBeInTheDocument()
     expect(
-      within(dialog).getByText(/이미 열려 있는 SSH 세션은 끊기지 않습니다/),
+      within(dialog).getByText(/이미 열려 있는 SSH 세션은 끊기지 않아요/),
     ).toBeInTheDocument()
 
     await user.click(within(dialog).getByRole('button', { name: '회수' }))

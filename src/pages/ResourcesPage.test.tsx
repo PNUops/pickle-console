@@ -100,9 +100,9 @@ describe('전체 리소스', () => {
     await screen.findByRole('link', { name: 'algo-judge' })
     await user.selectOptions(screen.getByLabelText('리소스 종류 필터'), 'DOMAIN')
 
-    expect(await screen.findByText('이 종류의 리소스가 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('이 종류의 리소스가 없어요.')).toBeInTheDocument()
     // Not the empty-inventory sentence: this reader has resources.
-    expect(screen.queryByText(/아직 리소스가 없습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/이 워크스페이스에 표시할 리소스가 없어요/)).not.toBeInTheDocument()
 
     await user.selectOptions(screen.getByLabelText('리소스 종류 필터'), '')
     expect(await screen.findByRole('link', { name: 'algo-judge' })).toBeInTheDocument()
@@ -122,7 +122,7 @@ describe('전체 리소스', () => {
     const limitedRow = (await screen.findByText('ml-notebook')).closest('tr')!
     expect(screen.queryByRole('link', { name: 'ml-notebook' })).not.toBeInTheDocument()
     expect(
-      within(limitedRow).getByText(/접근 권한이 없습니다 — 김철수 님에게 요청하세요/),
+      within(limitedRow).getByText(/접근 권한이 없어요\. 김철수님에게 요청해 주세요/),
     ).toBeInTheDocument()
   })
 

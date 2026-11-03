@@ -38,7 +38,7 @@ function NotificationInbox({ reader }: { reader: NotificationReader }) {
         if (!isCurrentReader(reader)) return
         const destination = usageNotificationPath(fresh)
         if (!destination) {
-          reportError('알림 연결 정보를 확인하지 못했습니다. 다시 조회해 주세요.', reader)
+          reportError('알림 연결 정보를 확인하지 못했어요. 다시 조회해 주세요.', reader)
           return
         }
         await openNotification(destination)
@@ -92,7 +92,7 @@ function NotificationInbox({ reader }: { reader: NotificationReader }) {
         <Alert variant="danger">{notifications.error.message}</Alert>
       )}
       {notifications.currentResponse && notifications.data?.content.length === 0 && (
-        <Card className="p-8 text-center text-sm text-neutral-500">알림이 없습니다.</Card>
+        <Card className="p-8 text-center text-sm text-neutral-500">{unreadOnly ? '읽지 않은 알림이 없어요.' : '알림이 없어요.'}</Card>
       )}
       {notifications.data && notifications.data.content.length > 0 && (
         <>

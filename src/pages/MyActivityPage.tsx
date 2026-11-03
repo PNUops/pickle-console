@@ -45,7 +45,7 @@ export function MyActivityPage() {
       {activity.isError && <Alert variant="danger">{activity.error.message}</Alert>}
       {activity.isSuccess && activity.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          활동 기록이 없습니다.
+          표시할 활동 기록이 없어요.
         </Card>
       )}
       {activity.isSuccess && activity.data.content.length > 0 && (

@@ -32,7 +32,7 @@ describe('GPU allocations', () => {
   })
   test('renders an empty inventory without inventing a GPU', async () => {
     renderGpu('/console/gpus')
-    expect(await screen.findByRole('heading', { name: '할당받은 GPU가 없습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '표시할 GPU 할당이 없어요' })).toBeInTheDocument()
   })
   test('requires explicit confirmation and never retries an unavailable VM later', async () => {
     const user = userEvent.setup()

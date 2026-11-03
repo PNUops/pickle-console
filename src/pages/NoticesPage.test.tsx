@@ -36,7 +36,7 @@ describe('공지사항 게시판', () => {
     server.use(refreshSuccessHandler('access-user'))
     renderApp('/console/notices')
 
-    expect(await screen.findByText('등록된 공지사항이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('표시할 공지사항이 없어요.')).toBeInTheDocument()
   })
 
   test('고정 공지가 먼저 온다', async () => {
@@ -114,7 +114,7 @@ describe('공지사항 상세', () => {
     )
     renderApp(`/console/notices/${uuid(343)}`)
 
-    expect(await screen.findByText('이미지를 불러오지 못했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('이미지를 불러오지 못했어요.')).toBeInTheDocument()
     expect(screen.getByText('본문은 읽을 수 있어야 한다.')).toBeInTheDocument()
   })
 

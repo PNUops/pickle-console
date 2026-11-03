@@ -37,7 +37,7 @@ export function LlmKeysPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">LLM API 키</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            승인된 키는 소유자가 발급해야 쓸 수 있습니다.
+            발급 전인 키는 키 소유자가 직접 발급해야 사용할 수 있어요.
           </p>
         </div>
         <LinkButton to={consolePaths.newRequest(scope, 'LLM_API_KEY')}>LLM API 키 신청</LinkButton>
@@ -53,8 +53,8 @@ export function LlmKeysPage() {
         <Card className="space-y-4 p-8 text-center text-sm text-neutral-500">
           <p>
             {scope == null
-              ? '접근 권한을 가진 LLM API 키가 없습니다. 워크스페이스를 고르면 그 워크스페이스의 키를 볼 수 있습니다.'
-              : '이 워크스페이스에는 아직 LLM API 키가 없습니다. 신청이 승인되면 이곳에 표시됩니다.'}
+              ? '접근 권한을 가진 LLM API 키가 없어요. 워크스페이스를 고르면 그 워크스페이스의 키를 볼 수 있어요.'
+              : '이 워크스페이스에 표시할 LLM API 키가 없어요.'}
           </p>
           <LinkButton to={consolePaths.newRequest(scope, 'LLM_API_KEY')}>
             LLM API 키 신청
@@ -91,9 +91,9 @@ export function LlmKeysPage() {
                       )}
                       {key.accessLimited && (
                         <p className="mt-0.5 text-xs text-neutral-500">
-                          접근 권한이 없습니다
+                          접근 권한이 없어요.
                           {key.ownerNames.length > 0 &&
-                            ` — ${key.ownerNames.join(', ')} 님에게 요청하세요`}
+                            ` ${key.ownerNames.join(', ')}님에게 요청해 주세요.`}
                           {/* 워크스페이스 소유자는 이 키 안을 볼 수 없어도 누가 접근할지는
                               정할 수 있다. 상세로 못 들어가므로 이 행이 그 유일한
                               진입점이고, 소유자가 떠난 키를 되살리는 길이기도 하다.

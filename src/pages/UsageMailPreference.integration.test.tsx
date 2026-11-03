@@ -58,7 +58,7 @@ test('personal preference reads ON and writes only its usage-mail boolean', asyn
   await userEvent.click(checkbox)
   await userEvent.click(screen.getByRole('button', { name: '메일 설정 저장' }))
   await waitFor(() => expect(writes).toEqual([{ usageMailEnabled: false }]))
-  await screen.findByText('사용량 알림 메일 설정을 저장했습니다.')
+  await screen.findByText('사용량 알림 메일 설정을 저장했어요.')
   expect(screen.getByText('키 사용량 알림')).toBeInTheDocument()
 })
 
@@ -113,7 +113,7 @@ test('late preference PUT cannot change or announce success in another account',
   await act(async () => { await pending.promise })
   await waitFor(() => expect(client.isMutating()).toBe(0))
   expect(screen.getByRole('checkbox', { name: '사용량 알림 메일 받기' })).toBeChecked()
-  expect(screen.queryByText('사용량 알림 메일 설정을 저장했습니다.')).not.toBeInTheDocument()
+  expect(screen.queryByText('사용량 알림 메일 설정을 저장했어요.')).not.toBeInTheDocument()
 })
 
 
@@ -128,7 +128,7 @@ test('a failed preference save preserves its draft without announcing success', 
   await screen.findByText('메일 설정을 저장하지 못했습니다.')
   expect(screen.getByRole('checkbox', { name: '사용량 알림 메일 받기' })).not.toBeChecked()
   expect(screen.getByRole('button', { name: '메일 설정 저장' })).toBeEnabled()
-  expect(screen.queryByText('사용량 알림 메일 설정을 저장했습니다.')).not.toBeInTheDocument()
+  expect(screen.queryByText('사용량 알림 메일 설정을 저장했어요.')).not.toBeInTheDocument()
 })
 
 
@@ -159,11 +159,11 @@ test('an older preference GET cannot overwrite a successful current save', async
     await userEvent.click(checkbox)
     await userEvent.click(screen.getByRole('button', { name: '메일 설정 저장' }))
     await waitFor(() => expect(saved).toBe(true))
-    await screen.findByText('사용량 알림 메일 설정을 저장했습니다.')
+    await screen.findByText('사용량 알림 메일 설정을 저장했어요.')
     expect(screen.getByRole('checkbox', { name: '사용량 알림 메일 받기' })).not.toBeChecked()
   } finally { oldRead.release() }
   await act(async () => { await pendingRead })
   await waitFor(() => expect(client.isFetching()).toBe(0))
   expect(screen.getByRole('checkbox', { name: '사용량 알림 메일 받기' })).not.toBeChecked()
-  expect(screen.getByText('사용량 알림 메일 설정을 저장했습니다.')).toBeInTheDocument()
+  expect(screen.getByText('사용량 알림 메일 설정을 저장했어요.')).toBeInTheDocument()
 })

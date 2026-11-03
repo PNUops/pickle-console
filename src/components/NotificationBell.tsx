@@ -34,7 +34,7 @@ function ReaderNotificationBell({ to, reader }: { to: string; reader: Notificati
         if (!isCurrentReader(reader)) return
         const destination = usageNotificationPath(fresh)
         if (!destination) {
-          reportError('알림 연결 정보를 확인하지 못했습니다. 다시 조회해 주세요.', reader)
+          reportError('알림 연결 정보를 확인하지 못했어요. 다시 조회해 주세요.', reader)
           return
         }
         if (await openNotification(destination)) close()
@@ -96,11 +96,11 @@ function ReaderNotificationBell({ to, reader }: { to: string; reader: Notificati
         )}
         {recent.isError && (
           <p className="px-4 py-6 text-center text-sm text-neutral-500">
-            알림을 불러오지 못했습니다.
+            알림을 불러오지 못했어요.
           </p>
         )}
         {recent.currentResponse && recent.data?.content.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-neutral-500">알림이 없습니다.</p>
+          <p className="px-4 py-8 text-center text-sm text-neutral-500">알림이 없어요.</p>
         )}
         {recent.data && recent.data.content.length > 0 && (
           <ul className="max-h-96 divide-y divide-neutral-100 overflow-y-auto">
