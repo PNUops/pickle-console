@@ -103,7 +103,7 @@ export function ProfileFields({
     <>
       {options.isError && (
         <Alert variant="danger">
-          직책과 소속 목록을 불러오지 못했습니다.{' '}
+          직책과 소속 목록을 불러오지 못했어요.{' '}
           <button
             type="button"
             className="underline underline-offset-2"
@@ -165,7 +165,7 @@ export function ProfileFields({
             정하고, 먼저 물으면 고른 뒤에 칸이 바뀌면서 방금 쓴 값이 버려진다.
           */}
           {values.position === '' ? (
-            <p className="text-sm text-neutral-500">직책을 고르면 소속을 입력할 수 있습니다.</p>
+            <p className="text-sm text-neutral-500">직책을 고르면 소속을 입력할 수 있어요.</p>
           ) : departmentFromCatalog ? (
             <>
               <FormField label="소속 학과" error={errors?.departmentCode}>

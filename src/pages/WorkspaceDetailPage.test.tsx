@@ -669,7 +669,7 @@ describe('workspace detail: invitations', () => {
     await user.click(within(row).getByRole('button', { name: 'jiwoo.han@pusan.ac.kr 초대 취소' }))
     const dialog = await screen.findByRole('dialog', { name: '초대 취소' })
     expect(within(dialog).getByText('대상 초대: jiwoo.han@pusan.ac.kr')).toBeInTheDocument()
-    await user.click(await within(dialog).findByRole('checkbox', { name: '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다' }))
+    await user.click(await within(dialog).findByRole('checkbox', { name: '종료할 항목과 변경 내용을 확인했어요' }))
     await user.click(within(dialog).getByRole('button', { name: '초대 취소' }))
 
     expect(await screen.findByText('대기 중인 초대가 없습니다.')).toBeInTheDocument()
@@ -709,7 +709,7 @@ describe('워크스페이스 상세 — 워크스페이스 삭제', () => {
 
     await user.type(within(dialog).getByRole('textbox'), '캡스톤 3조')
     expect(confirm).toBeDisabled()
-    await user.click(await within(dialog).findByRole('checkbox', { name: '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다' }))
+    await user.click(await within(dialog).findByRole('checkbox', { name: '종료할 항목과 변경 내용을 확인했어요' }))
     expect(confirm).toBeEnabled()
     await user.click(confirm)
 

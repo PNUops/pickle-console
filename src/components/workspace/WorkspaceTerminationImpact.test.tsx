@@ -348,7 +348,7 @@ function executableImpact(overrides: Partial<WorkspaceTerminationImpact> = {}): 
     blockingResources: { page: 0, size: 20, totalElements: 0, totalPages: 0, content: [] }, ...overrides })
 }
 
-const impactAcknowledgement = '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다'
+const impactAcknowledgement = '종료할 항목과 변경 내용을 확인했어요'
 
 test('an empty owner deletion requires both the exact name and explicit impact confirmation', async () => {
   const user = userEvent.setup()

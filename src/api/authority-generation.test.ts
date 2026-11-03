@@ -19,6 +19,6 @@ test('an administrator response from an earlier authority cannot refill current 
   await issued
   advanceAuthorityGeneration()
   finish()
-  await expect(response).rejects.toThrow('관리 업무가 변경되었습니다')
+  await expect(response).rejects.toThrow('관리 업무가 바뀌었어요')
   expect(getAccessToken()).toBe('access-org-admin')
 })

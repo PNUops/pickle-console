@@ -16,7 +16,7 @@ export type RequestMailTargetOption = NonNullable<OrgOperations['selectionTarget
 export function fetchOrgOperations(orgId: string, requesterId?: string, target?: RequestMailTarget | null): Promise<OrgOperations> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/orgs/{orgId}/operations', { params: { path: { orgId }, query: { requesterId, ...target } } })
-    if (!data) throw toApiError(error, '기관 운영 설정을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 운영 설정을 불러오지 못했어요.')
     return data
   })
 }
@@ -24,7 +24,7 @@ export function fetchOrgOperations(orgId: string, requesterId?: string, target?:
 export function previewOrgOperations(orgId: string, body: SaveOrgOperations): Promise<OrgOperationsPreview> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/orgs/{orgId}/operations/preview', { params: { path: { orgId } }, body })
-    if (!data) throw toApiError(error, '기관 권한 변경안을 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 권한 변경안을 확인하지 못했어요.')
     return data
   })
 }
@@ -32,7 +32,7 @@ export function previewOrgOperations(orgId: string, body: SaveOrgOperations): Pr
 export function saveOrgOperations(orgId: string, body: SaveOrgOperations): Promise<OrgOperations> {
   return guardNetwork(async () => {
     const { data, error } = await api.PUT('/admin/orgs/{orgId}/operations', { params: { path: { orgId } }, body })
-    if (!data) throw toApiError(error, '기관 권한을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 권한을 저장하지 못했어요.')
     return data
   })
 }
@@ -40,7 +40,7 @@ export function saveOrgOperations(orgId: string, body: SaveOrgOperations): Promi
 export function previewRequestMail(orgId: string, body: SaveRequestMail, target?: RequestMailTarget | null): Promise<OrgOperationsPreview> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/orgs/{orgId}/operations/request-mail/preview', { params: { path: { orgId }, query: target ?? undefined }, body })
-    if (!data) throw toApiError(error, '신청 메일 수신 변경안을 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 메일 수신 변경안을 확인하지 못했어요.')
     return data
   })
 }
@@ -48,7 +48,7 @@ export function previewRequestMail(orgId: string, body: SaveRequestMail, target?
 export function saveRequestMail(orgId: string, body: SaveRequestMail): Promise<OrgOperations> {
   return guardNetwork(async () => {
     const { data, error } = await api.PUT('/admin/orgs/{orgId}/operations/request-mail', { params: { path: { orgId } }, body })
-    if (!data) throw toApiError(error, '신청 메일 수신 설정을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 메일 수신 설정을 저장하지 못했어요.')
     return data
   })
 }

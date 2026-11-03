@@ -32,54 +32,54 @@ const CAPABILITIES: Record<PassthroughEndpoint, Capability> = {
   chat: {
     label: 'Chat',
     description:
-      '텍스트를 생성합니다. Chat Completions와 Messages 경로, opencode와 Claude Code 연결이 포함됩니다',
+      '텍스트를 생성해요. Chat Completions와 Messages, OpenCode와 Claude Code 연결에 사용해요',
   },
   web_search: {
     label: '웹 검색',
-    description: '모델이 응답 전에 웹을 검색해서 결과를 참고합니다',
+    description: '모델이 응답 전에 웹을 검색해 결과를 참고해요',
     parents: ['chat'],
   },
   pdf_ocr: {
     label: 'PDF OCR',
-    description: 'PDF를 직접 읽지 못하는 모델에 보낼 때 PDF를 유료 OCR로 변환합니다',
+    description: 'PDF를 직접 읽지 못하는 모델에 보낼 때 유료 OCR로 변환해요',
     parents: ['chat'],
   },
   containers: {
     label: '코드 실행',
-    description: '모델이 샌드박스 컨테이너에서 코드를 실행하고 결과 파일을 돌려줍니다',
+    description: '모델이 샌드박스 컨테이너에서 코드를 실행하고 결과 파일을 돌려줘요',
     parents: ['chat'],
   },
   images: {
     label: '이미지 생성',
-    description: '텍스트 프롬프트로 이미지를 생성합니다',
+    description: '텍스트 프롬프트로 이미지를 생성해요',
   },
   embeddings: {
     label: '임베딩',
-    description: '텍스트를 벡터로 변환합니다. 유사도 검색, RAG에 씁니다',
+    description: '텍스트를 벡터로 변환해 유사도 검색과 RAG에 사용해요',
   },
   rerank: {
     label: '리랭크',
-    description: '검색된 문서를 질의와의 관련도 순으로 재정렬합니다. RAG 정확도를 높일 때 씁니다',
+    description: '검색된 문서를 질의와의 관련도 순으로 재정렬해요',
   },
   speech: {
     label: 'TTS',
-    description: '텍스트를 음성 파일로 변환합니다',
+    description: '텍스트를 음성 파일로 변환해요',
   },
   transcriptions: {
     label: 'STT',
-    description: '음성 파일을 텍스트로 변환합니다',
+    description: '음성 파일을 텍스트로 변환해요',
   },
   videos: {
     label: '동영상 생성',
-    description: '텍스트나 이미지로 짧은 영상을 생성합니다. 요청당 비용이 큽니다',
+    description: '텍스트나 이미지로 짧은 영상을 생성해요',
   },
   batches: {
     label: '배치',
-    description: '여러 요청을 한 번에 제출하고 결과를 나중에 받습니다. 응답은 늦지만 비용이 낮습니다',
+    description: '여러 요청을 한 번에 제출하고 결과를 나중에 받아요',
   },
   files: {
     label: '파일 업로드',
-    description: '배치나 코드 실행에 쓸 파일을 미리 업로드합니다',
+    description: '배치나 코드 실행에 쓸 파일을 업로드해요',
     parents: ['batches', 'containers'],
   },
 }

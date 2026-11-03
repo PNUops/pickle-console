@@ -12,7 +12,7 @@ export async function fetchLlmRosterAccountReferences(orgId: string, workspaceId
   const params = new URLSearchParams({ orgId, workspaceId })
   const response = await fetchAuthedBytes(`/api/v1/admin/llm/roster-account-references?${params}`)
   const body: unknown = await response.json()
-  if (!response.ok) throw toApiError(body, '명단 지급에 사용할 사업 계정 참조를 불러오지 못했습니다.')
-  if (!Array.isArray(body)) throw new Error('사업 계정 참조 형식을 확인할 수 없습니다.')
+  if (!response.ok) throw toApiError(body, '명단 지급에 사용할 사업 계정 목록을 불러오지 못했어요.')
+  if (!Array.isArray(body)) throw new Error('사업 계정 정보를 확인하지 못했어요.')
   return body as LlmAccountReference[]
 }

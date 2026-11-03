@@ -21,7 +21,7 @@ export function fetchWorkspaceTerminationImpact(workspaceId: string, { invitatio
       : admin
         ? await api.GET('/admin/workspaces/{workspaceId}/termination-impact', { params: { path: { workspaceId }, query } })
         : await api.GET('/workspaces/{workspaceId}/termination-impact', { params: { path: { workspaceId }, query } })
-    if (!result.data) throw toApiError(result.error, '종료 영향을 불러오지 못했습니다.')
+    if (!result.data) throw toApiError(result.error, '종료 영향을 불러오지 못했어요.')
     return result.data
   })
 }

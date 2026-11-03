@@ -12,7 +12,7 @@ export type ProfileImpact = components['schemas']['AdminUserProfileImpactRespons
 export function fetchUserSupport(userId: string, orgId?: string): Promise<UserSupport> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/users/{userId}/support', { params: { path: { userId }, query: { orgId } } })
-    if (!data) throw toApiError(error, '사용자 관계를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사용자 관계를 불러오지 못했어요.')
     return data
   })
 }
@@ -20,7 +20,7 @@ export function fetchUserSupport(userId: string, orgId?: string): Promise<UserSu
 export function fetchUserResourceAccess(userId: string, type: ResourceType, resourceId: string, orgId?: string): Promise<UserResourceAccess> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/users/{userId}/support/access', { params: { path: { userId }, query: { type, resourceId, orgId } } })
-    if (!data) throw toApiError(error, '이 사용자의 접근 조건을 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '이 사용자의 접근 조건을 확인하지 못했어요.')
     return data
   })
 }
@@ -28,7 +28,7 @@ export function fetchUserResourceAccess(userId: string, type: ResourceType, reso
 export function previewUserProfileImpact(userId: string, action: 'PROFILE' | 'ENABLE', profile?: AdminProfileUpdate): Promise<ProfileImpact> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/users/{userId}/profile-impact', { params: { path: { userId } }, body: { action, ...(profile ? { profile } : {}) } })
-    if (!data) throw toApiError(error, '변경 영향을 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '변경 영향을 확인하지 못했어요.')
     return data
   })
 }
