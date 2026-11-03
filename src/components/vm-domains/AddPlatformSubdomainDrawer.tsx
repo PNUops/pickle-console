@@ -77,7 +77,7 @@ export function AddPlatformSubdomainDrawer({
       await queryClient.invalidateQueries({ queryKey: ['domains'] })
     },
     onError: (err) => {
-      const apiError = toApiError(err, '도메인 연결을 접수하지 못했습니다.')
+      const apiError = toApiError(err, '도메인 연결을 접수하지 못했어요.')
       if (apiError.code === 'DOMAIN_LIMIT_REACHED') {
         // 상한값과 행동 지침(몇 개까지인지, 해제하거나 커스텀 도메인을 쓰라는
         // 안내)은 서버 detail에만 있다 — 자체 문구로 덮지 않고 그대로 보여준다.
@@ -86,7 +86,7 @@ export function AddPlatformSubdomainDrawer({
         return
       }
       if (apiError.code === 'DOMAIN_FQDN_TAKEN') {
-        setFieldErrors({ subdomain: '이미 사용 중인 이름입니다. 다른 이름을 입력해 주세요.' })
+        setFieldErrors({ subdomain: '이미 사용 중인 이름이에요. 다른 이름을 입력해 주세요.' })
         setError(apiError.message)
         return
       }
@@ -142,13 +142,13 @@ export function AddPlatformSubdomainDrawer({
           onPortUsed={() => {}}
           notice={
             <Alert variant="info">
-              연결을 접수했습니다. 적용이 끝나면 이 주소로 열립니다.
+              연결을 접수했어요.
             </Alert>
           }
         />
       ) : (
         <form onSubmit={submit} className="space-y-4" noValidate>
-          <p className="text-sm text-neutral-600">소유 확인 없이 바로 연결됩니다.</p>
+          <p className="text-sm text-neutral-600">소유 확인 없이 플랫폼 서브도메인을 연결해요.</p>
           {error && (
             <ErrorSummary
               error={error}
@@ -205,7 +205,7 @@ export function AddPlatformSubdomainDrawer({
             label="공개 포트"
             required
             error={fieldErrors.port}
-            description="VM 안에서 서비스가 듣고 있는 포트입니다. SSH 포트(22)는 공개할 수 없습니다."
+            description="VM 안에서 서비스가 듣고 있는 포트예요. SSH 포트(22)는 공개할 수 없어요."
             className="sm:w-40"
           >
             <Input
@@ -216,7 +216,7 @@ export function AddPlatformSubdomainDrawer({
           </FormField>
           {options.isError && (
             <Alert variant="warning">
-              루트 도메인 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+              루트 도메인 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
             </Alert>
           )}
           <Button

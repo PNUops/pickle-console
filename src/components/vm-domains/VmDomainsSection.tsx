@@ -34,11 +34,11 @@ export function VmDomainsSection({ vm, surface = 'personal' }: { vm: VmDetail; s
 function InstitutionVmDomainsSection({ vm }: { vm: VmDetail }) {
   const permissions = useInstitutionResourcePermissions()
   if (!permissions.canAnyWork(PUBLICATION_READ_COMMANDS, SYS_READERS)) {
-    return <Card><CardContent><p className="text-sm text-neutral-500">게시 정보를 조회하거나 운영할 권한이 없습니다.</p></CardContent></Card>
+    return <Card><CardContent><p className="text-sm text-neutral-500">게시 정보를 조회하거나 운영할 권한이 없어요.</p></CardContent></Card>
   }
   return <Card><CardHeader><CardTitle>도메인</CardTitle></CardHeader><CardContent className="space-y-3">
-    {vm.publications == null ? <p className="text-sm text-neutral-500">이 화면에는 게시 세부 정보가 제공되지 않았습니다.</p>
-      : vm.publications.length === 0 ? <p className="text-sm text-neutral-500">연결된 도메인이 없습니다.</p>
+    {vm.publications == null ? <p className="text-sm text-neutral-500">이 화면에는 게시 세부 정보가 제공되지 않았어요.</p>
+      : vm.publications.length === 0 ? <p className="text-sm text-neutral-500">연결된 도메인이 없어요.</p>
         : <ul className="space-y-2">{vm.publications.map((pub) => <li key={pub.domain.id}><Link className="text-primary-700 underline" to={`${adminPaths.domains()}?domainId=${encodeURIComponent(pub.domain.id)}`}>{pub.fqdn} 관리</Link></li>)}</ul>}
     <Link className="text-primary-700 underline" to={adminPaths.domains()}>공개 서비스에서 확인</Link>
   </CardContent></Card>
@@ -64,7 +64,7 @@ function PersonalVmDomainsSection({ vm }: { vm: VmDetail }) {
   // publications에 오므로, 목록 조회에서 releasedAt이 찍힌 행이 예약 절이 된다.
   const reserved = (domains.data?.content ?? []).filter((d) => d.releasedAt != null)
 
-  if (live == null) return <Card><CardHeader><CardTitle>도메인</CardTitle></CardHeader><CardContent><Alert variant="info">게시 세부 정보가 제공되지 않았습니다. 개인 접근 권한을 확인해 주세요.</Alert></CardContent></Card>
+  if (live == null) return <Card><CardHeader><CardTitle>도메인</CardTitle></CardHeader><CardContent><Alert variant="info">게시 세부 정보가 제공되지 않았어요. 개인 접근 권한을 확인해 주세요.</Alert></CardContent></Card>
   const connectable = CONNECTABLE_STATUSES.includes(vm.status)
   const empty = live.length === 0 && reserved.length === 0
 
@@ -82,17 +82,17 @@ function PersonalVmDomainsSection({ vm }: { vm: VmDetail }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">
-          이 VM의 HTTP 서비스를 공개하는 주소 목록입니다.
+          이 VM의 HTTP 서비스를 공개하는 주소 목록이에요.
         </p>
 
         {canMutate && !connectable && (
           <Alert variant="warning">
-            실행 중 또는 중지됨 상태의 VM만 도메인을 연결할 수 있습니다.
+            실행 중 또는 중지됨 상태의 VM만 도메인을 연결할 수 있어요.
           </Alert>
         )}
 
         {domains.isError && (
-          <Alert variant="danger" title="도메인 목록을 불러오지 못했습니다">
+          <Alert variant="danger" title="도메인 목록을 불러오지 못했어요">
             <Button
               size="sm"
               variant="secondary"
@@ -112,11 +112,10 @@ function PersonalVmDomainsSection({ vm }: { vm: VmDetail }) {
         {empty && !domains.isPending ? (
           <div className="space-y-3 py-6 text-center">
             <p className="text-sm font-medium text-neutral-700">
-              아직 연결된 도메인이 없습니다
+              아직 연결된 도메인이 없어요
             </p>
             <p className="text-sm text-neutral-500">
-              플랫폼 서브도메인은 바로 연결되고, 내 소유 도메인은 DNS 확인을 거쳐
-              연결됩니다.
+              플랫폼 서브도메인은 소유 확인 없이, 내 소유 도메인은 DNS 확인을 거쳐 연결해요.
             </p>
             {(canMutate ? (
                 <div className="flex flex-wrap justify-center gap-2">
@@ -259,7 +258,7 @@ function AddButtons({
 function ReadOnlyNote() {
   return (
     <p className="text-sm text-neutral-500">
-      도메인 연결·해제는 이 VM의 소유자·편집자만 할 수 있습니다.
+      도메인 연결과 해제는 이 VM의 소유자나 편집자만 할 수 있어요.
     </p>
   )
 }

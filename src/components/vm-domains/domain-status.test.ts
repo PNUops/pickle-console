@@ -38,7 +38,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
     expect(fold.label).toBe('예약 중')
     expect(fold.tone).toBe('neutral')
     expect(fold.hint).toBe(
-      '8월 13일에 이름이 풀립니다. 그 전에는 다시 연결할 수 있습니다.',
+      '예약 기한은 8월 13일까지예요. 그 전에는 다시 연결할 수 있어요.',
     )
   })
 
@@ -55,7 +55,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
       releasedAt: '2026-08-06T09:00:00+09:00',
     })
     expect(fold.key).toBe('reserved')
-    expect(fold.hint).toContain('이름이 풀립니다')
+    expect(fold.hint).toContain('해제된 이름이에요')
   })
 
   test('도메인 검증 실패는 소유 확인 축을 지목한다', () => {
@@ -68,7 +68,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
     })
     expect(fold.key).toBe('failed')
     expect(fold.tone).toBe('danger')
-    expect(fold.hint).toBe('소유 확인에 실패했습니다. DNS 레코드를 확인해 주세요.')
+    expect(fold.hint).toBe('소유 확인에 실패했어요. DNS 레코드를 확인해 주세요.')
   })
 
   test('인증서 실패는 도메인이 정상일 때 인증서 축을 지목한다', () => {
@@ -79,7 +79,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
       route: route('FAILED'),
     })
     expect(fold.key).toBe('failed')
-    expect(fold.hint).toBe('인증서 발급에 실패했습니다.')
+    expect(fold.hint).toBe('인증서 발급에 실패했어요.')
   })
 
   test('라우트 실패는 앞 축이 모두 정상일 때 라우트 축을 지목한다', () => {
@@ -90,7 +90,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
       route: route('FAILED'),
     })
     expect(fold.key).toBe('failed')
-    expect(fold.hint).toBe('라우트 적용에 실패했습니다.')
+    expect(fold.hint).toBe('라우트 적용에 실패했어요.')
   })
 
   test('커스텀 + 소유 확인 전(PENDING)은 레코드 대기다', () => {
@@ -98,14 +98,14 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
     expect(fold.key).toBe('awaiting-records')
     expect(fold.label).toBe('레코드 대기')
     expect(fold.tone).toBe('warning')
-    expect(fold.hint).toBe('안내된 DNS 레코드 2개를 추가하면 자동으로 확인됩니다.')
+    expect(fold.hint).toBe('안내된 DNS 레코드 2개를 추가하면 자동으로 확인돼요.')
   })
 
   test('검증 중(VERIFYING)은 연결 중 — 소유 확인 진행 안내', () => {
     const fold = foldDomainStatus({ kind: 'CUSTOM', status: 'VERIFYING', route: route('PENDING') })
     expect(fold.key).toBe('connecting')
     expect(fold.label).toBe('연결 중')
-    expect(fold.hint).toContain('소유 확인을 진행하고 있습니다')
+    expect(fold.hint).toContain('소유 확인을 진행하고 있어요')
   })
 
   test('검증 완료 후 인증서가 아직 없는 커스텀은 발급 중 안내다', () => {
@@ -116,7 +116,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
       route: route('PENDING'),
     })
     expect(fold.key).toBe('connecting')
-    expect(fold.hint).toBe('인증서를 발급하고 있습니다. 보통 몇 분 안에 끝납니다.')
+    expect(fold.hint).toBe('인증서 발급을 기다리고 있어요.')
   })
 
   test("DNS 레코드 등록 실패는 실패로 접히고, 인증서보다 먼저 지목된다", () => {
@@ -128,7 +128,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
       route: route('APPLIED'),
     })
     expect(fold.key).toBe('failed')
-    expect(fold.hint).toBe('DNS 레코드 등록에 실패했습니다.')
+    expect(fold.hint).toBe('DNS 레코드 등록에 실패했어요.')
   })
 
   test('DNS 레코드 등록 대기는 연결 중이다', () => {
@@ -139,7 +139,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
       route: route('APPLIED'),
     })
     expect(fold.key).toBe('connecting')
-    expect(fold.hint).toBe('DNS 레코드를 등록하고 있습니다. 잠시 후 자동으로 갱신됩니다.')
+    expect(fold.hint).toBe('DNS 레코드 등록을 기다리고 있어요.')
   })
 
   test("dnsStatus 'NONE'은 배지를 움직이지 않는다 — 서빙 중인 옛 행이 연결됨으로 남는다", () => {
@@ -172,7 +172,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
       route: route('APPLIED'),
     })
     expect(fold.key).toBe('connecting')
-    expect(fold.hint).toBe('인증서를 발급하고 있습니다. 보통 몇 분 안에 끝납니다.')
+    expect(fold.hint).toBe('인증서 발급을 기다리고 있어요.')
   })
 
   test('라우트 적용 대기(PENDING 또는 미생성)는 적용 안내로 접힌다', () => {
@@ -183,7 +183,7 @@ describe('foldDomainStatus — 접힌 상태 파생 우선순위', () => {
       route: route('PENDING'),
     })
     expect(pending.key).toBe('connecting')
-    expect(pending.hint).toContain('공개 설정을 적용하고 있습니다')
+    expect(pending.hint).toContain('공개 설정 반영을 기다리고 있어요')
 
     // 접수 직후 과도기 — 라우트 블록이 아직 없어도 크래시 없이 연결 중이다.
     const missing = foldDomainStatus({

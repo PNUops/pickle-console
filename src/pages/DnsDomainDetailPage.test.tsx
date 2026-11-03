@@ -29,7 +29,7 @@ describe('domain detail', () => {
     renderDetail('records')
 
     await screen.findByDisplayValue('93.184.216.34')
-    expect(screen.getByText(/표에서 지운 줄은 존에서도 지워집니다/)).toBeInTheDocument()
+    expect(screen.getByText(/표에서 지운 줄도 삭제돼요/)).toBeInTheDocument()
 
     // Add a row to make three, then delete one so two remain. With only one
     // left, "sends everything" and "sends the first row" build the same body.
@@ -93,7 +93,7 @@ describe('domain detail', () => {
 
     // Without this the failed set looks exactly like an applied one, and the
     // owner is left with an address that does not resolve and no reason.
-    expect(await screen.findByText(/반영하지 못했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/반영하지 못했어요/)).toBeInTheDocument()
     expect(screen.getByText(/CNAME is not allowed at the apex/)).toBeInTheDocument()
   })
 
@@ -118,7 +118,7 @@ describe('domain detail', () => {
     renderDetail('records')
 
     expect(
-      await screen.findByText(/해제한 이름에는 레코드를 넣을 수 없습니다/),
+      await screen.findByText(/해제한 이름에는 레코드를 넣을 수 없어요/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
     // The row keeps status ACTIVE on the server, so the plain badge would read
@@ -145,7 +145,7 @@ describe('domain detail', () => {
       expect(dnsDomainStore.rows[0].domain.releasedAt).not.toBeNull()
       expect(dnsDomainStore.rows[0].records).toHaveLength(0)
     })
-    expect(await screen.findByText(/해제한 이름입니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/해제한 이름이에요/)).toBeInTheDocument()
   })
 
   test('a reader below editor is not shown the actions the server would refuse', async () => {

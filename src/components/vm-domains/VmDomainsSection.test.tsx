@@ -27,7 +27,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
     await screen.findByRole('heading', { name: 'web-lab' })
     const card = await domainsCard()
     expect(
-      await within(card).findByText('아직 연결된 도메인이 없습니다'),
+      await within(card).findByText('아직 연결된 도메인이 없어요'),
     ).toBeInTheDocument()
     expect(
       within(card).getByRole('button', { name: /플랫폼 서브도메인 추가/ }),
@@ -47,7 +47,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
     expect(within(card).getByText('→ :3000')).toBeInTheDocument()
     expect(within(card).getByText('연결됨')).toBeInTheDocument()
     // 정상 연결 행에는 안내 줄이 없다.
-    expect(within(card).queryByText(/실패했습니다/)).not.toBeInTheDocument()
+    expect(within(card).queryByText(/실패했어요/)).not.toBeInTheDocument()
   })
 
   test('예약 중 절 — 트래픽을 받지 않는 이름을 서빙 목록과 분리해 보여준다', async () => {
@@ -63,7 +63,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
       within(card).queryByRole('link', { name: /shop-old\.pusan\.dev/ }),
     ).not.toBeInTheDocument()
     expect(within(card).getByRole('button', { name: '다시 연결' })).toBeInTheDocument()
-    expect(within(card).getByText(/이름이 풀립니다/)).toBeInTheDocument()
+    expect(within(card).getByText(/예약 기한은/)).toBeInTheDocument()
   })
 
   test('N개 서빙 — 도메인마다 행이 하나씩 나오고 실패 축을 지목한다', async () => {
@@ -78,7 +78,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
     expect(within(card).getByRole('link', { name: /shop\.example\.com/ })).toBeInTheDocument()
     // 커스텀 행은 실패로 접히고 라우트 축을 지목한다.
     expect(within(card).getByText('실패')).toBeInTheDocument()
-    expect(within(card).getByText('라우트 적용에 실패했습니다.')).toBeInTheDocument()
+    expect(within(card).getByText('라우트 적용에 실패했어요.')).toBeInTheDocument()
     // 플랫폼 행은 정상.
     expect(within(card).getByText('연결됨')).toBeInTheDocument()
   })
@@ -90,7 +90,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
     await screen.findByRole('heading', { name: 'algo-judge' })
     const card = await domainsCard()
     expect(
-      await within(card).findByText(/도메인 연결·해제는 이 VM의 소유자·편집자만/),
+      await within(card).findByText(/도메인 연결과 해제는 이 VM의 소유자나 편집자만/),
     ).toBeInTheDocument()
     expect(
       within(card).queryByRole('button', { name: /플랫폼 서브도메인 추가/ }),
@@ -104,7 +104,7 @@ describe('VM 도메인 — 목록 렌더링 (0/1/N)', () => {
     const card = await domainsCard()
     expect(
       await within(card).findByText(
-        '실행 중 또는 중지됨 상태의 VM만 도메인을 연결할 수 있습니다.',
+        '실행 중 또는 중지됨 상태의 VM만 도메인을 연결할 수 있어요.',
       ),
     ).toBeInTheDocument()
     expect(
@@ -138,7 +138,7 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => 
     // 커스텀 연결과 같은 모양으로, 같은 드로어가 접수된 도메인 상세로 전환된다.
     const detail = await screen.findByRole('dialog', { name: 'web-lab.pusan.dev' })
     expect(
-      within(detail).getByText(/연결을 접수했습니다\. 적용이 끝나면/),
+      within(detail).getByText(/연결을 접수했어요\./),
     ).toBeInTheDocument()
     // 행이 생기고, 라우트 PENDING → 폴링 → APPLIED로 연결됨에 수렴한다.
     expect(
@@ -162,7 +162,7 @@ describe('VM 도메인 — 플랫폼 서브도메인 추가 (드로어)', () => 
     await user.type(within(modal).getByLabelText('서브도메인'), 'www')
     await user.click(within(modal).getByRole('button', { name: '도메인 연결' }))
     expect(
-      await within(modal).findByText("'www'은(는) 예약된 서브도메인이라 사용할 수 없습니다."),
+      await within(modal).findByText('예약된 서브도메인이에요. 다른 이름을 입력해 주세요.'),
     ).toBeInTheDocument()
   })
 
@@ -222,7 +222,7 @@ describe('VM 도메인 — 내 도메인 연결 (드로어)', () => {
     // 드로어가 접수된 도메인의 상세로 전환된다 — 후속 작업(레코드 등록)이 바로 보인다.
     const detail = await screen.findByRole('dialog', { name: 'myapp.example.com' })
     expect(
-      within(detail).getByText(/연결을 접수했습니다\. 아래 DNS 레코드를 추가하면/),
+      within(detail).getByText(/연결을 접수했어요\. 아래 DNS 레코드를 추가하면/),
     ).toBeInTheDocument()
     expect(within(detail).getByText('레코드 대기')).toBeInTheDocument()
     // A·TXT 두 레코드와 복사 버튼이 표로 안내된다.
@@ -289,7 +289,7 @@ describe('VM 도메인 — 드로어의 검증 재확인·포트 변경', () => 
     await user.click(within(drawer).getByRole('button', { name: '공개 포트 변경' }))
 
     expect(
-      await screen.findByText('공개 포트 변경을 접수했습니다. 잠시 후 적용됩니다.'),
+      await screen.findByText('공개 포트 변경을 접수했어요.'),
     ).toBeInTheDocument()
     // 목록 행의 포트 표기가 갱신된다 (폴링·무효화 반영).
     expect(await within(card).findByText('→ :9090')).toBeInTheDocument()
@@ -312,7 +312,7 @@ describe('VM 도메인 — 해제 확인의 무게', () => {
 
     const confirm = await screen.findByRole('dialog', { name: '도메인 연결 해제' })
     expect(
-      within(confirm).getByText(/이름도 바로 풀립니다.*소유 확인을 처음부터/),
+      within(confirm).getByText(/이름은 바로 풀리며.*소유 확인을 처음부터/),
     ).toBeInTheDocument()
     // 도메인이 둘이라 마지막 도메인 경고는 없다.
     expect(within(confirm).queryByText(/마지막 도메인/)).not.toBeInTheDocument()
@@ -340,7 +340,7 @@ describe('VM 도메인 — 해제 확인의 무게', () => {
 
     const confirm = await screen.findByRole('dialog', { name: '도메인 연결 해제' })
     // 플랫폼 서브도메인은 이름이 예약된 뒤 풀린다. 도메인이 둘이라 승격은 없다.
-    expect(within(confirm).getByText(/예약된 뒤 풀립니다/)).toBeInTheDocument()
+    expect(within(confirm).getByText(/예약 기간 뒤에 풀리고/)).toBeInTheDocument()
     expect(within(confirm).queryByText(/마지막 도메인/)).not.toBeInTheDocument()
 
     await user.click(within(confirm).getByRole('button', { name: '연결 해제' }))
@@ -370,7 +370,7 @@ describe('VM 도메인 — 해제 확인의 무게', () => {
 
     const confirm = await screen.findByRole('dialog', { name: '도메인 연결 해제' })
     expect(
-      within(confirm).getByText(/마지막 도메인입니다.*HTTP 공개가 완전히 중단됩니다/),
+      within(confirm).getByText(/마지막 도메인이에요.*연결된 도메인이 남지 않아요/),
     ).toBeInTheDocument()
   })
 })
@@ -456,7 +456,7 @@ describe('VM 도메인 — 예약 중 이름의 두 갈래', () => {
     await user.click(within(drawer).getByRole('button', { name: '지금 이름 반납' }))
     const confirm = await screen.findByRole('dialog', { name: '지금 이름 반납' })
     expect(
-      within(confirm).getByText(/이름이 즉시 풀려 다른 사용자가 사용할 수 있게 됩니다/),
+      within(confirm).getByText(/이름이 즉시 풀려 다른 사용자가 사용할 수 있게 돼요/),
     ).toBeInTheDocument()
     await user.click(within(confirm).getByRole('button', { name: '지금 이름 반납' }))
 

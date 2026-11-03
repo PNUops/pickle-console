@@ -64,8 +64,8 @@ export function ConnectCustomDomainDrawer({
           onPortUsed={() => {}}
           notice={
             <Alert variant="info">
-              연결을 접수했습니다. 아래 DNS 레코드를 추가하면 확인이 자동으로
-              진행됩니다.
+              연결을 접수했어요. 아래 DNS 레코드를 추가하면 확인이 자동으로
+              진행돼요.
             </Alert>
           }
         />
@@ -113,10 +113,10 @@ function ConnectForm({
       await queryClient.invalidateQueries({ queryKey: ['domains'] })
     },
     onError: (err) => {
-      const apiError = toApiError(err, '도메인 연결을 접수하지 못했습니다.')
+      const apiError = toApiError(err, '도메인 연결을 접수하지 못했어요.')
       if (apiError.code === 'DOMAIN_FQDN_TAKEN') {
         setFieldErrors({
-          customDomain: '이미 사용 중인 이름입니다. 다른 이름을 입력해 주세요.',
+          customDomain: '이미 사용 중인 이름이에요. 다른 이름을 입력해 주세요.',
         })
         setError(apiError.message)
         return
@@ -147,7 +147,7 @@ function ConnectForm({
     <form onSubmit={submit} className="space-y-4" noValidate>
       <p className="text-sm text-neutral-600">
         접수하면 안내되는 DNS 레코드를 등록해야 소유 확인과 인증서 발급이
-        진행됩니다.
+        진행돼요.
       </p>
       {error && (
         <ErrorSummary
@@ -168,7 +168,7 @@ function ConnectForm({
         label="공개 포트"
         required
         error={fieldErrors.port}
-        description="VM 안에서 서비스가 듣고 있는 포트입니다. SSH 포트(22)는 공개할 수 없습니다."
+        description="VM 안에서 서비스가 듣고 있는 포트예요. SSH 포트(22)는 공개할 수 없어요."
         className="sm:w-40"
       >
         <Input

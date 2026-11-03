@@ -384,8 +384,8 @@ describe('institution resource authority projections', () => {
 
   test('hidden personal publications are not converted to an empty list', async () => {
     renderPage({ ...orgAdminProfile, institutionAuthority: undefined }, '/fixture/domains', { vm: { ...vmStore[0], publications: null } })
-    expect(await screen.findByText('게시 세부 정보가 제공되지 않았습니다. 개인 접근 권한을 확인해 주세요.')).toBeInTheDocument()
-    expect(screen.queryByText('아직 연결된 도메인이 없습니다')).not.toBeInTheDocument()
+    expect(await screen.findByText('게시 세부 정보가 제공되지 않았어요. 개인 접근 권한을 확인해 주세요.')).toBeInTheDocument()
+    expect(screen.queryByText('아직 연결된 도메인이 없어요')).not.toBeInTheDocument()
   })
 })
 

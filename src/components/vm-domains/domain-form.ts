@@ -15,8 +15,8 @@ export const DOMAIN_FIELD_LABELS: Record<string, string> = {
 export function portFieldError(raw: string): string | null {
   if (!/^\d+$/.test(raw.trim())) return '포트 번호를 입력해 주세요.'
   const port = Number(raw.trim())
-  if (port < 1 || port > 65535) return '포트는 1–65535 범위여야 합니다.'
-  if (port === 22) return 'VM의 SSH 포트(22)는 공개할 수 없습니다.'
+  if (port < 1 || port > 65535) return '포트는 1–65535 범위여야 해요.'
+  if (port === 22) return 'VM의 SSH 포트(22)는 공개할 수 없어요.'
   return null
 }
 
@@ -33,7 +33,7 @@ export function subdomainFieldError(
     return '서브도메인은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
   }
   if (reserved?.includes(name)) {
-    return `'${name}'은(는) 예약된 서브도메인이라 사용할 수 없습니다.`
+    return '예약된 서브도메인이에요. 다른 이름을 입력해 주세요.'
   }
   return null
 }
