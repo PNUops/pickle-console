@@ -18,7 +18,7 @@ export function LlmKeyConnectionCard({ keyId }: { keyId: string }) {
     return (
       <Card>
         <CardHeader><CardTitle>연결 정보</CardTitle></CardHeader>
-        <CardContent>개발 환경에서 LLM API 연결이 비활성화되어 있습니다.</CardContent>
+        <CardContent>개발 환경에서 LLM API 연결이 비활성화되어 있어요.</CardContent>
       </Card>
     )
   }
@@ -62,7 +62,7 @@ export function LlmKeyConnectionCard({ keyId }: { keyId: string }) {
           >
             사용 가이드
           </GuideLink>
-          에 있습니다.
+          에 있어요.
         </p>
         <LlmKeyModelsModal
           keyId={keyId}

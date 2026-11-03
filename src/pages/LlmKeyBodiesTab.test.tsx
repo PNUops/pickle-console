@@ -35,14 +35,14 @@ describe('기록된 본문 탭', () => {
     // 자기가 남긴 것을 볼 수 없다 — 이 회귀를 막는 유일한 그물이다.
     renderBodies(RECORDING_OFF_WITH_HISTORY)
 
-    expect(await screen.findByText(/본문 기록은 지금 꺼져 있습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/본문 기록은 지금 꺼져 있어요/)).toBeInTheDocument()
     expect(await screen.findByText(/"90번째 질문입니다"/)).toBeInTheDocument()
   })
 
   test('기록이 없고 꺼져 있으면 켜는 길을 안내한다', async () => {
     renderBodies(NO_RECORDS_KEY)
 
-    expect(await screen.findByText('기록된 본문이 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('기록된 본문이 없어요')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '설정 탭에서 켜기' })).toBeInTheDocument()
   })
 
@@ -54,7 +54,7 @@ describe('기록된 본문 탭', () => {
     server.use(llmKeyDetailAs(RECORDED_KEY, 'OWNER', { recordBodies: false }))
     renderBodies(RECORDED_KEY)
 
-    expect(await screen.findByText('기록된 본문이 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('기록된 본문이 없어요')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '설정 탭에서 켜기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
@@ -62,7 +62,7 @@ describe('기록된 본문 탭', () => {
   test('발급 전 키는 조회하지 않고 이유를 말한다', async () => {
     renderBodies(PENDING_KEY)
 
-    expect(await screen.findByText('아직 발급되지 않은 키입니다')).toBeInTheDocument()
+    expect(await screen.findByText('아직 발급되지 않은 키예요')).toBeInTheDocument()
   })
 
   test('부여 없는 키는 기록을 한 줄도 보여 주지 않는다', async () => {
@@ -81,7 +81,7 @@ describe('기록된 본문 탭', () => {
     renderBodies(RECORDED_KEY)
 
     expect(
-      await screen.findByText(/접근 권한이 있는 사람이면 누구나 읽을 수 있습니다/),
+      await screen.findByText(/접근 권한이 있는 사람이면 누구나 읽을 수 있어요/),
     ).toBeInTheDocument()
     expect(screen.getByText(/보관 기간은 30일/)).toBeInTheDocument()
   })
@@ -91,7 +91,7 @@ describe('기록된 본문 탭', () => {
     // 화면이 같은 사실을 두 번 말하지 않는다.
     renderBodies(RECORDING_OFF_WITH_HISTORY)
 
-    await screen.findByText('본문 기록은 지금 꺼져 있습니다')
+    await screen.findByText('본문 기록은 지금 꺼져 있어요')
     expect(document.body.textContent?.match(/30일/g) ?? []).toHaveLength(1)
   })
 
@@ -157,7 +157,7 @@ describe('기록된 본문 탭', () => {
 
     await user.click(screen.getByRole('button', { name: '켜기' }))
     const open = document.body.textContent ?? ''
-    expect(open.match(/30일 동안 보관합니다/g) ?? []).toHaveLength(1)
+    expect(open.match(/30일 동안 보관해요/g) ?? []).toHaveLength(1)
     expect(open.match(/접근 권한이 있는 사람은 모두/g) ?? []).toHaveLength(1)
     settings.unmount()
 
@@ -185,7 +185,7 @@ describe('기록된 본문 탭', () => {
     const on = renderApp(`/console/llm-keys/${LIVE_KEY}?tab=settings`)
 
     await screen.findByRole('button', { name: '끄기' })
-    expect(screen.getByText(/이미 기록된 본문은 보관 기간까지 남습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/이미 기록된 본문은 보관 기간까지 남아요/)).toBeInTheDocument()
     on.unmount()
 
     key.recordBodies = false

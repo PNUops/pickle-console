@@ -4,7 +4,7 @@ import { Alert, Button, Spinner } from './ui'
 
 export function ModelCatalogueStatus({ state }: { state: ModelCatalogueState }) {
   const { canRead, query } = state
-  if (!canRead) return <Alert>모델 목록을 조회할 권한이 없습니다. 허용된 정책 입력은 직접 작성할 수 있습니다.</Alert>
+  if (!canRead) return <Alert>모델 목록을 조회할 권한이 없어요. 허용된 정책 입력은 직접 작성할 수 있어요.</Alert>
   const catalogue = query.data
   const refreshFailed = catalogue != null && (catalogue.lastError != null || catalogue.consecutiveFailures > 0)
   return <section aria-label="모델 목록 갱신 진단" className="space-y-3 rounded-lg border border-line p-3 text-sm">
@@ -28,8 +28,8 @@ export function ModelCatalogueStatus({ state }: { state: ModelCatalogueState }) 
         <p className="break-all">오류 분류: <code>{catalogue.lastError ?? '미보고'}</code></p>
       </Alert>}
       {catalogue.lastSuccessAt == null && <Alert>
-        <p>아직 성공한 공급자 목록이 없습니다.</p>
-        {catalogue.lastAttemptAt == null && <p>공급자 목록을 갱신한 시도 기록도 없습니다.</p>}
+        <p>모델 목록을 갱신한 성공 기록이 없어요.</p>
+        {catalogue.lastAttemptAt == null && <p>갱신을 시도한 기록도 없어요.</p>}
       </Alert>}
       {catalogue.freshness === 'STALE' && <Alert variant="warning">모델 목록이 오래됐어요.</Alert>}
     </>}

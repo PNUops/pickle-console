@@ -34,30 +34,30 @@ export function capacityState(params: URLSearchParams, fallback: ReturnType<type
   const to = params.has('to') ? instant(params.get('to')) : fallback.to
   let error: string | null = null
   if (!from || !to || Date.parse(to) <= Date.parse(from) || Date.parse(to) - Date.parse(from) > 90 * 86400_000) {
-    error = '조회 시작·종료 시각을 확인해 주세요. 기간은 0보다 크고 90일 이하여야 합니다.'
+    error = '조회 시작·종료 시각을 확인해 주세요. 기간은 0보다 크고 90일 이하여야 해요.'
   }
   const ids: Pick<LlmCapacityQuery, 'workspaceId' | 'upstreamId' | 'telemetrySourceId' | 'openrouterAccountId'> = {}
   for (const field of ['workspaceId', 'upstreamId', 'telemetrySourceId', 'openrouterAccountId'] as const) {
     const value = params.get(field)
-    if (value && !isUuid(value)) error = '조회 대상의 식별자가 올바르지 않습니다.'
+    if (value && !isUuid(value)) error = '조회 대상의 식별자가 올바르지 않아요.'
     else if (value) ids[field] = value.toLowerCase()
   }
   const rawGroup = params.get('group')
   const group: NonNullable<LlmCapacityQuery['group']> = rawGroup === 'ORG' || rawGroup === 'KEY' ? rawGroup : 'WORKSPACE'
-  if (rawGroup && !['ORG', 'WORKSPACE', 'KEY'].includes(rawGroup)) error = '소비처 구분이 올바르지 않습니다.'
+  if (rawGroup && !['ORG', 'WORKSPACE', 'KEY'].includes(rawGroup)) error = '소비처 구분이 올바르지 않아요.'
   const bucket = params.get('bucketSeconds')
   const bucketSeconds = bucket && /^\d+$/.test(bucket) && Number.isSafeInteger(Number(bucket)) && Number(bucket) > 0 ? Number(bucket) : undefined
-  if (bucket && !bucketSeconds) error = '집계 간격이 올바르지 않습니다.'
+  if (bucket && !bucketSeconds) error = '집계 간격이 올바르지 않아요.'
   const errorTypeMissing = params.get('errorTypeMissing')
-  if (errorTypeMissing && !['true', 'false'].includes(errorTypeMissing)) error = '원인 미기록 필터가 올바르지 않습니다.'
-  if (errorTypeMissing === 'true' && params.get('errorType')) error = '원인과 원인 미기록 필터를 동시에 선택할 수 없습니다.'
+  if (errorTypeMissing && !['true', 'false'].includes(errorTypeMissing)) error = '원인 미기록 필터가 올바르지 않아요.'
+  if (errorTypeMissing === 'true' && params.get('errorType')) error = '원인과 원인 미기록 필터를 동시에 선택할 수 없어요.'
   const rawCategory = params.get('reasonCategory')
   const reasonCategory = REASON_CATEGORIES.find((category) => category === rawCategory)
-  if (rawCategory && !reasonCategory) error = '원인 분류 필터가 올바르지 않습니다.'
+  if (rawCategory && !reasonCategory) error = '원인 분류 필터가 올바르지 않아요.'
   const sort = CONSUMER_SORTS.find((value) => value === params.get('sort')) ?? 'REQUESTS_DESC'
   const size = explorationPageSize(params.get('size'))
-  if (size == null) error = '페이지 크기는 1~100이어야 합니다.'
-  if (params.has('sort') && !CONSUMER_SORTS.includes(params.get('sort') as typeof sort)) error = '소비처 정렬 조건이 올바르지 않습니다.'
+  if (size == null) error = '페이지 크기는 1~100이어야 해요.'
+  if (params.has('sort') && !CONSUMER_SORTS.includes(params.get('sort') as typeof sort)) error = '소비처 정렬 조건이 올바르지 않아요.'
   return {
     error,
     query: {

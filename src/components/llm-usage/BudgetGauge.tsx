@@ -45,7 +45,7 @@ export function BudgetGauge({
   const barPercent = percent != null ? Math.min(percent, 100) : null
   const valueLabel =
     usedLabel == null
-      ? '아직 보고된 사용량이 없습니다'
+      ? '아직 보고된 사용량이 없어요'
       : `${usedLabel}${limitLabel ? ` / ${limitLabel}` : ''}${percentLabel != null ? ` (${percentLabel}%)` : ''}`
   return (
     <div className="space-y-1">

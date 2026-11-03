@@ -216,23 +216,22 @@ function StatusNotice({ status }: { status: LlmApiKeyStatus }) {
   // 한 탭에 세 번 선다. 나머지 상태는 배지 밖의 다음 행동을 실어 남는다.
   if (status === 'REVOKED') {
     return (
-      <Alert variant="warning" title="폐기된 키입니다">
-        이 키로 보낸 요청은 거부됩니다. 계속 쓰려면 새로 신청해 주세요. 지금까지의 사용
-        기록은 남아 있습니다.
+      <Alert variant="warning" title="폐기된 키예요">
+        계속 쓰려면 새로 신청해 주세요. 지금까지의 사용 기록은 남아 있어요.
       </Alert>
     )
   }
   if (status === 'SUSPENDED') {
     return (
-      <Alert variant="warning" title="정지된 키입니다">
-        관리자가 해제하기 전까지는 요청이 거부됩니다.
+      <Alert variant="warning" title="정지된 키예요">
+        관리자가 정지를 해제해야 다시 쓸 수 있어요.
       </Alert>
     )
   }
   if (status === 'EXPIRED') {
     return (
-      <Alert variant="warning" title="만료된 키입니다">
-        더 이상 요청을 인증하지 않습니다. 계속 쓰려면 새로 신청해 주세요.
+      <Alert variant="warning" title="만료된 키예요">
+        더 이상 요청을 인증하지 않아요. 계속 쓰려면 새로 신청해 주세요.
       </Alert>
     )
   }

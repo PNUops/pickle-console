@@ -50,7 +50,7 @@ test('a late user mutation cannot close another allocation modal or publish its 
   response.resolve()
   await waitFor(() => expect(client.isMutating()).toBe(0))
   expect(screen.getByRole('dialog', { name: 'GPU 반납' })).toBeInTheDocument()
-  expect(screen.queryByText('GPU 임대 연장 요청을 접수했습니다.')).not.toBeInTheDocument()
+  expect(screen.queryByText('GPU 임대 연장 요청을 접수했어요.')).not.toBeInTheDocument()
 })
 
 test('a late administrator mutation cannot affect the next allocation controls', async () => {

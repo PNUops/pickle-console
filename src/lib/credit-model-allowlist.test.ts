@@ -51,13 +51,13 @@ describe('creditModelsError', () => {
   // 선행 물결을 떼고 보지 않으면 자체 서빙 이름이 한 글자 차이로 들어온다.
   test('자체 서빙 이름은 물결을 붙여도 거부한다', () => {
     for (const model of ['pickle-general', 'pnu-general', '~pickle-general', '~pnu-general']) {
-      expect(creditModelsError([model], 'DENY')).toContain('자체 서빙')
+      expect(creditModelsError([model], 'DENY')).toContain('이 목록에는 유료 모델 이름을 적어 주세요')
     }
   })
 
   test('개수와 길이 상한을 지킨다', () => {
     const many = Array.from({ length: 51 }, (_, i) => `openai/model-${i}`)
     expect(creditModelsError(many, 'ALLOW')).toContain('최대 50개')
-    expect(creditModelsError([`openai/${'a'.repeat(201)}`], 'ALLOW')).toContain('너무 깁니다')
+    expect(creditModelsError([`openai/${'a'.repeat(201)}`], 'ALLOW')).toContain('200바이트까지')
   })
 })

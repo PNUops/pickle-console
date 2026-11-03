@@ -852,7 +852,7 @@ export const llmArticles: GuideArticle[] = [
           <ol>
             <li>키 상세의 <strong>설정 → 본문 기록 → 켜기</strong>를 눌러요. 편집자 이상 등급이 필요해요.</li>
             <li>기록할 내용, 열람 범위와 보관 기간을 읽고 확인 창에서 켜요.</li>
-            <li>민감한 내용이 없는 Chat Completions 요청을 보내고, 잠시 후 <strong>기록된 본문</strong> 탭에서 나타나는지 확인해요.</li>
+            <li>설정이 게이트웨이에 반영된 뒤 민감한 내용이 없는 Chat Completions 요청을 보내고, 잠시 후 <strong>기록된 본문</strong> 탭에서 나타나는지 확인해요.</li>
           </ol>
           <p><strong>설정 → 본문 기록 → 끄기</strong>는 앞으로 보낼 요청의 기록을 멈춰요. 이미 기록된 본문은 보관 기간까지 남으며, 지난 것부터 삭제돼요. 끄기나 키 폐기는 기존 기록을 즉시 삭제하는 기능이 아니에요.</p>
         </>,
@@ -878,8 +878,8 @@ export const llmArticles: GuideArticle[] = [
             <li>새 키를 복사해 실행 환경에 넣고, 이전 값을 사용하는 모든 프로그램의 설정을 바꿔요.</li>
             <li><GuideLink slug="llm/connect" anchor="first-call">첫 호출 예제</GuideLink>로 새 키가 정상 응답하는지 확인해요.</li>
           </ol>
-          <Alert variant="warning" title="이전 키 값은 즉시 무효화돼요">
-            재발급 직후부터 이전 값을 쓰는 프로그램의 요청은 실패해요. 새 값을 복사하기 전에 완료 창을 닫지 마세요.
+          <Alert variant="warning" title="새 키 값으로 연결 설정을 바꿔 주세요">
+            변경이 게이트웨이에 반영되면 이전 키 값으로 새 요청을 보낼 수 없어요. 이미 진행 중인 요청은 계속 처리될 수 있어요. 새 값을 복사하기 전에 완료 창을 닫지 마세요.
           </Alert>
           <GuideVideo
             src={llmKeyReissueVideo}
@@ -902,7 +902,7 @@ export const llmArticles: GuideArticle[] = [
             <li><strong>폐기</strong>를 누르고 목록이나 개요의 상태가 <strong>폐기됨</strong>으로 바뀌었는지 확인해요.</li>
           </ol>
           <Alert variant="danger" title="폐기는 되돌릴 수 없어요">
-            폐기한 키는 다시 발급할 수 없으며 이후 요청은 거부돼요. 계속 쓰려면 새로 신청해야 해요. 지금까지의 사용 기록은 남아요.
+            폐기한 키는 다시 발급할 수 없어요. 변경이 게이트웨이에 반영되면 새 요청이 거부돼요. 이미 진행 중인 요청은 계속 처리될 수 있어요. 계속 쓰려면 새로 신청해야 해요. 지금까지의 사용 기록은 남아요.
           </Alert>
         </>,
       },

@@ -81,9 +81,9 @@ function ModelsBody({
   return (
     <div className="space-y-6">
       <p className="text-sm text-neutral-600">
-        요청 본문의 <code className="font-mono">model</code> 필드에 아래 이름을 그대로 넣습니다.
+        요청 본문의 <code className="font-mono">model</code> 필드에 아래 이름을 그대로 넣어 주세요.
       </p>
-      <p className="text-xs text-neutral-500">이 목록은 저장된 모델 정책의 후보입니다. 부여된 기능 권한과 키 상태·기한·한도, 자격증명 및 공급자 지원은 별도 호출 조건이며, 이름이 있어도 호출 성공을 보장하지 않습니다.</p>
+      <p className="text-xs text-neutral-500">이 목록은 저장된 모델 정책의 후보예요. 부여된 기능 권한과 키 상태·기한·한도, 자격증명 및 공급자 지원은 별도 호출 조건이며, 이름이 있어도 호출 성공을 보장하지 않아요.</p>
 
       <Input
         value={term}
@@ -95,9 +95,9 @@ function ModelsBody({
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-900">자체 서빙 모델</h3>
         {data.selfServed.length === 0 ? (
-          <p className="text-sm text-neutral-600">지금 제공되는 자체 서빙 모델이 없습니다.</p>
+          <p className="text-sm text-neutral-600">지금 제공되는 자체 서빙 모델이 없어요.</p>
         ) : selfServed.length === 0 ? (
-          <p className="text-sm text-neutral-600">찾는 이름이 없습니다.</p>
+          <p className="text-sm text-neutral-600">찾는 이름이 없어요.</p>
         ) : (
           <ul className="divide-y divide-neutral-200 rounded border border-neutral-200">
             {selfServed.map((model) => (
@@ -144,7 +144,7 @@ function PaidSection({
   filtered: boolean
 }) {
   const paid = data.paid
-  if (paid == null) return <Alert>이 키의 유료 모델 정책은 현재 업무로 제공되지 않습니다.</Alert>
+  if (paid == null) return <Alert>이 키의 유료 모델 정책은 현재 업무로 제공되지 않아요.</Alert>
   const narrowed = paid.allowedPatterns.length > 0 || paid.deniedPatterns.length > 0
 
   return (
@@ -153,18 +153,18 @@ function PaidSection({
 
       {paid.access === 'NONE' && (
         <Alert variant="info">
-          이 키에는 아직 금액 한도가 없습니다. 아래는 한도를 신청하면 넣을 수 있는 이름입니다.
+          이 키에는 아직 금액 한도가 없어요. 아래는 한도를 신청하면 넣을 수 있는 이름이에요.
         </Alert>
       )}
       {paid.access === 'PENDING' && (
         <Alert variant="info">
-          금액 한도의 적용이 아직 확인되지 않았습니다. 적용과 다른 호출 조건을 확인해 주세요.
+          금액 한도의 적용이 아직 확인되지 않았어요. 적용과 다른 호출 조건을 확인해 주세요.
         </Alert>
       )}
       {paid.catalogFreshness === 'STALE' && (
         <Alert variant="warning">
-          공급자 목록을 마지막으로 가져온 지 오래됐습니다. 그 뒤에 생기거나 사라진 모델은
-          반영되지 않았을 수 있습니다.
+          공급자 목록을 마지막으로 가져온 지 오래됐어요. 그 뒤에 생기거나 사라진 모델은
+          반영되지 않았을 수 있어요.
         </Alert>
       )}
 
@@ -172,17 +172,17 @@ function PaidSection({
 
       {paid.catalogFreshness === 'UNKNOWN' ? (
         <p className="text-sm text-neutral-600">
-          공급자 목록을 아직 한 번도 가져오지 못했습니다. 목록이 비어 있는 것과는 다르며,
+          공급자 목록을 아직 한 번도 가져오지 못했어요. 목록이 비어 있는 것과는 다르며,
           이름을 알고 있다면 모델 정책과 별도 호출 조건을 확인해 주세요.
         </p>
       ) : paid.models.length === 0 ? (
         <p className="text-sm text-neutral-600">
           {narrowed
-            ? '저장된 목록에서 이 키의 패턴 조건을 통과하는 후보가 없습니다.'
-            : '공급자 목록이 비어 있습니다.'}
+            ? '저장된 목록에서 이 키의 패턴 조건을 통과하는 후보가 없어요.'
+            : '공급자 목록이 비어 있어요.'}
         </p>
       ) : rows.length === 0 && filtered ? (
-        <p className="text-sm text-neutral-600">찾는 이름이 없습니다.</p>
+        <p className="text-sm text-neutral-600">찾는 이름이 없어요.</p>
       ) : (
         <ul className="divide-y divide-neutral-200 rounded border border-neutral-200">
           {rows.map((model) => (

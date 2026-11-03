@@ -50,7 +50,7 @@ export function LlmKeyBodyRecordCard({ llmKey }: { llmKey: LlmKeyDetail }) {
     },
     onError: (err) => {
       setConfirming(false)
-      setError(toApiError(err, '본문 기록 설정을 바꾸지 못했습니다.').message)
+      setError(toApiError(err, '본문 기록 설정을 바꾸지 못했어요.').message)
     },
   })
 
@@ -65,8 +65,8 @@ export function LlmKeyBodyRecordCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           label={llmKey.recordBodies ? '켜짐' : '꺼짐'}
           description={
             llmKey.recordBodies
-              ? '이 키의 Chat Completions 프롬프트와 응답 텍스트를 보관합니다.'
-              : '새 요청은 기록되지 않습니다.'
+              ? '이 키의 Chat Completions 프롬프트와 응답 텍스트를 보관해요.'
+              : '새 요청은 기록되지 않아요.'
           }
           action={
             <Button
@@ -88,13 +88,13 @@ export function LlmKeyBodyRecordCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           }
           note={
             llmKey.recordBodies
-              ? '끄면 새 요청만 기록되지 않고, 이미 기록된 본문은 보관 기간까지 남습니다.'
+              ? '끄면 새 요청만 기록되지 않고, 이미 기록된 본문은 보관 기간까지 남아요.'
               : undefined
           }
         />
         {!allowed && (
           <PermissionNotice>
-            본문 기록은 편집자 이상 등급을 받은 사람만 켜고 끌 수 있습니다.
+            본문 기록은 편집자 이상 등급을 받은 사람만 켜고 끌 수 있어요.
           </PermissionNotice>
         )}
 
@@ -120,13 +120,13 @@ export function LlmKeyBodyRecordCard({ llmKey }: { llmKey: LlmKeyDetail }) {
           <div className="space-y-3">
             <Alert variant="warning">
               이 키에 접근 권한이 있는 사람은 모두 기록된 프롬프트와 응답을 읽을 수
-              있습니다. 개인정보가 담기는 요청에는 켜지 마세요.
+              있어요. 개인정보가 담기는 요청에는 켜지 마세요.
             </Alert>
             <p className="text-sm text-neutral-600">
-              켜면 이 키의 Chat Completions 프롬프트와 응답 텍스트를 30일 동안 보관합니다.
-              Chat Completions 밖의 경로는 기록하지 않습니다. 프롬프트에 포함한 이미지나
+              설정이 게이트웨이에 반영되면 이 키의 Chat Completions 프롬프트와 응답 텍스트를 30일 동안 보관해요.
+              Chat Completions 밖의 경로는 기록하지 않아요. 프롬프트에 포함한 이미지나
               파일의 참조와 일부 데이터도 저장될 수 있으며, 텍스트 화면에서 보이지 않는다고
-              저장에서 제외되는 것은 아닙니다.
+              저장에서 제외되는 것은 아니에요.
             </p>
           </div>
         </Modal>

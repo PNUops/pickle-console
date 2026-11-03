@@ -831,7 +831,7 @@ describe('AdminLlmKeyDetailPage expiry change', () => {
     await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
     const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
     expect(
-      within(dialog).getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.'),
+      within(dialog).getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있어요.'),
     ).toBeInTheDocument()
     await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-06-01')
     await user.click(within(dialog).getByRole('button', { name: '변경' }))
@@ -858,7 +858,7 @@ describe('AdminLlmKeyDetailPage expiry change', () => {
     await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
     const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
     expect(
-      within(dialog).queryByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.'),
+      within(dialog).queryByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있어요.'),
     ).not.toBeInTheDocument()
     await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-01-01')
     await user.click(within(dialog).getByRole('button', { name: '변경' }))

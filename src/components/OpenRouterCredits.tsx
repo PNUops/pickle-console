@@ -73,7 +73,7 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
 
       {credits.error && (
         <MessageBar variant="warning" title="최근 credits 확인 실패">
-          {errorLabel}. 이전 조회 값입니다.
+          {errorLabel}. 이전 조회 값이에요.
         </MessageBar>
       )}
       <DescriptionList
@@ -165,10 +165,10 @@ export function KeyCreditObservation({
 
 const ALLOCATION_NOTES: Record<AllocationVerdict, string | null> = {
   WITHIN: null,
-  EXCEEDED: '남은 배정이 잔액을 넘습니다.',
-  NO_BALANCE: '계정 잔액이 0입니다.',
-  NEGATIVE_BALANCE: '계정 잔액이 음수입니다.',
-  UNKNOWN: '잔액을 아직 관측하지 못해 초과 여부를 판단할 수 없습니다.',
+  EXCEEDED: '남은 배정이 잔액을 넘어요.',
+  NO_BALANCE: '계정 잔액이 0이에요.',
+  NEGATIVE_BALANCE: '계정 잔액이 음수예요.',
+  UNKNOWN: '잔액을 아직 관측하지 못해 초과 여부를 판단할 수 없어요.',
 }
 
 /**
@@ -270,7 +270,7 @@ export function AllocationWarning({
   return (
     <MessageBar
       variant={judgement.state === 'UNKNOWN' ? 'info' : 'warning'}
-      title={judgement.state === 'UNKNOWN' ? '잔액을 확인하지 못했습니다' : '초과 배정'}
+      title={judgement.state === 'UNKNOWN' ? '잔액을 확인하지 못했어요' : '초과 배정'}
     >
       <div className="space-y-1">
         <p>{note}</p>
@@ -287,12 +287,12 @@ export function AllocationWarning({
           </li>
           {judgement.committed !== judgement.remaining ? (
             <li className="text-foreground-secondary">
-              배정 합계는 {formatUsd(judgement.committed)}입니다.
+              배정 합계: {formatUsd(judgement.committed)}
             </li>
           ) : null}
           {judgement.windowCommitment > 0 ? (
             <li className="text-foreground-secondary">
-              이 중 {formatUsd(judgement.windowCommitment)}는 리셋 창마다 다시 채워집니다.
+              이 중 {formatUsd(judgement.windowCommitment)}는 리셋 창마다 다시 채워져요.
             </li>
           ) : null}
         </ul>

@@ -24,11 +24,11 @@ export interface KeyUsageCopy {
 
 export const KEY_USAGE_COPY: Record<UsageAudience, KeyUsageCopy> = {
   owner: {
-    unissuedHint: '개요 탭에서 키를 발급하면 그때부터 쌓입니다.',
+    unissuedHint: '개요 탭에서 키를 발급하고 사용하면 기록이 쌓여요.',
     rateLimitedAction: '계속 거부된다면 한도 상향을 신청해 주세요.',
   },
   admin: {
-    unissuedHint: '신청자가 키를 발급하면 그때부터 쌓입니다.',
-    rateLimitedAction: '한도를 올릴지는 위 「한도 변경」에서 정합니다.',
+    unissuedHint: '신청자가 키를 발급하고 사용하면 기록이 쌓여요.',
+    rateLimitedAction: '한도를 올릴지는 위 「한도 변경」에서 정해요.',
   },
 }

@@ -75,7 +75,7 @@ describe('사용량 탭', () => {
     renderUsage(NEVER_USED_KEY)
 
     expect(
-      await screen.findByText('최근 30일 동안 이 키로 들어온 요청이 없습니다.'),
+      await screen.findByText('최근 30일 동안 이 키로 들어온 요청이 없어요.'),
     ).toBeInTheDocument()
     // There is no moment to show, and a sentence saying so would only
     // restate the summary above.
@@ -104,7 +104,7 @@ describe('사용량 탭', () => {
   test('한도 초과 거부는 다른 실패와 따로 세고, 할 수 있는 일을 알려 준다', async () => {
     renderUsage(USED_KEY)
 
-    const alert = await screen.findByText('한도에 걸려 거부된 요청이 있습니다')
+    const alert = await screen.findByText('한도에 걸려 거부된 요청이 있어요')
     expect(alert).toBeInTheDocument()
     expect(screen.getByText(/한도 상향을 신청해 주세요/)).toBeInTheDocument()
 
@@ -148,9 +148,9 @@ describe('사용량 탭', () => {
   test('발급 전 키는 빈 차트 대신 왜 비었는지를 말한다', async () => {
     renderUsage(PENDING_KEY)
 
-    expect(await screen.findByText('아직 발급되지 않은 키입니다')).toBeInTheDocument()
+    expect(await screen.findByText('아직 발급되지 않은 키예요')).toBeInTheDocument()
     expect(
-      screen.getByText(/발급 전에는 이 키로 인증되는 요청이 없으므로 사용 기록도 없습니다/),
+      screen.getByText(/발급 전에는 이 키로 인증되는 요청이 없으므로 사용 기록도 없어요/),
     ).toBeInTheDocument()
     // 그릴 것이 없으므로 차트도 기간 스위처도 없다.
     expect(screen.queryByRole('img', { name: '요청 수' })).not.toBeInTheDocument()
@@ -163,8 +163,8 @@ describe('사용량 탭', () => {
     const user = userEvent.setup()
     renderUsage(PENDING_KEY)
 
-    const alert = (await screen.findByText('아직 발급되지 않은 키입니다')).closest('div')!
-    expect(alert.textContent).toContain('개요 탭에서 키를 발급하면 그때부터 쌓입니다.')
+    const alert = (await screen.findByText('아직 발급되지 않은 키예요')).closest('div')!
+    expect(alert.textContent).toContain('개요 탭에서 키를 발급하고 사용하면 기록이 쌓여요.')
     await user.click(screen.getByRole('tab', { name: '개요' }))
     expect(screen.getByRole('button', { name: '키 발급' })).toBeInTheDocument()
   })
@@ -173,7 +173,7 @@ describe('사용량 탭', () => {
     renderUsage(REVOKED_KEY)
 
     expect(
-      await screen.findByText('폐기된 키입니다. 아래는 폐기되기 전까지 남은 기록입니다.'),
+      await screen.findByText('폐기된 키의 사용 기록이에요.'),
     ).toBeInTheDocument()
     expect(await screen.findByRole('img', { name: '요청 수' })).toBeInTheDocument()
   })
@@ -241,11 +241,11 @@ describe('사용량 탭', () => {
     const money = screen.getByText('누적 금액 사용').closest<HTMLDivElement>('div[class*="space-y"]')!
     expect(within(money).queryByRole('progressbar')).not.toBeInTheDocument()
     if (value == null) {
-      expect(money).toHaveTextContent('아직 보고된 사용량이 없습니다')
+      expect(money).toHaveTextContent('아직 보고된 사용량이 없어요')
       expect(money).not.toHaveTextContent('$0')
     } else {
       expect(money).toHaveTextContent(`$${value}`)
-      expect(money).not.toHaveTextContent('아직 보고된 사용량이 없습니다')
+      expect(money).not.toHaveTextContent('아직 보고된 사용량이 없어요')
     }
   })
 
@@ -263,7 +263,7 @@ describe('사용량 탭', () => {
   test('쓰인 적 없는 키는 분해가 비어도 화면이 선다', async () => {
     renderUsage(NEVER_USED_KEY)
 
-    expect(await screen.findByText(/요청이 없습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/요청이 없어요/)).toBeInTheDocument()
     expect(screen.queryByRole('img', { name: /모델별 요청 비중/ })).not.toBeInTheDocument()
     // 예산은 사용과 무관하게 현재 상태이므로 그대로 서 있어야 한다.
     expect(screen.getByRole('progressbar', { name: '오늘 토큰 사용 소진율' })).toBeInTheDocument()

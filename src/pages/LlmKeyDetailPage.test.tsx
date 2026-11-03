@@ -106,7 +106,7 @@ describe('LLM API 키 상세', () => {
 
     await screen.findByRole('heading', { name: 'algo-hint-writer' })
     expect(screen.getByText('금액 한도 없음')).toBeInTheDocument()
-    expect(screen.queryByText(/유료 모델을 쓸 수 없습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/유료 모델을 쓸 수 없어요/)).not.toBeInTheDocument()
   })
 })
 
@@ -119,12 +119,12 @@ describe('발급 전 키', () => {
     // 알림을 두면 한 탭에 세 번 서게 된다.
     // 「발급 전」은 헤더 배지와 키 정보의 「키 앞부분」 칸에 함께 나온다.
     expect(screen.getAllByText('발급 전').length).toBeGreaterThan(0)
-    expect(screen.queryByText('아직 발급되지 않은 키입니다')).not.toBeInTheDocument()
-    const issued = screen.getByText(/발급하기 전까지 이 키로 보낸 요청은 인증되지 않습니다/)
+    expect(screen.queryByText('아직 발급되지 않은 키예요')).not.toBeInTheDocument()
+    const issued = screen.getByText(/발급하기 전까지 이 키로 보낸 요청은 인증되지 않아요/)
     expect(issued).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '키 발급' })).toBeEnabled()
     // 폐기 이야기는 여기 없다.
-    expect(screen.queryByText('폐기된 키입니다')).not.toBeInTheDocument()
+    expect(screen.queryByText('폐기된 키예요')).not.toBeInTheDocument()
   })
 
   test('keeps the one-time key visible until explicitly acknowledged', async () => {
@@ -136,13 +136,13 @@ describe('발급 전 키', () => {
 
     const confirm = await screen.findByRole('dialog')
     expect(
-      within(confirm).getByText(/평문은 다음 화면에서 한 번만 볼 수 있습니다/),
+      within(confirm).getByText(/평문은 다음 화면에서 한 번만 볼 수 있어요/),
     ).toBeInTheDocument()
     await user.click(within(confirm).getByRole('button', { name: '키 발급' }))
 
     // 평문을 보여 주기 전에 다시 볼 수 없다는 말이 먼저 온다.
     const result = await screen.findByRole('dialog')
-    expect(within(result).getByText('이 키는 다시 볼 수 없습니다')).toBeInTheDocument()
+    expect(within(result).getByText('키 값은 지금 한 번만 볼 수 있어요')).toBeInTheDocument()
     const plaintext = within(result).getByText(/^pk-llm-live-.*-secret$/).textContent!
     // Navigation would unmount the only copy before the user has saved it.
     expect(within(result).queryByRole('link')).not.toBeInTheDocument()
@@ -152,7 +152,7 @@ describe('발급 전 키', () => {
     await user.keyboard('{Escape}')
     expect(within(result).getByText(/^pk-llm-live-.*-secret$/)).toBeInTheDocument()
 
-    await user.click(within(result).getByRole('button', { name: '확인했습니다' }))
+    await user.click(within(result).getByRole('button', { name: '보관했어요' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     // 남는 것은 두 키를 구별하는 앞부분뿐이고, 평문은 어디에도 없다.
     expect(screen.queryByText(plaintext)).not.toBeInTheDocument()
@@ -176,7 +176,7 @@ describe('이미 발급된 키', () => {
 
     const confirm = await screen.findByRole('dialog')
     expect(
-      within(confirm).getByText(/재발급 즉시 이전 키 값이 무효화됩니다/),
+      within(confirm).getByText(/변경이 게이트웨이에 반영되면 이전 키 값으로 새 요청을 보낼 수 없어요/),
     ).toBeInTheDocument()
   })
 
@@ -242,7 +242,7 @@ describe('폐기된 키', () => {
     renderKey(REVOKED_KEY)
 
     await screen.findByRole('heading', { name: 'leaked-demo-key' })
-    expect(screen.getByText('폐기된 키입니다')).toBeInTheDocument()
+    expect(screen.getByText('폐기된 키예요')).toBeInTheDocument()
     // 다음 행동을 말하고, 내부 어휘(게이트웨이)로 어디서 거부되는지는 말하지 않는다.
     expect(screen.getByText(/계속 쓰려면 새로 신청해 주세요/)).toBeInTheDocument()
     expect(screen.queryByText(/게이트웨이/)).not.toBeInTheDocument()
@@ -324,7 +324,7 @@ describe('기간이 지난 키 — 상태 열은 아직 활성이다', () => {
     await screen.findByRole('heading', { name: 'last-semester-key' })
     expect(screen.getByText('만료됨')).toBeInTheDocument()
     expect(screen.queryByText('활성')).not.toBeInTheDocument()
-    expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
+    expect(screen.getByText('만료된 키예요')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
   })
@@ -346,7 +346,7 @@ describe('정지·만료된 키', () => {
     renderKey(MEMBER_KEY, 'settings')
 
     await screen.findByRole('heading', { name: 'study-shared-key' })
-    expect(screen.getByText('만료된 키입니다')).toBeInTheDocument()
+    expect(screen.getByText('만료된 키예요')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /키 발급|키 재발급/ })).not.toBeInTheDocument()
     // With no settings tab, the address opens the overview.
     expect(screen.queryByRole('tab', { name: '설정' })).not.toBeInTheDocument()
@@ -372,7 +372,7 @@ describe('키 이름 수정', () => {
     await user.type(name, 'capstone-chatbot-v2')
     await user.click(screen.getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('이름을 바꿨습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('이름을 바꿨어요.')).toBeInTheDocument()
     const stored = llmKeyStore.find((candidate) => candidate.id === ISSUED_KEY)!
     expect(stored.name).toBe('capstone-chatbot-v2')
     // 생략한 항목은 서버가 그대로 둔다는 계약이 화면 쪽에서도 지켜져야 한다.
@@ -398,7 +398,7 @@ describe('키 이름 수정', () => {
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     await user.clear(screen.getByDisplayValue('capstone-chatbot'))
 
-    expect(await screen.findByText('키 이름은 비워 둘 수 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('키 이름은 비워 둘 수 없어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   })
 })
@@ -411,7 +411,7 @@ describe('키 폐기', () => {
 
     await screen.findByRole('heading', { name: 'capstone-chatbot' })
     expect(screen.getAllByText('키 폐기')).toHaveLength(2)
-    expect(screen.getByText(/이후 이 키로 보낸 요청이 거부됩니다/)).toBeInTheDocument()
+    expect(screen.getByText(/폐기가 게이트웨이에 반영되면 이 키의 새 요청이 거부돼요/)).toBeInTheDocument()
   })
 
 
@@ -423,14 +423,14 @@ describe('키 폐기', () => {
     await user.click(screen.getByRole('button', { name: '키 폐기' }))
 
     const modal = await screen.findByRole('dialog')
-    expect(within(modal).getByText('되돌릴 수 없습니다')).toBeInTheDocument()
+    expect(within(modal).getByText('되돌릴 수 없어요')).toBeInTheDocument()
     const confirmButton = within(modal).getByRole('button', { name: '폐기' })
     expect(confirmButton).toBeDisabled()
 
     await user.type(within(modal).getByRole('textbox'), 'capstone-chatbot')
     await user.click(within(modal).getByRole('button', { name: '폐기' }))
 
-    expect(await screen.findByText('폐기된 키입니다')).toBeInTheDocument()
+    expect(await screen.findByText('폐기된 키예요')).toBeInTheDocument()
     expect(llmKeyStore.find((key) => key.id === ISSUED_KEY)!.status).toBe('REVOKED')
   })
 })
