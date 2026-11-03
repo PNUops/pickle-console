@@ -9,9 +9,9 @@ const FRESHNESS = { FRESH: '최근 관측', STALE: '관측 지연', UNKNOWN: '�
 
 /** Render the server snapshot only. This component never computes a replacement budget. */
 export function AccountImpactView({ projection }: { projection: LlmAccountImpactProjection | null | undefined }) {
-  if (!projection || projection.state === 'NOT_PROVIDED') return <MessageBar>계정별 배정 영향이 제공되지 않습니다.</MessageBar>
+  if (!projection || projection.state === 'NOT_PROVIDED') return <MessageBar>계정별 배정 영향이 제공되지 않았어요.</MessageBar>
   if (projection.state === 'NOT_APPLICABLE') return null
-  if (!projection.accounts) return <MessageBar variant="warning">계정별 변경 전후 값을 확인하지 못했습니다.</MessageBar>
+  if (!projection.accounts) return <MessageBar variant="warning">계정별 변경 전후 값을 확인하지 못했어요.</MessageBar>
   return <section className="space-y-3" aria-label="계정별 배정 영향">
     <h3 className="font-semibold">계정별 배정 영향</h3>
     <p className="text-xs text-foreground-muted">{formatDateTimeSeconds(projection.observedAt)} 기준</p>
@@ -35,11 +35,11 @@ export function AccountImpactView({ projection }: { projection: LlmAccountImpact
           { term: '매월', description: `${formatUsd(account.before.committedMonthly)} → ${formatUsd(account.after.committedMonthly)}` },
         ]} />
       </details>
-      {account.overAllocated === true && <MessageBar variant="warning" title="초과 배정">변경 후 남은 배정이 잔액을 넘습니다.</MessageBar>}
-      {account.overAllocated == null && <MessageBar>현재 자료로 변경 후 배정과 잔액을 비교할 수 없습니다.</MessageBar>}
-      {account.quality.periodBasisMismatch && <MessageBar variant="warning">리셋 주기가 달라 남은 배정을 비교할 수 없습니다.</MessageBar>}
-      {account.balanceError && <MessageBar variant="warning">잔액의 최근 확인이 실패했습니다. 마지막 성공 관측값을 표시합니다.</MessageBar>}
-      {account.quality.keyMetersError && <MessageBar variant="warning">키 대사의 최근 확인이 실패했습니다.</MessageBar>}
+      {account.overAllocated === true && <MessageBar variant="warning" title="초과 배정">변경 후 남은 배정이 잔액을 넘어요.</MessageBar>}
+      {account.overAllocated == null && <MessageBar>현재 자료로 변경 후 배정과 잔액을 비교할 수 없어요.</MessageBar>}
+      {account.quality.periodBasisMismatch && <MessageBar variant="warning">리셋 주기가 달라 남은 배정을 비교할 수 없어요.</MessageBar>}
+      {account.balanceError && <MessageBar variant="warning">최근 잔액 확인에 실패했어요. 마지막 성공 관측값을 표시해요.</MessageBar>}
+      {account.quality.keyMetersError && <MessageBar variant="warning">최근 키 대사에 실패했어요.</MessageBar>}
     </section>)}
   </section>
 }

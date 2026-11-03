@@ -126,15 +126,15 @@ export function AccountUsageSection({ accountId, orgId }: { accountId: string; o
         <option value="REPORTED_COST_DESC">보고 금액 많은 순</option><option value="REQUESTS_DESC">요청 많은 순</option><option value="TOKENS_DESC">토큰 많은 순</option>
       </Select>
       <Button variant="secondary" onClick={() => change({ sort: undefined, page: undefined, size: undefined })}>소비 키 정렬·페이지 초기화</Button>
-      {invalidSize && <MessageBar variant="danger">페이지 크기는 1~100이어야 합니다.</MessageBar>}
-      {invalidSort && <MessageBar variant="danger">소비 키 정렬 조건이 올바르지 않습니다.</MessageBar>}
-      {invalidDays && <MessageBar variant="danger">조회 일수는 1~90일이어야 합니다. 기간을 다시 선택해 주세요.</MessageBar>}
+      {invalidSize && <MessageBar variant="danger">페이지 크기는 1~100이어야 해요.</MessageBar>}
+      {invalidSort && <MessageBar variant="danger">소비 키 정렬 조건이 올바르지 않아요.</MessageBar>}
+      {invalidDays && <MessageBar variant="danger">조회 일수는 1~90일이어야 해요. 기간을 다시 선택해 주세요.</MessageBar>}
 
       {usage.isPending && !data && <LoadingBlock label="계정 사용량 불러오는 중" />}
       {usage.isFetching && data && <MessageBar>이전 조회 값이에요. 새 결과를 확인 중이에요.</MessageBar>}
       {usage.isError && <MessageBar variant="danger">
         <p>{usage.error.message}</p>
-        <p>{data ? '이전 조회 값이에요.' : '성공한 조회 결과가 없습니다.'}</p>
+        <p>{data ? '이전 조회 값이에요.' : '성공한 조회 결과가 없어요.'}</p>
       </MessageBar>}
 
       {data && (
@@ -159,8 +159,8 @@ export function AccountUsageSection({ accountId, orgId }: { accountId: string; o
             <EmptyState
               title={
                 data.keysLinked === 0
-                  ? '이 계정에 연결된 키가 없습니다'
-                  : '고른 기간에 이 계정으로 호출한 기록이 없습니다'
+                  ? '이 계정에 연결된 키가 없어요'
+                  : '고른 기간에 이 계정으로 호출한 기록이 없어요'
               }
               className="min-h-40"
             />

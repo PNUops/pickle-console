@@ -29,7 +29,7 @@ describe('administrator target state', () => {
   test('an explicit unmanaged institution cannot restore the previous institution', async () => {
     server.use(refreshSuccessHandler('access-org-admin', orgAdminUser))
     renderApp(`/admin/llm/keys/${uuid(171)}?org=${uuid(2)}`)
-    await screen.findByText('현재 관리 범위에서 이 LLM API 키를 찾을 수 없습니다.')
+    await screen.findByText('현재 관리 범위에서 이 LLM API 키를 찾을 수 없어요.')
     expect(screen.queryByRole('heading', { name: 'active-admin-key' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '한도 변경' })).not.toBeInTheDocument()
   })
@@ -69,7 +69,7 @@ describe('administrator target state', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'active-admin-key' })).not.toBeInTheDocument()
     release()
-    await screen.findByText('현재 관리 범위에서 이 LLM API 키를 찾을 수 없습니다.')
+    await screen.findByText('현재 관리 범위에서 이 LLM API 키를 찾을 수 없어요.')
     expect(adminLlmLimitBodies).toHaveLength(0)
   })
 
@@ -94,7 +94,7 @@ describe('administrator target state', () => {
     release()
     await waitFor(() => expect(invalidations).toHaveBeenCalledWith({ queryKey: ['admin', 'llm-accounts'] }))
     expect(client.getQueryData(['admin', 'llm-keys', 'detail', { keyId: uuid(171), orgId: null }])).toBeUndefined()
-    expect(screen.queryByText('LLM API 키 한도를 변경했습니다.')).not.toBeInTheDocument()
+    expect(screen.queryByText('LLM API 키 한도를 변경했어요.')).not.toBeInTheDocument()
     invalidations.mockRestore()
   })
 })

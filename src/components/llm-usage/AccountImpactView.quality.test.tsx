@@ -15,8 +15,8 @@ test.each(['FRESH', 'STALE'] as const)('latest failures and reported freshness s
   row.quality.keyMetersLastSuccessAt = '2026-10-27T00:01:00Z'
   row.quality.keyMetersLastAttemptAt = '2026-10-27T00:11:00Z'
   render(<AccountImpactView projection={snapshot} />)
-  expect(screen.getByText('잔액의 최근 확인이 실패했습니다. 마지막 성공 관측값을 표시합니다.')).toBeInTheDocument()
-  expect(screen.getByText(/키 대사의 최근 확인이 실패했습니다/)).toBeInTheDocument()
+  expect(screen.getByText('최근 잔액 확인에 실패했어요. 마지막 성공 관측값을 표시해요.')).toBeInTheDocument()
+  expect(screen.getByText(/최근 키 대사에 실패했어요/)).toBeInTheDocument()
   expect(screen.getByText('계정 잔액 / 키 대사 상태').parentElement).toHaveTextContent(freshness === 'FRESH' ? '최근 관측 / 최근 관측' : '관측 지연 / 관측 지연')
   for (const [label, time] of [['잔액 마지막 성공', '09:00:00'], ['키 대사 마지막 성공', '09:01:00']]) {
     expect(screen.getByText(label).parentElement).toHaveTextContent(time)

@@ -7,7 +7,7 @@ import { MessageBar } from '../ui'
 
 export function AccountKeyNavigation({ account }: { account: OpenRouterAccount }) {
   const navigation = account.keyNavigation
-  if (!navigation || navigation.population !== 'CURRENT_READABLE_KEYS') return <MessageBar>현재 읽을 수 있는 키군 탐색 정보가 제공되지 않았습니다.</MessageBar>
+  if (!navigation || navigation.population !== 'CURRENT_READABLE_KEYS') return <MessageBar>현재 읽을 수 있는 키군 탐색 정보가 제공되지 않았어요.</MessageBar>
   const rows = [
     ['linked', '연결된 키', 'ALL'],
     ['committed', '현재 금액 배정', 'COMMITTED'],

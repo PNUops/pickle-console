@@ -114,7 +114,7 @@ describe('관리자 LLM API 키 목록', () => {
       ),
     )
     const empty = renderApp('/admin/llm/keys')
-    expect(await screen.findByRole('heading', { name: '표시할 LLM API 키가 없습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '표시할 LLM API 키가 없어요' })).toBeInTheDocument()
     empty.unmount()
 
     server.use(
