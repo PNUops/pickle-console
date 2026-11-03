@@ -80,7 +80,7 @@ describe('사업 계정 상세의 배정 현황', () => {
     expect(within(section).getByText(/\$300\.00/)).toBeInTheDocument()
     expect(within(section).getAllByText(/\$290\.00/).length).toBeGreaterThan(0)
     expect(
-      within(section).getByText('남은 배정이 잔액을 넘습니다.'),
+      within(section).getByText('남은 배정이 잔액을 넘어요.'),
     ).toBeInTheDocument()
   })
 
@@ -105,8 +105,8 @@ describe('사업 계정 상세의 배정 현황', () => {
     renderDetailAsSysAdmin(unobserved.id)
 
     const section = (await screen.findByRole('heading', { name: '배정 현황' })).closest('section')!
-    expect(within(section).getByText(/초과 여부를 판단할 수 없습니다/)).toBeInTheDocument()
-    expect(within(section).queryByText(/잔액을 넘습니다/)).not.toBeInTheDocument()
+    expect(within(section).getByText(/초과 여부를 판단할 수 없어요/)).toBeInTheDocument()
+    expect(within(section).queryByText(/잔액을 넘어요/)).not.toBeInTheDocument()
   })
 
   test('shows the recurring-window commitment as a monetary value', async () => {
@@ -159,7 +159,7 @@ describe('사업 계정의 승인 기본 목록', () => {
     await user.type(denied, '-openai/**')
     await user.click(dialog.getByRole('button', { name: '저장' }))
 
-    expect(await dialog.findByText(/형식이 아닙니다/)).toBeInTheDocument()
+    expect(await dialog.findByText(/형식으로 적어 주세요/)).toBeInTheDocument()
   })
 
   // The approval form starts from the features the requester ticked, so an

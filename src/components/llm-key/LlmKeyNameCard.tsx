@@ -48,14 +48,14 @@ export function LlmKeyNameCard({ llmKey }: { llmKey: LlmKeyDetail }) {
     },
     onError: (err) => {
       setSaved(false)
-      setError(toApiError(err, '이름을 바꾸지 못했습니다.').message)
+      setError(toApiError(err, '이름을 바꾸지 못했어요.').message)
     },
   })
 
   const dirty = trimmed !== llmKey.name
   // 이름은 지울 수 없다 (계약이 1자 이상을 요구한다). 서버가 422로 막기 전에
   // 여기서 말해 준다 — 눌러야만 아는 거절을 만들지 않는다.
-  const nameError = trimmed === '' ? '키 이름은 비워 둘 수 없습니다.' : undefined
+  const nameError = trimmed === '' ? '키 이름은 비워 둘 수 없어요.' : undefined
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -71,7 +71,7 @@ export function LlmKeyNameCard({ llmKey }: { llmKey: LlmKeyDetail }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
-        {saved && !dirty && <Alert variant="success">이름을 바꿨습니다.</Alert>}
+        {saved && !dirty && <Alert variant="success">이름을 바꿨어요.</Alert>}
         <form onSubmit={submit} className="space-y-4">
           <FormField label="이름" className="max-w-md" error={nameError}>
             <Input
@@ -91,7 +91,7 @@ export function LlmKeyNameCard({ llmKey }: { llmKey: LlmKeyDetail }) {
         </form>
         {!allowed && (
           <PermissionNotice>
-            이름 변경은 편집자 이상 등급을 받은 사람만 할 수 있습니다.
+            이름 변경은 편집자 이상 등급을 받은 사람만 할 수 있어요.
           </PermissionNotice>
         )}
       </CardContent>

@@ -43,7 +43,7 @@ export function CapturedBodyDrawer({
         </div>
       )}
       {detail.isError && (
-        <Alert variant="danger" title="전문을 불러오지 못했습니다">
+        <Alert variant="danger" title="전문을 불러오지 못했어요">
           {detail.error instanceof Error ? detail.error.message : '잠시 후 다시 시도해 주세요.'}
         </Alert>
       )}
@@ -60,8 +60,8 @@ export function CapturedBodyDrawer({
           </dl>
 
           {!detail.data.readable && (
-            <Alert variant="warning" title="본문을 읽을 수 없습니다">
-              이 기록을 푸는 암호화 키가 서버에 없습니다. 기록이 있었다는 사실만 남아 있습니다.
+            <Alert variant="warning" title="본문을 읽을 수 없어요">
+              기록된 본문을 열지 못했어요. 시각과 이벤트 식별자는 확인할 수 있어요.
             </Alert>
           )}
 
@@ -90,7 +90,7 @@ function PromptSection({ view, truncated }: { view: PromptView | null; truncated
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-semibold">프롬프트</h3>
-      {view === null && <p className="text-sm text-neutral-500">기록되지 않았습니다.</p>}
+      {view === null && <p className="text-sm text-neutral-500">표시할 프롬프트가 없어요.</p>}
       {view?.kind === 'messages' &&
         view.messages.map((message, index) => (
           <div key={index} className="space-y-1">
@@ -100,7 +100,7 @@ function PromptSection({ view, truncated }: { view: PromptView | null; truncated
             <Block>{message.text}</Block>
             {message.nonText > 0 && (
               <p className="text-xs text-neutral-500">
-                이 화면에서는 텍스트가 아닌 항목 {message.nonText}개를 표시하지 않습니다.
+                이 화면에서는 텍스트가 아닌 항목 {message.nonText}개를 표시하지 않아요.
               </p>
             )}
           </div>
@@ -112,7 +112,7 @@ function PromptSection({ view, truncated }: { view: PromptView | null; truncated
               「어떤 기록은 왜 역할별로 나뉘고 어떤 것은 왜 뭉쳐 있나」를 영원히
               모른다. 잘렸다는 사실 자체는 아래 경고가 한 번만 말한다. */}
           <p className="text-xs text-neutral-500">
-            역할별로 나눌 수 없어 한 덩어리로 보입니다.
+            역할별로 나눌 수 없어 한 덩어리로 보여요.
           </p>
         </>
       )}
@@ -120,13 +120,13 @@ function PromptSection({ view, truncated }: { view: PromptView | null; truncated
         <>
           <Block>{view.text}</Block>
           <p className="text-xs text-neutral-500">
-            기록된 모양이 예상과 달라 원문 그대로 보입니다.
+            기록된 모양이 예상과 달라 원문 그대로 보여요.
           </p>
         </>
       )}
       {truncated && (
-        <Alert variant="warning" title="프롬프트가 잘렸습니다">
-          프롬프트가 64 KiB를 넘어 앞부분만 기록됐습니다.
+        <Alert variant="warning" title="프롬프트가 잘렸어요">
+          프롬프트가 64 KiB를 넘어 앞부분만 기록됐어요.
         </Alert>
       )}
     </section>
@@ -137,10 +137,10 @@ function AnswerSection({ text, truncated }: { text?: string | null; truncated: b
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-semibold">응답</h3>
-      {text ? <Block>{text}</Block> : <p className="text-sm text-neutral-500">기록되지 않았습니다.</p>}
+      {text ? <Block>{text}</Block> : <p className="text-sm text-neutral-500">표시할 응답 텍스트가 없어요.</p>}
       {truncated && (
-        <Alert variant="warning" title="응답이 잘렸습니다">
-          응답이 256 KiB를 넘어 앞부분만 기록됐습니다.
+        <Alert variant="warning" title="응답이 잘렸어요">
+          응답이 256 KiB를 넘어 앞부분만 기록됐어요.
         </Alert>
       )}
     </section>

@@ -21,8 +21,8 @@ describe('model catalogue diagnostics', () => {
 
     expect(await screen.findByText('공급자 갱신 실패')).toBeInTheDocument()
     expect(screen.getByText('HTTP_503')).toBeInTheDocument()
-    expect(screen.queryByText('공급자 목록을 갱신한 시도 기록도 없습니다.')).not.toBeInTheDocument()
-    expect(screen.getByText('아직 성공한 공급자 목록이 없습니다.')).toBeInTheDocument()
+    expect(screen.queryByText('갱신을 시도한 기록도 없어요.')).not.toBeInTheDocument()
+    expect(screen.getByText('모델 목록을 갱신한 성공 기록이 없어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장된 목록 다시 조회' })).toBeInTheDocument()
   })
 })

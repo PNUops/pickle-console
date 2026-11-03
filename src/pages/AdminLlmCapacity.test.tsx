@@ -184,7 +184,7 @@ test('does not issue a broadened request for malformed scope filters', async () 
   let calls = 0
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => { calls++; return HttpResponse.json(llmCapacityFixture()) }))
   renderApp(`${route}&workspaceId=invalid`)
-  expect(await screen.findByText('조회 대상의 식별자가 올바르지 않습니다.')).toBeInTheDocument()
+  expect(await screen.findByText('조회 대상의 식별자가 올바르지 않아요.')).toBeInTheDocument()
   expect(calls).toBe(0)
 })
 

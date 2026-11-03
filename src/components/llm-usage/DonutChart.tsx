@@ -37,7 +37,7 @@ export function DonutChart({ title, slices, format, renderValue, size = 176 }: D
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
   if (total <= 0) {
     return (
-      <p className="text-sm text-neutral-500">{title}을(를) 그릴 자료가 아직 없습니다.</p>
+      <p className="text-sm text-neutral-500">{title}: 표시할 자료가 아직 없어요.</p>
     )
   }
 

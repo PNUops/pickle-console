@@ -70,9 +70,9 @@ export function LlmKeyBodiesSection({
 
   if (unissued) {
     return (
-      <Alert variant="info" title="아직 발급되지 않은 키입니다">
-        발급 전에는 이 키로 인증되는 요청이 없으므로 기록된 본문도 없습니다. 개요 탭에서 키를
-        발급한 뒤 본문 기록을 켜고 Chat Completions로 호출해야 기록됩니다.
+      <Alert variant="info" title="아직 발급되지 않은 키예요">
+        발급 전에는 이 키로 인증되는 요청이 없으므로 기록된 본문도 없어요. 개요 탭에서 키를
+        발급한 뒤 본문 기록을 켜고 Chat Completions로 호출해야 기록돼요.
       </Alert>
     )
   }
@@ -85,7 +85,7 @@ export function LlmKeyBodiesSection({
   }
   if (bodies.isError) {
     return (
-      <Alert variant="danger" title="기록된 본문을 불러오지 못했습니다">
+      <Alert variant="danger" title="기록된 본문을 불러오지 못했어요">
         {bodies.error instanceof Error ? bodies.error.message : '잠시 후 다시 시도해 주세요.'}
       </Alert>
     )
@@ -95,14 +95,14 @@ export function LlmKeyBodiesSection({
   if (rows.length === 0) {
     return recordBodies ? (
       <EmptyState
-        title="아직 기록된 본문이 없습니다"
-        description="본문 기록은 켜져 있습니다. 설정을 켠 뒤 Chat Completions로 보낸 요청의 프롬프트와 응답 텍스트가 기록됩니다. Chat Completions 밖의 경로는 기록하지 않습니다. 방금 보낸 요청은 아직 반영되지 않았을 수 있습니다."
+        title="아직 기록된 본문이 없어요"
+        description="본문 기록은 켜져 있어요. 설정이 게이트웨이에 반영된 뒤 Chat Completions로 보낸 요청의 프롬프트와 응답 텍스트가 기록돼요. Chat Completions 밖의 경로는 기록하지 않아요. 방금 보낸 요청은 아직 반영되지 않았을 수 있어요."
       />
     ) : (
       <div className="space-y-4">
         <EmptyState
-          title="기록된 본문이 없습니다"
-          description="이 키는 본문 기록이 꺼져 있어 프롬프트와 응답을 보관하지 않습니다."
+          title="기록된 본문이 없어요"
+          description="이 키는 본문 기록이 꺼져 있어 프롬프트와 응답을 보관하지 않아요."
           action={
             canEdit && !terminal ? (
               <Button variant="secondary" onClick={onGoToSettings}>
@@ -113,7 +113,7 @@ export function LlmKeyBodiesSection({
         />
         {!canEdit && !terminal && (
           <PermissionNotice>
-            본문 기록은 편집자 이상 등급을 받은 사람만 켤 수 있습니다.
+            본문 기록은 편집자 이상 등급을 받은 사람만 켤 수 있어요.
           </PermissionNotice>
         )}
       </div>
@@ -123,13 +123,13 @@ export function LlmKeyBodiesSection({
   return (
     <div className="space-y-4">
       {!recordBodies && (
-        <Alert variant="info" title="본문 기록은 지금 꺼져 있습니다">
-          아래는 켜져 있던 동안 기록된 것입니다.
+        <Alert variant="info" title="본문 기록은 지금 꺼져 있어요">
+          아래는 켜져 있던 동안 기록된 것이에요.
         </Alert>
       )}
       {status === 'REVOKED' && (
-        <Alert variant="info" title="폐기된 키입니다">
-          아래는 폐기되기 전까지 기록된 것입니다.
+        <Alert variant="info" title="폐기된 키예요">
+          폐기된 키의 본문 기록이에요.
         </Alert>
       )}
       <Card>
@@ -186,8 +186,8 @@ export function LlmKeyBodiesSection({
           {/* 목록이 있는 한 언제나 나오므로, 보관 기간을 말하는 자리는 여기
               하나다. 위의 「꺼져 있습니다」 안내가 같은 말을 하고 있었다. */}
           <p className="text-xs text-neutral-500">
-            기록된 본문은 이 키에 접근 권한이 있는 사람이면 누구나 읽을 수 있습니다. 보관 기간은
-            30일이고, 지난 것부터 삭제됩니다.
+            기록된 본문은 이 키에 접근 권한이 있는 사람이면 누구나 읽을 수 있어요. 보관 기간은
+            30일이고, 지난 것부터 삭제돼요.
           </p>
         </CardContent>
       </Card>

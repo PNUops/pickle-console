@@ -21,7 +21,7 @@ export function LimitField({
     <FormField
       label={label}
       error={error}
-      description={min === 0 ? '0이면 토큰 축을 닫고, 비우면 무제한입니다.' : '비우면 서비스 기본값을 따릅니다.'}
+      description={min === 0 ? '0이면 자체 서빙 모델을 사용할 수 없고, 비우면 무제한이에요.' : '비우면 서비스 기본값을 따라요.'}
     >
       <Input
         type="number"

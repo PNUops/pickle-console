@@ -52,7 +52,7 @@ export function RevokeKeyAction({ keyId, name, allowed }: RevokeKeyProps) {
     },
     onError: (err) => {
       setConfirming(false)
-      setError(toApiError(err, 'LLM API 키를 폐기하지 못했습니다.').message)
+      setError(toApiError(err, 'LLM API 키를 폐기하지 못했어요.').message)
     },
   })
 
@@ -62,7 +62,7 @@ export function RevokeKeyAction({ keyId, name, allowed }: RevokeKeyProps) {
           카드와 같은 모양이다 — 카드는 그 동작이 무엇을 하는지 한 줄로 말하고,
           되돌릴 수 없다는 사실은 확인 창이 갖는다. */}
       <p className="text-sm text-neutral-600">
-        키를 폐기하면 이후 이 키로 보낸 요청이 거부됩니다.
+        폐기가 게이트웨이에 반영되면 이 키의 새 요청이 거부돼요.
       </p>
       <Button
         variant="danger"
@@ -74,7 +74,7 @@ export function RevokeKeyAction({ keyId, name, allowed }: RevokeKeyProps) {
       </Button>
       {!allowed && (
         <PermissionNotice>
-          키 폐기는 이 키의 소유자 또는 워크스페이스 소유자만 할 수 있습니다.
+          키 폐기는 이 키의 소유자 또는 워크스페이스 소유자만 할 수 있어요.
         </PermissionNotice>
       )}
       {error && <Alert variant="danger">{error}</Alert>}
@@ -89,10 +89,10 @@ export function RevokeKeyAction({ keyId, name, allowed }: RevokeKeyProps) {
         onConfirm={() => revoke.mutate()}
       >
         <div className="space-y-3 text-sm text-neutral-600">
-          <Alert variant="danger" title="되돌릴 수 없습니다">
-            폐기한 키는 다시 발급할 수 없습니다. 계속 쓰려면 새로 신청해야 합니다.
+          <Alert variant="danger" title="되돌릴 수 없어요">
+            폐기한 키는 다시 발급할 수 없어요. 계속 쓰려면 새로 신청해야 해요.
           </Alert>
-          <p>지금까지의 사용 기록은 남습니다.</p>
+          <p>지금까지의 사용 기록은 남아요.</p>
         </div>
       </ConfirmNameModal>
     </div>

@@ -36,7 +36,7 @@ export function UsageHeatmap({ cells }: { cells: LlmKeyHourlyUsage[] }) {
   const byCell = new Map(cells.map((cell) => [`${cell.weekday}-${cell.hour}`, cell.requests]))
   const max = cells.reduce((top, cell) => Math.max(top, cell.requests), 0)
   if (max === 0) {
-    return <p className="text-sm text-neutral-500">이 기간에는 요청이 없습니다.</p>
+    return <p className="text-sm text-neutral-500">이 기간에는 요청이 없어요.</p>
   }
   return (
     <div className="space-y-2">

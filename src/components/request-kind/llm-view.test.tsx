@@ -452,7 +452,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     expect(
-      await screen.findByText(/자체 서빙 모델이라 이 목록의 대상이 아닙니다/),
+      await screen.findByText(/이 목록에는 유료 모델 이름을 적어 주세요/),
     ).toBeInTheDocument()
     expect(approved).toHaveLength(0)
   })
@@ -725,7 +725,7 @@ describe('유료 모델 선택기', () => {
     await screen.findByRole('heading', { name: '신청 상세' })
     await user.type(screen.getByLabelText('유료 모델 허용·차단'), '-openai/*gpt*')
 
-    expect(await screen.findByText(/미리보기를 멈췄습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/입력 오류를 고치면 미리보기를 볼 수 있어요/)).toBeInTheDocument()
   })
 
   test('별칭은 벤더 프리픽스에 안 덮인다고 표시한다', async () => {
@@ -777,7 +777,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/60개 중 40개를 보고 있습니다/)
+    await screen.findByText(/60개 중 40개를 보고 있어요/)
   })
 
   test('오래된 목록이라고 말한다', async () => {
@@ -801,7 +801,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/아직 성공한 공급자 목록이 없습니다/)
+    await screen.findByText(/모델 목록을 갱신한 성공 기록이 없어요/)
   })
 })
 
@@ -1002,7 +1002,7 @@ describe('signed paid-model policy editor', () => {
     await user.click(rules)
     await user.paste('+openai/*\n-')
     expect(screen.getByText(/2행: 부호 뒤에/)).toBeInTheDocument()
-    expect(screen.getByText(/미리보기를 멈췄습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/입력 오류를 고치면 미리보기를 볼 수 있어요/)).toBeInTheDocument()
     const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
     await user.click(picker.getByRole('button', { name: 'openai/o1-pro 차단 목록에 추가' }))
     expect(rules).toHaveValue('+openai/*\n-\n-openai/o1-pro')

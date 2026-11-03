@@ -310,7 +310,7 @@ describe('AdminBulkChangePage', () => {
     adminLlmKeyStore.find((key) => key.id === uuid(171))!.expiresAt = '2029-12-31T15:00:00Z'
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key', 'pending-admin-key'])
     await chooseKind(user, '만료일')
-    expect(screen.getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있어요.')).toBeInTheDocument()
     await user.type(screen.getByLabelText(/새 만료일/), '2030-06-01')
     await user.click(screen.getByRole('button', { name: '미리보기' }))
     const preview = await screen.findByRole('table', { name: '일괄 변경 미리보기' })

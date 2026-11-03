@@ -107,7 +107,7 @@ describe('유출된 키를 멈추는 길', () => {
 
     const modal = await screen.findByRole('dialog')
     // 확인 문구가 키의 내용을 전제하지 않는다 — 이 사람은 안을 볼 권한이 없다.
-    expect(within(modal).getByText('되돌릴 수 없습니다')).toBeInTheDocument()
+    expect(within(modal).getByText('되돌릴 수 없어요')).toBeInTheDocument()
     await user.type(within(modal).getByRole('textbox'), 'db-lab-grader')
     await user.click(within(modal).getByRole('button', { name: '폐기' }))
 

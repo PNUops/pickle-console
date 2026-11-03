@@ -112,13 +112,13 @@ export function formatTokens(value: number): string {
  */
 export function usageSummary(points: LlmKeyUsagePoint[]): string {
   const days = points.length
-  if (days === 0) return '조회할 구간이 없습니다.'
+  if (days === 0) return '조회할 구간이 없어요.'
   const totals = usageTotals(points)
   if (totals.requests === 0) {
-    return `최근 ${days}일 동안 이 키로 들어온 요청이 없습니다.`
+    return `최근 ${days}일 동안 이 키로 들어온 요청이 없어요.`
   }
   const busiest = points.reduce((top, point) => (point.requests > top.requests ? point : top))
-  return `가장 많이 쓴 날은 ${busiest.day}(${group(busiest.requests)}회)입니다.`
+  return `가장 많이 쓴 날은 ${busiest.day}(${group(busiest.requests)}회)이에요.`
 }
 
 /**

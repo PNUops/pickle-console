@@ -40,7 +40,7 @@ describe('호출할 수 있는 모델', () => {
     // 이 화면의 전제라, 감추는 회귀를 잡는 자리가 여기다.
     await openModels('noBudget')
 
-    expect(await screen.findByText(/아직 금액 한도가 없습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/아직 금액 한도가 없어요/)).toBeInTheDocument()
     expect(await screen.findByText('openai/gpt-5.6-luna')).toBeInTheDocument()
   })
 
@@ -65,7 +65,7 @@ describe('호출할 수 있는 모델', () => {
 
   test('distinguishes a pending limit from confirmed application', async () => {
     await openModels('pending')
-    expect(await screen.findByText(/금액 한도의 적용이 아직 확인되지 않았습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/금액 한도의 적용이 아직 확인되지 않았어요/)).toBeInTheDocument()
   })
 
   test('좁히는 규칙이 없으면 좁혀졌다고 말하지 않는다', async () => {
@@ -106,7 +106,7 @@ describe('호출할 수 있는 모델', () => {
 
   test('한 번도 못 가져온 목록과 비어 있는 목록을 다르게 말한다', async () => {
     await openModels('neverFetched')
-    expect(await screen.findByText(/한 번도 가져오지 못했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/한 번도 가져오지 못했어요/)).toBeInTheDocument()
   })
 
   test('지시문만 남기고 한정을 붙이지 않는다', async () => {
@@ -114,7 +114,7 @@ describe('호출할 수 있는 모델', () => {
     await openModels('unrestricted')
 
     const dialog = await screen.findByRole('dialog')
-    expect(dialog.textContent).toContain('필드에 아래 이름을 그대로 넣습니다')
+    expect(dialog.textContent).toContain('필드에 아래 이름을 그대로 넣어 주세요')
     expect(screen.queryByText(/호출 시점/)).not.toBeInTheDocument()
   })
 
@@ -134,19 +134,19 @@ describe('호출할 수 있는 모델', () => {
   test('낡은 목록은 그리되 단서를 붙인다', async () => {
     await openModels('stale')
 
-    expect(await screen.findByText(/가져온 지 오래됐습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/가져온 지 오래됐어요/)).toBeInTheDocument()
     expect(await screen.findByText('openai/gpt-5.6-luna')).toBeInTheDocument()
   })
 
   test('좁혀서 남은 것이 없는 것과 목록이 비어 있는 것을 구분한다', async () => {
     await openModels('narrowedToNothing')
-    expect(await screen.findByText(/이 키의 패턴 조건을 통과하는 후보가 없습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/이 키의 패턴 조건을 통과하는 후보가 없어요/)).toBeInTheDocument()
   })
 
   test('자체 서빙 구역이 비어도 고장으로 읽히지 않는다', async () => {
     await openModels('noSelfServed')
 
-    expect(await screen.findByText(/자체 서빙 모델이 없습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/자체 서빙 모델이 없어요/)).toBeInTheDocument()
     expect(await screen.findByText('openai/gpt-5.6-luna')).toBeInTheDocument()
   })
 
@@ -159,6 +159,6 @@ describe('호출할 수 있는 모델', () => {
 
     expect(await screen.findByText('anthropic/claude-sonnet-4')).toBeInTheDocument()
     expect(screen.queryByText('openai/gpt-5.6-luna')).not.toBeInTheDocument()
-    expect(await screen.findByText('찾는 이름이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('찾는 이름이 없어요.')).toBeInTheDocument()
   })
 })
