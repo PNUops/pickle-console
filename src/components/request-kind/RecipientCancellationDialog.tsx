@@ -147,7 +147,7 @@ export function RecipientCancellationDialog({ request, recipient, support, resou
           {impact.previousReason && <p className="text-sm">이전 생성 실패·제외 사유: {impact.previousReason}</p>}
           {impact.previousStatus === 'FAILED' && <Alert variant="warning">생성 실패의 재시도를 포기해요. 실패는 진행 중인 생성 대기와 다르며 이전 실패 사유와 시도 이력은 유지돼요.</Alert>}
           {!impact.allowed && <Alert variant="warning">{impact.blockedReason ?? '현재 조건에서는 생성 대기를 취소할 수 없어요.'}</Alert>}
-          {!impact.allowed && <p className="text-sm">이미 등록된 VM과 발급 전 LLM API 키는 등록 자원이에요. {resourceHref ? <Link className="text-primary-700 underline" to={resourceHref}>기존 리소스 상세</Link> : '현재 권한에서 열 수 있는 기존 리소스 상세'}에서 허용된 삭제·폐기 경로를 확인해 주세요. 연결이 불명확하면 운영자에게 확인해 주세요.</p>}
+          {!impact.allowed && <p className="text-sm">이미 등록된 VM과 발급 전 LLM API 키는 등록 자원이에요. {resourceHref ? <Link className="text-primary-700 underline" to={resourceHref}>기존 리소스 상세</Link> : '현재 권한에서 열 수 있는 기존 리소스 상세'}에서 허용된 삭제 또는 폐기 경로를 확인해 주세요. 연결이 불명확하면 운영자에게 확인해 주세요.</p>}
           <FormField label="취소 사유" required><Textarea value={reason} maxLength={500} disabled={pending || unknown} onChange={(event) => { setReason(event.target.value); setConfirmed(null) }} rows={3} /></FormField>
           <Checkbox label="선택한 대상과 현재 상태, 생성 대기 취소 효과를 확인했어요" checked={confirmed === impact.fingerprint}
             disabled={!impact.allowed || pending || loading || unknown} onChange={(event) => setConfirmed(event.target.checked ? impact.fingerprint : null)} />

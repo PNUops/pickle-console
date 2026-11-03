@@ -303,7 +303,7 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
       const budgetRequired = Number(creditLimit) > 0 || !!creditReset || parsedCreditModels.length > 0
         || parsedDeniedModels.length > 0 || passthroughEndpoints.some((endpoint) => endpoint !== 'chat')
       if (budgetRequired && !accountData.paidAllowed) {
-        errors['llmKey.grantedCreditLimit'] = '유료 정책에는 같은 기관·공간 범위의 승인 또는 명단 지급과 키 예산 업무가 같은 부여에 있어야 해요.'
+        errors['llmKey.grantedCreditLimit'] = '유료 정책에는 같은 기관과 공간 범위에서 승인 또는 명단 지급 업무 중 하나와 키 예산 업무가 같은 부여에 있어야 해요.'
       }
       const modelsError = creditModelRulesError(parsedRules)
       if (modelsError) {
@@ -362,12 +362,12 @@ function useLlmKeyApproveForm(request: RequestDetail, value: unknown): DecisionF
             setPassthroughEndpoints(free ? (spec?.reqPassthroughEndpoints ?? []).filter((endpoint) => endpoint === 'chat') : spec?.reqPassthroughEndpoints ?? [])
             setChatlessAcknowledged(null)
           }} />
-          {freeApprovalSelected && <p className="text-sm">금액 0, 리셋 없음, 사업 계정 미지정으로 승인해요. 유료 모델 허용·차단 목록과 Chat 외 기능은 모두 닫아요.</p>}
+          {freeApprovalSelected && <p className="text-sm">금액 0, 리셋 없음, 사업 계정 미지정으로 승인해요. 유료 모델 허용 목록과 차단 목록, Chat 외 기능은 모두 닫아요.</p>}
           {!freeApprovalSelected && <p className="text-sm">현재 부여안 기능: {passthroughText(passthroughEndpoints)}</p>}
         </div>}
         <details open className="min-w-0 space-y-4 rounded border border-line p-3">
           <summary className="cursor-pointer font-medium">TOKEN 토큰 한도</summary>
-          <p className="text-xs text-foreground-muted">RPM·TPM·동시 요청의 실제 서비스 기본값은 확인할 수 없어요.</p>
+          <p className="text-xs text-foreground-muted">RPM과 TPM, 동시 요청의 실제 서비스 기본값은 확인할 수 없어요.</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             label="부여 분당 요청 수"

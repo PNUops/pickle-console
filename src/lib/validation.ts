@@ -66,7 +66,7 @@ export const PASSWORD_RULE_LABELS: Record<keyof PasswordRuleStatus, string> = {
   length: `${PASSWORD_MIN_LENGTH}자 이상 ${PASSWORD_MAX_LENGTH}자 이하`,
   byteLimit: `UTF-8 ${PASSWORD_MAX_BYTES}바이트 이하 (한글은 한 글자가 3바이트)`,
   noRepetition: '같은 문자만 반복하지 않기',
-  noSequence: '연속된 문자·숫자로만 이루어지지 않기',
+  noSequence: '연속된 문자나 숫자로만 이루어지지 않기',
 }
 
 /** 규칙 순서(체크리스트 표시 순서 = 서버 검사 순서에 맞춘 순서). */
@@ -87,7 +87,7 @@ export function passwordRuleError(password: string): string | null {
     return `비밀번호가 너무 길어요. 한글 등 다국어 문자를 포함하면 더 짧게 입력해 주세요. (UTF-8 ${PASSWORD_MAX_BYTES}바이트 이하)`
   }
   if (!status.noRepetition) return '같은 문자가 반복되는 비밀번호는 사용할 수 없어요.'
-  if (!status.noSequence) return '연속된 문자·숫자로만 이루어진 비밀번호는 사용할 수 없어요.'
+  if (!status.noSequence) return '연속된 문자나 숫자로만 이루어진 비밀번호는 사용할 수 없어요.'
   return null
 }
 

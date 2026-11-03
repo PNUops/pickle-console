@@ -57,11 +57,11 @@ export function ApprovalConfirmation({ request, approval, comparisons = [], targ
     {request.type !== 'DOMAIN' && <p>부여 사용 시작일: {approval.grantedStartDate ?? '시작일 미지정'}</p>}
     {recipients.length > 0 && <p>생성 대상에게 동일한 1명당 부여값을 적용해요.</p>}
     {request.type === 'VM' && approval.vm && <section aria-label="VM 부여안 총량" className="space-y-2">
-      <p className="font-semibold">취소·제외를 뺀 {entitled}명 기준 부여안 합계{counts.unknown > 0 && ' (조건 미확인 포함)'}: {formatSpec(approval.vm.grantedVcpu * entitled, approval.vm.grantedMemoryMb * entitled, approval.vm.grantedDiskGb * entitled)}</p>
+      <p className="font-semibold">취소되거나 제외된 대상을 뺀 {entitled}명 기준 부여안 합계{counts.unknown > 0 && ' (조건 미확인 포함)'}: {formatSpec(approval.vm.grantedVcpu * entitled, approval.vm.grantedMemoryMb * entitled, approval.vm.grantedDiskGb * entitled)}</p>
       <p>배치: {nodeName ?? (approval.vm.nodeId ? '노드 정보 확인 필요' : '자동 배치')}</p>
       <p className="text-foreground-muted">이 합계는 실제 생성 완료나 물리 용량 예약을 뜻하지 않아요. 각 대상자 생성 시점에 배치와 자원 상태를 확인해요.</p>
     </section>}
-    {counts.excluded > 0 && <Alert variant="warning">취소·제외된 {counts.excluded}명은 부여안 합계에 포함하지 않았어요.</Alert>}
+    {counts.excluded > 0 && <Alert variant="warning">취소되거나 제외된 {counts.excluded}명은 부여안 합계에 포함하지 않았어요.</Alert>}
     {request.workspaceId && workspaceReadable && <Link to={adminPaths.workspaceDetail(request.workspaceId, request.orgId ?? undefined)} className="inline-flex text-primary-700 hover:underline">워크스페이스 관계 보기</Link>}
     <section aria-label="종류별 승인 확인" className="space-y-3">{children}</section>
   </div>

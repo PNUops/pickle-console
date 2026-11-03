@@ -101,7 +101,7 @@ export function VmGatewayBlockSection({
               value={reason}
               maxLength={200}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="VM 이벤트·감사 기록에 포함돼요."
+              placeholder="VM 이벤트와 감사 기록에 포함돼요."
             />
           </label>
         </div>
