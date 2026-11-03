@@ -343,7 +343,7 @@ describe('Resource deadline projection', () => {
     const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
     fireEvent.change(within(dialog).getByLabelText(/새 만료일/), { target: { value: '2030-01-01' } })
     await userEvent.setup().click(within(dialog).getByRole('button', { name: '변경' }))
-    await screen.findByText('LLM API 키 만료일을 변경했습니다.')
+    await screen.findByText('LLM API 키 만료일을 변경했어요.')
     expect(adminLlmKeyStore.find((row) => row.id === uuid(170))!.expiresAt).toBe('2030-01-01T15:00:00.000Z')
     await waitFor(() => expect(client.getQueryState(key)?.isInvalidated).toBe(true))
   })

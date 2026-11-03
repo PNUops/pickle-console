@@ -69,7 +69,7 @@ export function AdminOpenRouterAccountsPage() {
       <PageHeader
         eyebrow="리소스"
         title="OpenRouter 사업 계정"
-        description="기관이 사업 단위로 쓰는 OpenRouter 결제 계정과 관리용 키 상태입니다."
+        description="기관에서 쓰는 OpenRouter 결제 계정과 관리용 키예요."
         actions={
           canManage ? (
             <Button onClick={() => setCreateOpen(true)}>사업 계정 등록</Button>
@@ -82,8 +82,8 @@ export function AdminOpenRouterAccountsPage() {
       {accounts.isError && <MessageBar variant="danger">{accounts.error.message}</MessageBar>}
       {accounts.isSuccess && accounts.data.length === 0 && (
         <EmptyState
-          title="등록된 OpenRouter 사업 계정이 없습니다"
-          description="유료 모델을 승인하려면 이 기관에 관리용 키까지 확인된 활성 사업 계정이 필요합니다."
+          title="등록된 OpenRouter 사업 계정이 없어요"
+          description="유료 모델을 승인하려면 이 기관에 관리용 키까지 확인된 활성 사업 계정이 필요해요."
         />
       )}
       {accounts.isSuccess && accounts.data.length > 0 && (
@@ -137,7 +137,7 @@ export function AdminOpenRouterAccountsPage() {
           onClose={() => setCreateOpen(false)}
           onCreated={(account) => {
             setCreateOpen(false)
-            setNotice(`${account.name} 사업 계정을 등록했습니다.`)
+            setNotice(`${account.name} 사업 계정을 등록했어요.`)
           }}
         />
       )}
@@ -172,7 +172,7 @@ function CreateAccountModal({
       onCreated(account)
     },
     onError: (failure) =>
-      setError(toApiError(failure, 'OpenRouter 사업 계정을 등록하지 못했습니다.').message),
+      setError(toApiError(failure, 'OpenRouter 사업 계정을 등록하지 못했어요.').message),
   })
 
   const submit = (event: FormEvent) => {
@@ -195,7 +195,7 @@ function CreateAccountModal({
       <form className="space-y-4" onSubmit={submit} noValidate>
         {error && <MessageBar variant="danger">{error}</MessageBar>}
         <p className="text-sm text-foreground-secondary">
-          관리용 키는 계정을 만든 뒤 따로 등록하고 확인합니다.
+          관리용 키는 계정을 만든 뒤 따로 등록하고 확인해요.
         </p>
         <FormField label="기관" required error={submitted && !orgId ? '기관을 선택해 주세요.' : undefined}>
           {fixedOrgId ? (
@@ -225,9 +225,9 @@ function CreateAccountModal({
           </FormField>
         </div>
         <FormField
-          label={`계속하려면 이름(${name.trim() || '사업 계정 이름'})을 정확히 입력하세요`}
+          label={`계속하려면 이름(${name.trim() || '사업 계정 이름'})을 정확히 입력해 주세요`}
           required
-          error={submitted && confirmName !== name.trim() ? '사업 계정 이름과 정확히 같아야 합니다.' : undefined}
+          error={submitted && confirmName !== name.trim() ? '사업 계정 이름과 정확히 같아야 해요.' : undefined}
         >
           <Input
             value={confirmName}

@@ -46,7 +46,7 @@ test('the captured first-binding proposal keeps a missing account impact separat
   const modal = within(screen.getByRole('dialog'))
   await user.clear(modal.getByLabelText('금액 한도 (USD)'))
   await user.type(modal.getByLabelText('금액 한도 (USD)'), '5')
-  await modal.findByText(/계정별 배정 영향이 제공되지 않습니다/)
+  await modal.findByText(/계정별 배정 영향이 제공되지 않았어요/)
   expect(proposedAccount).toBe(response.limitsProjection!.draft.openrouterAccountId)
   expect(modal.getByRole('button', { name: '저장' })).not.toBeDisabled()
   expect(modal.queryByText('관측 잔액')).not.toBeInTheDocument()
@@ -58,7 +58,7 @@ test('the captured unavailable bulk impact does not fabricate a zero account com
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser),
     http.get('*/api/v1/admin/bulk-changes/previews/:previewId', () => HttpResponse.json(preview)))
   renderApp(`/admin/bulk/llm-keys?previewId=${preview.previewId}`)
-  await screen.findByText(/계정별 배정 영향이 제공되지 않습니다/)
+  await screen.findByText(/계정별 배정 영향이 제공되지 않았어요/)
   expect(screen.queryByText('관측 잔액')).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '계정별 배정 영향' })).not.toBeInTheDocument()
 })

@@ -115,7 +115,7 @@ function AdminLlmKeysPageContent() {
       <PageHeader
         eyebrow="리소스"
         title="LLM API 키"
-        description="신청 승인 후 생성된 키의 상태와 한도를 기관·워크스페이스 범위에서 관리합니다."
+        description="기관과 워크스페이스별로 키의 상태와 한도를 관리해요."
       />
 
       <div className="flex min-w-0 flex-wrap items-center gap-3">
@@ -188,12 +188,12 @@ function AdminLlmKeysPageContent() {
       </div>
       <Button variant="secondary" onClick={() => change(Object.fromEntries(['workspaceId', 'requestId', 'openrouterAccountId', 'status', 'q', 'cohort', 'sort', 'policyModel', 'policyFeature', 'page', 'size'].map((key) => [key, undefined])), true)}>조회 필터 초기화</Button>
       {parsed.error && <MessageBar variant="danger">{parsed.error}</MessageBar>}
-      {(accounts.isFetching || workspaces.isFetching) && <MessageBar>조회 가능한 선택 항목을 불러오는 중입니다.</MessageBar>}
-      {(accounts.isError || workspaces.isError) && <MessageBar variant="warning">선택 항목을 불러오지 못했습니다. 현재 조회 조건은 유지합니다.</MessageBar>}
-      {!accounts.isEnabled && <p className="text-sm text-foreground-muted">사업 계정 선택 목록은 현재 업무에서 조회하지 않습니다.</p>}
-      {!workspaces.isEnabled && <p className="text-sm text-foreground-muted">워크스페이스 선택 목록은 현재 업무에서 조회하지 않습니다.</p>}
-      {accounts.isSuccess && accounts.data.length === 0 && <p className="text-sm text-foreground-muted">선택할 수 있는 사업 계정이 없습니다.</p>}
-      {workspaces.isSuccess && workspaces.data.length === 0 && <p className="text-sm text-foreground-muted">선택할 수 있는 워크스페이스가 없습니다.</p>}
+      {(accounts.isFetching || workspaces.isFetching) && <MessageBar>선택 항목을 불러오는 중이에요.</MessageBar>}
+      {(accounts.isError || workspaces.isError) && <MessageBar variant="warning">선택 항목을 불러오지 못했어요. 현재 조회 조건은 유지해요.</MessageBar>}
+      {!accounts.isEnabled && <p className="text-sm text-foreground-muted">현재 업무에서는 사업 계정 목록을 조회하지 않아요.</p>}
+      {!workspaces.isEnabled && <p className="text-sm text-foreground-muted">현재 업무에서는 워크스페이스 목록을 조회하지 않아요.</p>}
+      {accounts.isSuccess && accounts.data.length === 0 && <p className="text-sm text-foreground-muted">선택할 수 있는 사업 계정이 없어요.</p>}
+      {workspaces.isSuccess && workspaces.data.length === 0 && <p className="text-sm text-foreground-muted">선택할 수 있는 워크스페이스가 없어요.</p>}
 
       {canSelect && (
         <BulkSelectionBar
@@ -209,8 +209,8 @@ function AdminLlmKeysPageContent() {
       {data && <p className="text-xs text-foreground-muted">총 {isExactTokenCount(data.totalElements) ? data.totalElements.toLocaleString('ko-KR') : '정확값 확인 불가'}개 · {formatDateTime(keys.data!.fetchedAt)} 조회</p>}
       {data && data.content.length === 0 && (
         <EmptyState
-          title="표시할 LLM API 키가 없습니다"
-          description="관리 범위나 상태·검색 조건을 바꿔 보세요."
+          title="표시할 LLM API 키가 없어요"
+          description="관리 범위나 상태, 검색 조건을 바꿔 보세요."
         />
       )}
       {data && data.content.length > 0 && (
