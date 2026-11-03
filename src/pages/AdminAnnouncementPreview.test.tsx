@@ -66,7 +66,7 @@ describe('Announcement publishing and preview authority', () => {
     await user.click(screen.getByRole('radio', { name: '특정 워크스페이스' }))
     await user.selectOptions(await screen.findByLabelText('대상 워크스페이스'), uuid(12))
     await preview(user)
-    expect(await screen.findByText('조회 가능한 수신자 일부를 표시합니다.')).toBeInTheDocument()
+    expect(await screen.findByText('조회할 수 있는 수신자 일부예요.')).toBeInTheDocument()
     expect(screen.getByText('일부 발송 대상자는 계정 열람 권한 때문에 예시에 표시되지 않습니다.')).toBeInTheDocument()
     const previewSection = screen.getByRole('heading', { name: '발송 전 대상 확인' }).closest('section')!
     expect(within(previewSection).queryByText('sysadmin.lee@pusan.ac.kr')).not.toBeInTheDocument()
@@ -91,7 +91,7 @@ describe('Announcement estimate, queue snapshot and stale responses', () => {
     await user.click(screen.getByRole('button', { name: '검토한 알림 발송' }))
     const dialog = screen.getByRole('dialog', { name: '알림 발송 확인' })
     await user.click(within(dialog).getByRole('button', { name: '발송' }))
-    expect(await screen.findByText(/1명의 콘솔 알림을 저장하고 이메일 큐에 접수했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/알림을 저장했어요. 대상은 1명이에요/)).toBeInTheDocument()
     expect(screen.getByText('저장됨')).toBeInTheDocument()
     const created = announcementStore[0]
     expect(created.recipientCount).toBe(1)
@@ -253,7 +253,7 @@ describe('Saved announcement URL and visibility', () => {
     let calls = 0
     server.use(http.get('*/api/v1/admin/announcements/:announcementId', () => { calls += 1 }))
     system('/admin/announcements?selected=bad')
-    await screen.findByText('발송건 ID가 올바르지 않습니다.')
+    await screen.findByText('발송건 ID가 올바르지 않아요.')
     expect(calls).toBe(0)
   })
 })

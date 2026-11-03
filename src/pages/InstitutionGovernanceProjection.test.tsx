@@ -37,7 +37,7 @@ test('a qualified workspace sender completes delivery without institution-wide s
   await user.click(screen.getByRole('button', { name: '발송 대상 미리보기' }))
   await user.click(await screen.findByRole('button', { name: '검토한 알림 발송' }))
   await user.click(within(screen.getByRole('dialog', { name: '알림 발송 확인' })).getByRole('button', { name: '발송' }))
-  await screen.findByText(/발송건 'Synthetic scoped notice'/)
+  await screen.findByText(/'Synthetic scoped notice' 알림을 저장했어요/)
   expect(screen.queryByRole('button', { name: '저장한 발송건 보기' })).not.toBeInTheDocument()
   expect(historyReads).toBe(0)
 })

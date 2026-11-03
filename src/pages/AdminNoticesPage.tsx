@@ -116,9 +116,9 @@ export function AdminNoticesPage() {
   return <div className="space-y-6">
     <div className="flex flex-wrap items-start justify-between gap-3"><div>
       <h1 className="text-2xl font-bold text-neutral-900">공지사항 관리</h1>
-      <p className="mt-1 text-sm text-neutral-500">플랫폼 전체의 공지 본문과 이미지, 게시 기간을 관리합니다. 팝업 설정은 로그인하지 않은 방문자에게도 공개되는 비차단 카드입니다.</p>
+      <p className="mt-1 text-sm text-neutral-500">플랫폼 전체에 게시하는 공지예요. 팝업 공지는 로그인하지 않은 방문자에게도 공개돼요.</p>
     </div>{canManage && <Button ref={createRef} onClick={() => void navigate(adminPaths.newNotice(scope.activeOrgId, noticeListWithoutSelection(listPath)))}>공지 등록</Button>}</div>
-    {invalidSelected && <Alert variant="danger">공지 ID가 올바르지 않습니다.<Button variant="secondary" onClick={closeDrawer}>상세 선택 지우기</Button></Alert>}
+    {invalidSelected && <Alert variant="danger">공지 ID가 올바르지 않아요.<Button variant="secondary" onClick={closeDrawer}>상세 선택 지우기</Button></Alert>}
     {notices.isPending && <Spinner label="공지사항 목록 불러오는 중" />}
     {notices.isError && <Alert variant="danger">{notices.error.message}<Button variant="secondary" onClick={() => void notices.refetch()}>목록 다시 조회</Button></Alert>}
     {notices.isSuccess && <><div ref={listRef}><Card><Table><THead><TR><TH>제목</TH><TH>게시 상태</TH><TH>게시 시작</TH><TH>게시 종료</TH></TR></THead><TBody>
@@ -127,7 +127,7 @@ export function AdminNoticesPage() {
           <span className="mt-1 flex flex-wrap gap-1.5">{notice.pinned && <Badge variant="warning">고정</Badge>}{notice.popup && <Badge variant="info">팝업</Badge>}</span>
         </TD><TD><NoticeWindowBadge notice={notice} /></TD><TD className="whitespace-nowrap">{formatDateTime(notice.startsAt)}</TD><TD className="whitespace-nowrap">{notice.endsAt ? formatDateTime(notice.endsAt) : '계속 게시'}</TD>
       </TR>)}
-    </TBody></Table>{notices.data.content.length === 0 && <p className="p-8 text-center text-sm text-neutral-500">등록된 공지가 없습니다.</p>}</Card></div>
+    </TBody></Table>{notices.data.content.length === 0 && <p className="p-8 text-center text-sm text-neutral-500">등록된 공지가 없어요.</p>}</Card></div>
     <Pagination page={notices.data.page} totalPages={notices.data.totalPages} onPageChange={(nextPage) => change({ page: nextPage, selected: undefined, create: undefined })} /></>}
     <Drawer open={!!selectedId} onClose={closeDrawer} title="공지 상세">
       {selectedId && <ExistingNotice key={selectedId} noticeId={selectedId} canManage={canManage} editPath={adminPaths.editNotice(selectedId, scope.activeOrgId, listPath)} />}
@@ -180,9 +180,9 @@ function NoticeAuthoringSurface({ noticeId, creating }: { noticeId: string | nul
   const returnWithoutSelection = noticeListWithoutSelection(returnPath)
   return <div className="space-y-6">
     <nav><Link className="text-sm font-medium text-primary-700 hover:underline" to={returnPath}>← 공지사항 목록</Link></nav>
-    <div><h1 className="text-2xl font-bold">{creating ? '공지 등록' : '공지 수정'}</h1><p className="mt-1 text-sm text-neutral-500">평문 본문과 이미지, 게시 기간을 설정하고 저장 전 내용을 미리봅니다.</p></div>
-    {!canManage && <Alert variant="danger">공지 작성·변경 업무가 없습니다.</Alert>}
-    {invalid && <Alert variant="danger">공지 ID가 올바르지 않습니다.</Alert>}
+    <div><h1 className="text-2xl font-bold">{creating ? '공지 등록' : '공지 수정'}</h1><p className="mt-1 text-sm text-neutral-500">플랫폼 전체 공지의 본문과 이미지, 게시 기간을 설정하고 저장 전에 미리 확인해요.</p></div>
+    {!canManage && <Alert variant="danger">공지를 관리할 권한이 없어요.</Alert>}
+    {invalid && <Alert variant="danger">공지 ID가 올바르지 않아요.</Alert>}
     {!creating && detail.isPending && !invalid && canManage && <Spinner label="공지 편집 정보 불러오는 중" />}
     {!creating && detail.isError && <Alert variant="danger">{detail.error.message}<Button variant="secondary" onClick={() => void detail.refetch()}>편집 정보 다시 조회</Button></Alert>}
     {canManage && (creating || detail.isSuccess) && <section aria-label="공지 작성"><Card className="p-5"><NoticeEditor key={noticeId ?? 'new'} notice={creating ? null : detail.data!} initialStored={creationReceipt && detail.data && sameSavedNotice(creationReceipt, detail.data) ? creationReceipt : null}
@@ -273,10 +273,10 @@ function NoticeEditor({
       setSaved(created)
       setError(null)
       setFieldErrors({})
-      toast.success('공지를 등록했습니다. 이어서 이미지를 첨부할 수 있습니다.')
+      toast.success('공지를 등록했어요.')
       onCreated(created)
     },
-    onError: onMutationError('공지를 등록하지 못했습니다.'),
+    onError: onMutationError('공지 등록 결과를 확인하지 못했어요.'),
   })
 
   const update = useMutation({
@@ -288,9 +288,9 @@ function NoticeEditor({
       setSaved(updated)
       setError(null)
       setFieldErrors({})
-      toast.success('공지를 수정했습니다.')
+      toast.success('공지를 수정했어요.')
     },
-    onError: onMutationError('공지를 수정하지 못했습니다.'),
+    onError: onMutationError('공지 수정 결과를 확인하지 못했어요.'),
   })
 
   const remove = useMutation({
@@ -299,13 +299,13 @@ function NoticeEditor({
       await invalidate()
       if (!active.current) return
       setDeleting(false)
-      toast.success('공지를 삭제했습니다.')
+      toast.success('공지를 삭제했어요.')
       onDeleted()
     },
     onError: (err) => {
       if (!active.current) return
       setDeleting(false)
-      setError(toApiError(err, '공지를 삭제하지 못했습니다.').message)
+      setError(toApiError(err, '공지 삭제 결과를 확인하지 못했어요.').message)
     },
   })
 
@@ -316,12 +316,12 @@ function NoticeEditor({
     setSaved(null)
     const errors: Record<string, string> = {}
     if (!title.trim()) errors.title = '제목을 입력해 주세요.'
-    else if (title.length > 200) errors.title = '제목은 200자 이하여야 합니다.'
+    else if (title.length > 200) errors.title = '제목은 200자 이하로 입력해 주세요.'
     if (!body.trim()) errors.body = '본문을 입력해 주세요.'
-    else if (body.length > 20_000) errors.body = '본문은 20,000자 이하여야 합니다.'
+    else if (body.length > 20_000) errors.body = '본문은 20,000자 이하로 입력해 주세요.'
     if (!startsAt) errors.startsAt = '게시 시작 시각을 입력해 주세요.'
     if (startsAt && endsAt && endsAt <= startsAt) {
-      errors.endsAt = '게시 종료는 시작보다 뒤여야 합니다.'
+      errors.endsAt = '게시 종료는 시작보다 뒤로 설정해 주세요.'
     }
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
@@ -338,7 +338,7 @@ function NoticeEditor({
         </p>
       )}
       {error && <Alert variant="danger">{error}</Alert>}
-      {saved && (!notice || sameSavedNotice(saved, notice)) && <OperationResult stage="stored">공지 제목과 본문, 게시 기간을 저장했습니다. {NOTICE_WINDOW_LABELS[noticeWindowState(saved.startsAt, saved.endsAt)]} 설정이며 실제 독자의 조회와 팝업 노출은 게시 기간과 공개 설정을 따릅니다.</OperationResult>}
+      {saved && (!notice || sameSavedNotice(saved, notice)) && <OperationResult stage="stored">공지를 저장했어요. 게시 상태: {NOTICE_WINDOW_LABELS[noticeWindowState(saved.startsAt, saved.endsAt)]}</OperationResult>}
 
       <form onSubmit={submit} className="space-y-4" noValidate>
         <FormField label="제목" required error={fieldErrors.title}>
@@ -355,7 +355,7 @@ function NoticeEditor({
           label="본문"
           required
           error={fieldErrors.body}
-          description="서식 없는 평문입니다. 줄바꿈은 그대로 보입니다."
+          description="서식 없는 평문으로 표시하고 줄바꿈은 유지해요."
         >
           <Textarea
             rows={8}
@@ -369,14 +369,14 @@ function NoticeEditor({
         <div className="grid gap-3 sm:grid-cols-2">
           <Checkbox
             label="목록 상단 고정"
-            description="공지사항 목록과 대시보드에서 먼저 보입니다."
+            description="공지사항 목록과 대시보드에서 먼저 보여요."
             checked={pinned}
             disabled={busy}
             onChange={(event) => { edit(); setPinned(event.target.checked) }}
           />
           <Checkbox
             label="팝업으로 표시"
-            description="게시 기간 동안 콘솔·랜딩·로그인 화면에 비차단 카드로 표시됩니다. 로그인하지 않은 방문자에게도 공개됩니다."
+            description="게시 기간 동안 콘솔과 랜딩, 로그인 화면에 비차단 카드로 보여요. 로그인하지 않은 방문자에게도 공개돼요."
             checked={popup}
             disabled={busy}
             onChange={(event) => { edit(); setPopup(event.target.checked) }}
@@ -396,7 +396,7 @@ function NoticeEditor({
           <FormField
             label="게시 종료"
             error={fieldErrors.endsAt}
-            description="비워 두면 계속 게시합니다."
+            description="비워 두면 계속 게시해요."
           >
             <Input
               type="datetime-local"
@@ -448,8 +448,8 @@ function NoticeEditor({
         }
       >
         <Alert variant="warning">
-          공지 <strong>{notice?.title}</strong>와 첨부 이미지를 함께 삭제합니다. 되돌릴 수
-          없습니다.
+          <strong>{notice?.title}</strong> 공지와 첨부 이미지를 함께 삭제해요. 되돌릴 수
+          없어요.
         </Alert>
       </Modal>
     </div>
@@ -475,7 +475,7 @@ function NoticeImageSection({
       setError(null)
       await onChanged()
     },
-    onError: (err) => setError(toApiError(err, '이미지를 업로드하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '이미지 업로드 결과를 확인하지 못했어요.').message),
   })
 
   const remove = useMutation({
@@ -484,7 +484,7 @@ function NoticeImageSection({
       setError(null)
       await onChanged()
     },
-    onError: (err) => setError(toApiError(err, '이미지를 삭제하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '이미지 삭제 결과를 확인하지 못했어요.').message),
   })
 
   const images = notice?.images ?? []
@@ -496,11 +496,11 @@ function NoticeImageSection({
     event.target.value = ''
     if (!file) return
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setError('PNG·JPEG·WebP·GIF 이미지만 첨부할 수 있습니다.')
+      setError('PNG와 JPEG, WebP, GIF 이미지만 첨부할 수 있어요.')
       return
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setError('이미지 한 장의 크기는 2MB를 넘을 수 없습니다.')
+      setError('이미지 한 장은 2MB 이하여야 해요.')
       return
     }
     setError(null)
@@ -512,12 +512,12 @@ function NoticeImageSection({
       <h3 className="text-sm font-semibold text-neutral-800">첨부 이미지</h3>
       {notice == null ? (
         <p className="text-sm text-neutral-500">
-          공지를 먼저 등록하면 이미지를 첨부할 수 있습니다.
+          공지를 먼저 등록한 뒤 이미지를 첨부해요.
         </p>
       ) : (
         <>
           <p className="text-sm text-neutral-500">
-            PNG·JPEG·WebP·GIF, 한 장당 2MB까지, 최대 {MAX_IMAGES}장 첨부할 수 있습니다.
+            PNG와 JPEG, WebP, GIF를 한 장당 2MB 이하로, 최대 {MAX_IMAGES}장까지 첨부할 수 있어요.
           </p>
           {error && <Alert variant="danger">{error}</Alert>}
           {images.length > 0 && (
@@ -556,7 +556,7 @@ function NoticeImageSection({
           )}
           {canManage && full && (
             <p className="text-xs text-neutral-500">
-              이미지는 최대 {MAX_IMAGES}장까지 첨부할 수 있습니다.
+              이미지는 최대 {MAX_IMAGES}장까지 첨부할 수 있어요.
             </p>
           )}
         </>
