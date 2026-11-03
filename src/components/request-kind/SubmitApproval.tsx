@@ -120,7 +120,7 @@ function SubmitApprovalForm({
           </>
         }
       >
-        {confirmation.changed && <Alert variant="warning">승인 내용이 갱신되었습니다. 변경된 내용을 확인한 뒤 확정해 주세요.</Alert>}
+        {confirmation.changed && <Alert variant="warning">승인 내용이 갱신됐어요. 변경된 내용을 확인한 뒤 확정해 주세요.</Alert>}
         {confirmOpen && confirmation.displayed && <ApprovalConfirmation request={request} approval={confirmation.displayed} comparisons={form.comparisons} targetFacts={targetFacts} targetFactsKnown={targetFactsKnown} workspaceReadable={workspaceReadable} nodeName={form.nodeName}>
           {form.confirmBody}
         </ApprovalConfirmation>}

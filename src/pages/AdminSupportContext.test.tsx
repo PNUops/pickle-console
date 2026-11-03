@@ -156,6 +156,6 @@ test('a late administrative submission preserves the newer wizard URL and hides 
     await waitFor(() => expect(invalidations).toHaveBeenCalledWith({ queryKey: ['admin', 'requests'] }))
     expect(new URL(router.state.location.search, 'https://pickle.invalid').searchParams.get('step')).toBe('resource')
     expect(screen.queryByText('이전 기관의 승인 결과')).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '신청을 승인했습니다' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '신청을 승인했어요' })).not.toBeInTheDocument()
   } finally { release(); invalidations.mockRestore(); ACCESS_TOKENS['access-org-manager'] = original }
 })

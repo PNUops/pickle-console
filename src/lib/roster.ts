@@ -13,9 +13,9 @@ export interface RosterRow {
   error?: string
 }
 
-export const ROSTER_NO_STUDENT_NO = '학번을 찾지 못했습니다.'
+export const ROSTER_NO_STUDENT_NO = '학번을 찾지 못했어요.'
 export const ROSTER_AMBIGUOUS_STUDENT_NO =
-  '학번 열을 정하지 못했습니다. 머리글 행을 함께 붙여넣어 주세요.'
+  '학번 열을 정하지 못했어요. 머리글 행을 함께 붙여넣어 주세요.'
 
 /** Digits with at most one hyphen, seven digits or more: what a student number cell looks like. */
 const STUDENT_NO_CELL = /^\d+(-\d+)?$/

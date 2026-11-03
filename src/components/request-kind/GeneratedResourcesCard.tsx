@@ -33,7 +33,7 @@ export function GeneratedResourcesCard({ resources, returnTo, unlinkedDomain = f
   const { user } = useAuth()
   if (resources.length === 0) return unlinkedDomain ? <Card>
     <CardHeader><CardTitle>도메인 발급 연결 기록</CardTitle></CardHeader>
-    <CardContent><p className="text-sm text-foreground-muted">이 신청의 확정 자원 ID 연결 기록이 없습니다. 기존 발급 이름은 부여 내용에서 확인해 주세요. 연결 기록이 없다는 사실만으로 발급 실패를 뜻하지 않습니다.</p></CardContent>
+    <CardContent><p className="text-sm text-foreground-muted">이 신청의 확정 자원 ID 연결 기록이 없어요. 기존 발급 이름은 부여 내용에서 확인해 주세요. 연결 기록이 없다는 사실만으로 발급 실패를 뜻하지 않아요.</p></CardContent>
   </Card> : null
   return <Card>
     <CardHeader><CardTitle>자원 상태</CardTitle></CardHeader>

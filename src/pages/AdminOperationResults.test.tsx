@@ -118,7 +118,7 @@ test('bulk registration links use the actual organization from a global request'
   const table = await screen.findByRole('table', { name: '대상자' })
   expect(within(table).getByText('자원 등록됨')).toBeInTheDocument()
   expect(within(table).getByRole('link', { name: '상세 보기' })).toHaveAttribute('href', `/admin/vms/${uuid(8801)}?org=${uuid(2)}`)
-  expect(screen.getByText(/VM 프로비저닝 완료를 뜻하지 않습니다/)).toBeInTheDocument()
+  expect(screen.getByText(/VM 프로비저닝 완료를 뜻하지 않아요/)).toBeInTheDocument()
   expect(screen.getByText('승인했어요.')).toBeInTheDocument()
 })
 

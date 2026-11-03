@@ -86,10 +86,6 @@ export function RequestDetailPage() {
 
       {cancelError && <Alert variant="danger">{cancelError}</Alert>}
 
-      {data.status === 'SUBMITTED' && (
-        <Alert variant="info">처리되면 알려 드립니다.</Alert>
-      )}
-
       {data.review && <ReviewCard request={data} review={data.review} />}
 
       <RequestRecipientsCard
@@ -165,7 +161,7 @@ function CancelRequestButton({
       const { data, error } = await api.POST('/requests/{requestId}/cancel', {
         params: { path: { requestId } },
       })
-      if (!data) throw toApiError(error, '신청을 취소하지 못했습니다.')
+      if (!data) throw toApiError(error, '신청을 취소하지 못했어요.')
       return data
     },
     onSuccess: async () => {
@@ -175,7 +171,7 @@ function CancelRequestButton({
     },
     onError: async (err) => {
       setConfirmOpen(false)
-      onError(toApiError(err, '신청을 취소하지 못했습니다.').message)
+      onError(toApiError(err, '신청을 취소하지 못했어요.').message)
       // 이미 처리된 신청이면 최신 상태를 다시 불러온다.
       await queryClient.invalidateQueries({ queryKey: ['requests'] })
     },
@@ -202,7 +198,7 @@ function CancelRequestButton({
         }
       >
         <p className="text-sm text-neutral-600">
-          취소한 신청은 되돌릴 수 없으며, 필요하면 새로 신청해야 합니다.
+          취소한 신청은 되돌릴 수 없으며, 필요하면 새로 신청해야 해요.
         </p>
       </Modal>
     </>

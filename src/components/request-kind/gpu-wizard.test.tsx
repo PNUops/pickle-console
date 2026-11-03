@@ -16,7 +16,7 @@ describe('GPU request wizard', () => {
     renderApp('/console/requests/new?kind=GPU')
     await user.type(await screen.findByLabelText('이름'), '연구용 GPU')
     expect(screen.getByLabelText('희망 GPU 임대 기간')).toHaveValue(null)
-    expect(screen.queryByText('나중에 바꿀 수 있습니다.')).not.toBeInTheDocument()
+    expect(screen.queryByText('나중에 바꿀 수 있어요.')).not.toBeInTheDocument()
     expect(screen.getByLabelText('대상 VM')).toHaveValue('')
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(await screen.findByText('희망 임대 기간을 1 이상의 정수로 입력해 주세요.')).toBeInTheDocument()

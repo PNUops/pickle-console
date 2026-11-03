@@ -20,7 +20,7 @@ const ownerImpact = '*/api/v1/requests/:requestId/recipients/:recipientId/cancel
 const supportImpact = '*/api/v1/admin/requests/:requestId/recipients/:recipientId/cancellation-impact'
 const ownerCancel = '*/api/v1/requests/:requestId/recipients/:recipientId/cancel'
 const supportCancel = '*/api/v1/admin/requests/:requestId/recipients/:recipientId/cancel'
-const acknowledgement = '선택한 대상과 현재 상태, 생성 대기 취소 효과를 확인했습니다'
+const acknowledgement = '선택한 대상과 현재 상태, 생성 대기 취소 효과를 확인했어요'
 
 function recipient(overrides: Partial<RequestRecipient> = {}): RequestRecipient {
   return { id: uuid(700), userId: uuid(57), name: '정확한 대상', invitee: null, resourceId: null, status: 'QUEUED', reason: null,
@@ -100,7 +100,7 @@ test('canceling a failed recipient preserves the previous failure and attempts b
   }))
   renderApp(`/console/requests/${request.id}`)
   const dialog = await openCancellation(user)
-  expect(dialog.getByText(/생성 실패의 재시도를 포기합니다/)).toBeInTheDocument()
+  expect(dialog.getByText(/생성 실패의 재시도를 포기해요/)).toBeInTheDocument()
   await confirmCancellation(user, dialog)
   await waitFor(() => expect(screen.getAllByText('이전 생성 실패·제외 사유: 이전 생성 실패 원문').length).toBeGreaterThan(0))
   expect(request.recipients[0].reason).toBe('이전 생성 실패 원문')
@@ -158,7 +158,7 @@ test('a registration race refuses cancellation, reads the current blocker and re
   await dialog.findAllByText('이미 등록된 자원이 있습니다.')
   expect(dialog.getByRole('checkbox')).not.toBeChecked()
   expect(dialog.getByRole('button', { name: '생성 대기 취소' })).toBeDisabled()
-  expect(dialog.getByText(/발급 전 LLM API 키는 등록 자원입니다/)).toBeInTheDocument()
+  expect(dialog.getByText(/발급 전 LLM API 키는 등록 자원이에요/)).toBeInTheDocument()
   expect(writes).toBe(1)
 })
 
@@ -173,7 +173,7 @@ test('a lost POST response never auto-repeats and an explicit GET restores its s
   renderApp(`/console/requests/${request.id}`)
   const dialog = await openCancellation(user)
   await confirmCancellation(user, dialog)
-  await dialog.findByText(/완료나 실패를 단정할 수 없습니다/)
+  await dialog.findByText(/완료나 실패를 단정할 수 없어요/)
   expect(writes).toBe(1)
   expect(dialog.queryByText('생성 대기 취소 완료')).not.toBeInTheDocument()
   expect(dialog.getByRole('button', { name: '생성 대기 취소' })).toBeDisabled()
@@ -320,7 +320,7 @@ test('an uncertain operation can be closed and reopened to explicitly read its d
   renderApp(`/console/requests/${request.id}`)
   const first = await openCancellation(user)
   await confirmCancellation(user, first)
-  await first.findByText(/완료나 실패를 단정할 수 없습니다/)
+  await first.findByText(/완료나 실패를 단정할 수 없어요/)
   await user.keyboard('{Escape}')
   const reopened = await openCancellation(user)
   expect(reopened.getByRole('button', { name: '생성 대기 취소' })).toBeDisabled()
@@ -356,7 +356,7 @@ test('an explicit result read updates only this reader cache and preserves anoth
   const dialog = await openCancellation(user)
   currentRead = true
   await user.click(dialog.getByRole('button', { name: '현재 결과 조회' }))
-  await dialog.findByText(/저장된 개별 취소 결과가 없습니다/)
+  await dialog.findByText(/저장된 개별 취소 결과가 없어요/)
   expect(client.getQueryData<RequestDetail>(previousKey)?.displayName).toBe('이전 열람자 캐시')
   expect(dialog.getByText(/현재 열람자 조회 결과/)).toBeInTheDocument()
 })

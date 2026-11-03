@@ -188,7 +188,7 @@ describe('관리자 신청 상세 — 직접 입력 신청', () => {
 
     await screen.findByRole('heading', { name: '신청 상세' })
     expect(screen.getByText('직접 입력')).toBeInTheDocument()
-    expect(screen.getByText('준비된 사양을 쓰지 않는 신청입니다')).toBeInTheDocument()
+    expect(screen.getByText('준비된 사양을 쓰지 않는 신청이에요')).toBeInTheDocument()
     expect(
       screen.getByText('Spring Boot와 PostgreSQL을 함께 띄웁니다'),
     ).toBeInTheDocument()
@@ -337,7 +337,7 @@ describe('결정 폼 — OS 이미지 조회 실패', () => {
 
     await screen.findByRole('heading', { name: '신청 상세' })
     expect(
-      await screen.findByText('OS 이미지 목록을 불러오지 못했습니다'),
+      await screen.findByText('OS 이미지 목록을 불러오지 못했어요'),
     ).toBeInTheDocument()
 
     // 재시도하면 기본 핸들러(정상 응답)로 복구되어 결정 폼이 나타난다.

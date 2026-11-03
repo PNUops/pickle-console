@@ -211,7 +211,7 @@ export function RequestWizard({
         ...(adminInvitations.data ?? []).map((invitation) => ({
           key: `i:${invitation.id}`,
           label: invitation.email ?? invitation.studentNo ?? '—',
-          description: '가입하면 만들어집니다.',
+          description: '가입 대기',
         })),
       ]
     : [
@@ -223,7 +223,7 @@ export function RequestWizard({
         ...(ownsWorkspace ? (invitations.data ?? []) : []).map((invitation) => ({
           key: `i:${invitation.id}`,
           label: invitation.email ?? invitation.studentNo ?? '—',
-          description: '가입하면 만들어집니다.',
+          description: '가입 대기',
         })),
       ]
   const listedKeys = new Set(listed.map((candidate) => candidate.key))
@@ -238,7 +238,7 @@ export function RequestWizard({
     const chosen = new Set(selectedRecipients.map((candidate) => candidate.key))
     const total = chosen.size + added.filter((candidate) => !chosen.has(candidate.key)).length
     if (total > MAX_RECIPIENTS) {
-      return `${MAX_RECIPIENTS_MESSAGE} 명단을 더하면 ${total}명으로 ${total - MAX_RECIPIENTS}명이 많습니다.`
+      return `${MAX_RECIPIENTS_MESSAGE} 명단을 더하면 ${total}명으로 ${total - MAX_RECIPIENTS}명이 많아요.`
     }
     setState((prev) => {
       const kept = prev.roster?.workspaceId === workspaceId ? prev.roster.candidates : []
@@ -347,9 +347,9 @@ export function RequestWizard({
         const today = todayKstDate()
         const limit = new Date()
         limit.setFullYear(limit.getFullYear() + MAX_CUSTOM_PERIOD_YEARS)
-        if (state.reqEndDate < today) next.reqEndDate = '종료일은 오늘 이후여야 합니다.'
+        if (state.reqEndDate < today) next.reqEndDate = '종료일은 오늘 이후여야 해요.'
         else if (state.reqEndDate > kstDateString(limit))
-          next.reqEndDate = `직접 적는 종료일은 ${MAX_CUSTOM_PERIOD_YEARS}년 이내여야 합니다.`
+          next.reqEndDate = `직접 적는 종료일은 ${MAX_CUSTOM_PERIOD_YEARS}년 이내여야 해요.`
       }
     }
     return { ...next, ...kindApi.validateStep(stepId) }
@@ -421,7 +421,7 @@ export function RequestWizard({
   const submit = useMutation({
     mutationFn: async (body: CreateRequest) => {
       const { data, error } = await api.POST('/requests', { body })
-      if (!data) throw toApiError(error, '신청을 제출하지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      if (!data) throw toApiError(error, '신청을 제출하지 못했어요. 잠시 후 다시 시도해 주세요.')
       return data
     },
     onSuccess: (data) => {
@@ -445,7 +445,7 @@ export function RequestWizard({
     onError: (err) => {
       if (!active.current) return
       setConfirmOpen(false)
-      const apiError = toApiError(err, '신청을 제출하지 못했습니다.')
+      const apiError = toApiError(err, '신청을 제출하지 못했어요.')
       // The approval half answers under `approval.`; its form uses the same keys
       // without the prefix, as the approval screen does.
       const mapped: Record<string, string> = {}
@@ -697,7 +697,7 @@ export function RequestWizard({
 
             {returnedFrom && (
               <MessageBar variant="warning">
-                제출한 내용에 문제가 있어 되돌아왔습니다. 아래 항목을 고친 뒤 다시 제출해 주세요.
+                제출한 내용에 문제가 있어 되돌아왔어요. 아래 항목을 고친 뒤 다시 제출해 주세요.
               </MessageBar>
             )}
             <ErrorSummary
@@ -714,7 +714,7 @@ export function RequestWizard({
                     label="이름"
                     required
                     error={shown.displayName}
-                    description={kind.copy.displayNameHint === null ? undefined : (kind.copy.displayNameHint ?? '나중에 바꿀 수 있습니다.')}
+                    description={kind.copy.displayNameHint === null ? undefined : (kind.copy.displayNameHint ?? '나중에 바꿀 수 있어요.')}
                   >
                     <Input
                       value={state.displayName}
@@ -732,14 +732,14 @@ export function RequestWizard({
               <>
                 {hidden.orgId ? null : offeredOrgs.length === 0 ? (
                   <Alert variant="warning">
-                    신청할 수 있는 기관이 없습니다. 관리자에게 문의해 주세요.
+                    신청할 수 있는 기관이 없어요. 관리자에게 문의해 주세요.
                   </Alert>
                 ) : (
                   <CardRadioGroup
                     legend="기관"
                     required
                     error={shown.orgId}
-                    description="이 기관이 자원을 제공하고 신청을 검토합니다."
+                    description="이 기관이 자원을 제공하고 신청을 검토해요."
                     value={state.orgId}
                     onChange={(value) =>
                       // The administrator's workspace list is the organisation's,
@@ -771,7 +771,7 @@ export function RequestWizard({
                 ) : adminMode && adminWorkspaces.isError ? (
                   <Alert variant="danger">{adminWorkspaces.error.message}</Alert>
                 ) : adminMode && state.orgId != null && eligibleWorkspaces.length === 0 ? (
-                  <Alert variant="warning">이 기관에는 신청할 수 있는 워크스페이스가 없습니다.</Alert>
+                  <Alert variant="warning">이 기관에는 신청할 수 있는 워크스페이스가 없어요.</Alert>
                 ) : (
                   (!adminMode || state.orgId != null) && (
                     <CardRadioGroup
@@ -796,7 +796,7 @@ export function RequestWizard({
                     selected={state.recipients}
                     onChange={(next) => update({ recipients: next })}
                     required={adminMode}
-                    description={adminMode ? adminMembers.isEnabled ? undefined : '구성원 전체 목록은 별도 조회 업무가 필요합니다. 학번 명단으로 지급 대상자를 지정할 수 있습니다.' : '고르지 않으면 본인에게 신청합니다.'}
+                    description={adminMode ? adminMembers.isEnabled ? undefined : '구성원 전체 목록은 별도 조회 업무가 필요해요. 학번 명단으로 지급 대상자를 지정할 수 있어요.' : '고르지 않으면 본인에게 신청해요.'}
                     fieldError={shown.recipients}
                   />
                 )}
@@ -844,7 +844,7 @@ export function RequestWizard({
                         title: period.displayName,
                         meta: `${period.endDate}까지`,
                       })),
-                      { value: 'custom', title: '직접 입력', description: '날짜를 정해 적거나 무기한을 고릅니다.' },
+                      { value: 'custom', title: '직접 입력', description: '날짜를 정해 적거나 무기한을 골라요.' },
                     ]}
                   />
                   {state.periodMode === 'custom' && (
@@ -864,7 +864,7 @@ export function RequestWizard({
                       </FormField>
                       <Checkbox
                         label="무기한 (사전 승인 필요)"
-                        description="끝나지 않아야 하는 서비스만 해당합니다. 관리자와 먼저 이야기한 뒤 신청해 주세요."
+                        description="끝나지 않아야 하는 서비스만 해당해요. 관리자와 먼저 이야기한 뒤 신청해 주세요."
                         checked={state.indefinite}
                         onChange={(event) =>
                           // 종료일을 남겨 두면 화면에 없는 날짜가 함께 제출된다.
@@ -934,10 +934,10 @@ export function RequestWizard({
 function AdminSubmitSuccess({ request, orgId }: { request: RequestDetail; orgId?: string }) {
   return (
     <div className="mx-auto max-w-lg py-12 text-center">
-      <h1 className="text-2xl font-bold text-foreground-primary">신청을 승인했습니다</h1>
+      <h1 className="text-2xl font-bold text-foreground-primary">신청을 승인했어요</h1>
       <p className="mt-2 text-sm text-foreground-secondary">
         <span className="font-medium text-foreground-primary">{request.displayName}</span>{' '}
-        대상자별 생성 상태는 신청 상세에서 확인할 수 있습니다.
+        대상자별 생성 상태는 신청 상세에서 확인할 수 있어요.
       </p>
       <div className="mt-6 flex justify-center gap-3">
         <Link to={adminPaths.requestDetail(request.id, orgId)}>
@@ -976,13 +976,11 @@ function SubmitSuccess({ request, kind }: { request: RequestDetail; kind: Reques
         </svg>
       </div>
       <h1 className="mt-4 text-2xl font-bold text-foreground-primary">
-        {approved ? '신청이 승인되었습니다' : '신청이 접수되었습니다'}
+        {approved ? '신청이 승인됐어요' : '신청이 접수됐어요'}
       </h1>
       <p className="mt-2 text-sm text-foreground-secondary">
-        <span className="font-medium text-foreground-primary">{request.displayName}</span>{' '}
-        {approved
-          ? '신청이 바로 승인되어 리소스가 만들어졌습니다.'
-          : '신청을 관리자가 검토한 뒤 결과를 확인할 수 있습니다.'}
+        <span className="font-medium text-foreground-primary">{request.displayName}</span>
+        {!approved && ' 신청을 관리자가 검토한 뒤 결과를 확인할 수 있어요.'}
       </p>
       {approved && kind.copy.approvedNotice && (
         <p className="mt-2 text-sm text-foreground-secondary">{kind.copy.approvedNotice}</p>

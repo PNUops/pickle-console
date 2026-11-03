@@ -101,15 +101,15 @@ function checkSlug(value: string, reserved: string[] | undefined): string | null
   // 무엇이 틀렸는지 짚는다. 규칙 전체를 되풀이하면 칸 위의 안내와 같은 문장이
   // 두 번 보이고, 정작 자기 입력의 어디가 문제인지는 여전히 안 알려 준다.
   if (/[^a-z0-9-]/.test(value)) {
-    return '영문 소문자와 숫자, 하이픈만 쓸 수 있습니다. 한글과 공백, 대문자는 쓸 수 없습니다.'
+    return '영문 소문자와 숫자, 하이픈만 쓸 수 있어요. 한글과 공백, 대문자는 쓸 수 없어요.'
   }
   if (value.startsWith('-') || value.endsWith('-')) {
-    return '하이픈으로 시작하거나 끝낼 수 없습니다.'
+    return '하이픈으로 시작하거나 끝낼 수 없어요.'
   }
   if (!SUBDOMAIN_RE.test(value)) {
     return '3~40자로 입력해 주세요.'
   }
-  if (reserved?.includes(value)) return `'${value}'은(는) 예약된 이름이라 쓸 수 없습니다.`
+  if (reserved?.includes(value)) return '예약된 이름이라 쓸 수 없어요.'
   return null
 }
 
@@ -272,10 +272,10 @@ function useVmWizard(
     if (!selectedImage) next['vm.imageId'] = 'OS를 선택해 주세요.'
     if (!specChosen) next['vm.flavorId'] = '사양을 선택해 주세요.'
     if (selectedImage && specChosen) {
-      if (spec.reqVcpu < 1) next['vm.reqVcpu'] = 'vCPU는 1 이상이어야 합니다.'
-      if (spec.reqMemoryMb < 1024) next['vm.reqMemoryMb'] = '메모리는 1 GiB 이상이어야 합니다.'
+      if (spec.reqVcpu < 1) next['vm.reqVcpu'] = 'vCPU는 1 이상이어야 해요.'
+      if (spec.reqMemoryMb < 1024) next['vm.reqMemoryMb'] = '메모리는 1 GiB 이상이어야 해요.'
       if (spec.reqDiskGb < selectedImage.minDiskGb)
-        next['vm.reqDiskGb'] = `디스크는 이 OS의 최소 크기(${selectedImage.minDiskGb} GiB) 이상이어야 합니다.`
+        next['vm.reqDiskGb'] = `디스크는 이 OS의 최소 크기(${selectedImage.minDiskGb} GiB) 이상이어야 해요.`
 
       if (custom) {
         // **축마다 따로 묻는 이유가 여기 있다.** 사유가 하나뿐이면 메모리가 필요한
@@ -326,12 +326,12 @@ function useVmWizard(
             <FormField
               label="호스트 이름"
               error={errors['vm.desiredSlug'] ?? checkSlug(spec.desiredSlug, reservedSlugs) ?? undefined}
-              description="SSH로 접속할 때 쓰는 이름입니다. 만든 뒤에는 바꿀 수 없습니다. 소문자와 숫자, 하이픈만 쓸 수 있고 3~40자입니다."
+              description="SSH로 접속할 때 쓰는 이름이에요. 만든 뒤에는 바꿀 수 없어요. 소문자와 숫자, 하이픈만 쓸 수 있고 3~40자예요."
             >
               <Input
                 value={spec.desiredSlug}
                 onChange={(event) => update({ desiredSlug: event.target.value })}
-                placeholder="비우면 자동으로 정해집니다"
+                placeholder="비우면 자동으로 정해져요"
                 maxLength={40}
               />
             </FormField>
@@ -345,7 +345,7 @@ function useVmWizard(
 
         {images.length === 0 ? (
           <Alert variant="warning">
-            신청할 수 있는 OS가 아직 없습니다. 관리자가 OS를 등록하면 신청할 수 있습니다.
+            신청할 수 있는 OS가 아직 없어요. 관리자가 OS를 등록하면 신청할 수 있어요.
           </Alert>
         ) : (
           <CardRadioGroup
@@ -379,7 +379,7 @@ function useVmWizard(
 
         {flavors.data?.length === 0 ? (
           <Alert variant="warning">
-            신청할 수 있는 사양이 아직 없습니다. 관리자가 사양을 등록하면 신청할 수 있습니다.
+            신청할 수 있는 사양이 아직 없어요. 관리자가 사양을 등록하면 신청할 수 있어요.
           </Alert>
         ) : (
           <CardRadioGroup
@@ -399,7 +399,7 @@ function useVmWizard(
               {
                 value: CUSTOM_SPEC,
                 title: '직접 입력',
-                description: '준비된 사양으로 모자랄 때. 사유를 적으면 관리자가 검토합니다.',
+                description: '준비된 사양으로 모자랄 때. 사유를 적으면 관리자가 검토해요.',
               },
             ]}
           />
@@ -410,7 +410,7 @@ function useVmWizard(
             {specSummary}
             {selectedImage && selectedFlavor.diskGb < selectedImage.minDiskGb && (
               <span className="block text-xs text-foreground-muted">
-                {`선택한 OS의 최소 디스크에 맞춰 ${spec.reqDiskGb} GiB로 올렸습니다.`}
+                {`선택한 OS의 최소 디스크에 맞춰 ${spec.reqDiskGb} GiB로 올렸어요.`}
               </span>
             )}
           </p>
@@ -419,7 +419,7 @@ function useVmWizard(
         {custom && (
           <>
             <p className="text-sm text-foreground-secondary">
-              {`기본은 ${CUSTOM_BASE.vcpu} vCPU, ${CUSTOM_BASE.memoryMb / 1024} GiB 메모리, ${Math.max(CUSTOM_BASE.diskGb, selectedImage?.minDiskGb ?? 0)} GiB 디스크입니다. 더 필요한 항목만 골라 늘려 주세요.`}
+              {`기본은 ${CUSTOM_BASE.vcpu} vCPU, ${CUSTOM_BASE.memoryMb / 1024} GiB 메모리, ${Math.max(CUSTOM_BASE.diskGb, selectedImage?.minDiskGb ?? 0)} GiB 디스크예요. 더 필요한 항목만 골라 늘려 주세요.`}
             </p>
             <RaisedAxis
               label="vCPU"
@@ -433,7 +433,7 @@ function useVmWizard(
               reason={spec.vcpuReason}
               onReason={(value) => update({ vcpuReason: value })}
               reasonError={errors['vm.vcpuReason']}
-              reasonPlaceholder="예: 빌드와 테스트를 병렬로 돌려 코어를 4개까지 씁니다"
+              reasonPlaceholder="예: 빌드와 테스트를 병렬로 돌려 코어를 4개까지 써요"
             />
             <RaisedAxis
               label="메모리"
@@ -451,7 +451,7 @@ function useVmWizard(
               reason={spec.memoryReason}
               onReason={(value) => update({ memoryReason: value })}
               reasonError={errors['vm.memoryReason']}
-              reasonPlaceholder="예: 8만 장짜리 이미지 데이터셋을 메모리에 올려 두고 전처리합니다"
+              reasonPlaceholder="예: 8만 장짜리 이미지 데이터셋을 메모리에 올려 두고 전처리해요"
             />
             <RaisedAxis
               label="디스크"
@@ -465,11 +465,11 @@ function useVmWizard(
               reason={spec.diskReason}
               onReason={(value) => update({ diskReason: value })}
               reasonError={errors['vm.diskReason']}
-              reasonPlaceholder="예: 학습 데이터 원본과 중간 산출물을 합쳐 120 GiB를 둡니다"
+              reasonPlaceholder="예: 학습 데이터 원본과 중간 산출물을 합쳐 120 GiB를 보관해요"
             />
 
             <Alert variant="warning">
-              승인이 늦어질 수 있고 더 작은 사양으로 승인될 수 있습니다.
+              승인이 늦어질 수 있고 더 작은 사양으로 승인될 수 있어요.
             </Alert>
           </>
         )}
@@ -490,8 +490,8 @@ function useVmWizard(
 
     notice: (
       <Alert variant="warning" title="백업 책임 안내">
-        플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 사용자 책임이며, 삭제된
-        VM의 데이터는 복구할 수 없습니다.
+        플랫폼은 VM 데이터를 백업하지 않아요. 데이터 보호와 백업은 사용자 책임이며, 삭제된
+        VM의 데이터는 복구할 수 없어요.
       </Alert>
     ),
 
@@ -514,11 +514,11 @@ export const vmRequestKind: RequestKindModule = {
   type: 'VM',
   picker: {
     title: '가상머신',
-    description: 'SSH로 접속해 쓰는 리눅스 서버입니다.',
+    description: 'SSH로 접속해 쓰는 리눅스 서버예요.',
   },
   copy: {
     noWorkspaceNotice:
-      '가상머신을 신청할 수 있는 워크스페이스가 없습니다. 워크스페이스에 속해 있어야 신청할 수 있습니다.',
+      '가상머신을 신청할 수 있는 워크스페이스가 없어요. 워크스페이스에 속해 있어야 신청할 수 있어요.',
   },
   // 키는 서버가 422에 싣는 필드 경로 그대로다.
   fields: {
