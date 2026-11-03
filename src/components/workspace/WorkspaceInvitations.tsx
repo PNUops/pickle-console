@@ -33,7 +33,7 @@ const HOURLY_INVITE_ENTRIES = 500
 
 const INVITATION_OUTCOME_LABELS: Record<Schemas['WorkspaceInvitationOutcome'], string> = {
   ADDED: '구성원으로 추가됨',
-  INVITED: '초대함, 가입하면 자동으로 구성원이 됩니다',
+  INVITED: '초대함, 참여 대기',
   ALREADY_MEMBER: '이미 구성원',
   ALREADY_INVITED: '이미 초대함',
   DUPLICATE_IN_REQUEST: '같은 입력이 두 번 있음',
@@ -122,14 +122,14 @@ export function InviteMembersForm({ workspaceId, onInvited, beforeSend, sendEntr
         const chunk = lines.slice(start, start + MAX_INVITE_ENTRIES)
         const fail = (err: unknown) => ({
           results: done,
-          failure: { error: toApiError(err, '구성원을 초대하지 못했습니다.'), sent: start, lines: chunk },
+          failure: { error: toApiError(err, '구성원을 초대하지 못했어요.'), sent: start, lines: chunk },
         })
         try {
-          if (!active.current) return fail(new Error('변경 대상이 바뀌어 초대를 중단했습니다.'))
+          if (!active.current) return fail(new Error('변경 대상이 바뀌어 초대를 중단했어요.'))
           const entries = chunk.map((line) => line.entry)
           const confirmation = beforeSend ? await beforeSend(entries) : undefined
-          if (confirmation === null) return fail(new Error('권한 증가 확인을 취소했습니다. 나머지 초대는 보내지 않았습니다.'))
-          if (!active.current) return fail(new Error('변경 대상이 바뀌어 초대를 중단했습니다.'))
+          if (confirmation === null) return fail(new Error('권한 증가 확인을 취소했어요. 나머지 초대는 보내지 않았어요.'))
+          if (!active.current) return fail(new Error('변경 대상이 바뀌어 초대를 중단했어요.'))
           if (sendEntries) {
             const data = await sendEntries(entries, confirmation)
             done.push(...data.results)
@@ -174,7 +174,7 @@ export function InviteMembersForm({ workspaceId, onInvited, beforeSend, sendEntr
         ),
       )
     },
-    onError: (err) => { if (active.current) setError(toApiError(err, '구성원을 초대하지 못했습니다.').message) },
+    onError: (err) => { if (active.current) setError(toApiError(err, '구성원을 초대하지 못했어요.').message) },
   })
 
   const submit = (event: FormEvent) => {
@@ -188,7 +188,7 @@ export function InviteMembersForm({ workspaceId, onInvited, beforeSend, sendEntr
     }
     const unreadable = rows.filter((row) => row.error)
     if (unreadable.length > 0) {
-      setError('읽지 못한 줄이 있습니다.')
+      setError('읽지 못한 줄이 있어요.')
       setLineErrors(
         unreadable.map((row) => `${row.line}번째 줄 (${row.raw.replace(/\s+/g, ' ')}): ${row.error}`),
       )
@@ -229,7 +229,7 @@ export function InviteMembersForm({ workspaceId, onInvited, beforeSend, sendEntr
       </FormField>}
       {overBudget && (
         <Alert variant="info">
-          한 시간에 {HOURLY_INVITE_ENTRIES}명까지 초대할 수 있습니다. 나머지는 한 시간 뒤에 보내 주세요.
+          한 시간에 {HOURLY_INVITE_ENTRIES}명까지 초대할 수 있어요. 나머지는 한 시간 뒤에 보내 주세요.
         </Alert>
       )}
       <p className="text-xs text-foreground-muted">
@@ -293,14 +293,14 @@ export function PendingInvitationsSection({ workspaceId, onChanged, loadInvitati
         '/workspaces/{workspaceId}/invitations/{invitationId}',
         { params: { path: { workspaceId, invitationId: invitation.id } }, body: { confirmation: { fingerprint, confirmed: true } } },
       )
-      if (!response.ok) throw toApiError(err, '초대를 취소하지 못했습니다.')
+      if (!response.ok) throw toApiError(err, '초대를 취소하지 못했어요.')
       return invitation
     },
     onSuccess: (invitation) => {
       onChanged()
       if (!active.current) return
       setCancelTarget(null)
-      toast.success(`${invitationTarget(invitation)} 초대를 취소했습니다.`)
+      toast.success(`${invitationTarget(invitation)} 초대를 취소했어요.`)
     },
 
   })
@@ -318,7 +318,7 @@ export function PendingInvitationsSection({ workspaceId, onChanged, loadInvitati
       )}
       {invitations.isError && <Alert variant="danger">{invitations.error.message}</Alert>}
       {invitations.data && invitations.data.length === 0 && (
-        <p className="text-sm text-foreground-muted">대기 중인 초대가 없습니다.</p>
+        <p className="text-sm text-foreground-muted">대기 중인 초대가 없어요.</p>
       )}
       {invitations.data && invitations.data.length > 0 && (
         <Table>

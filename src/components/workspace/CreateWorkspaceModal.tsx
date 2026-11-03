@@ -32,7 +32,7 @@ export function CreateWorkspaceModal({ open, onClose }: { open: boolean; onClose
       const { data, error } = await api.POST('/workspaces', {
         body: { kind: kind as CreatableWorkspaceKind, name, description: description || null },
       })
-      if (!data) throw toApiError(error, '워크스페이스를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.')
+      if (!data) throw toApiError(error, '워크스페이스를 만들지 못했어요. 잠시 후 다시 시도해 주세요.')
       return data
     },
     onSuccess: async (workspace) => {
@@ -40,7 +40,7 @@ export function CreateWorkspaceModal({ open, onClose }: { open: boolean; onClose
       navigate(`/console/workspaces/${workspace.id}`)
     },
     onError: (error) => {
-      const apiError = toApiError(error, '워크스페이스를 만들지 못했습니다.')
+      const apiError = toApiError(error, '워크스페이스를 만들지 못했어요.')
       const mapped = fieldErrorsOf(apiError.problem)
       if (Object.keys(mapped).length > 0) {
         setFieldErrors(mapped)

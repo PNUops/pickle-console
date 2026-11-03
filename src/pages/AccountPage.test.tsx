@@ -1,7 +1,7 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   MFA_VALID_CODE,
   mfaProfile,
@@ -13,7 +13,11 @@ import {
   USER_PASSWORD,
 } from '../test/msw/handlers/auth'
 import { server } from '../test/msw/server'
+import * as queries from '../api/queries'
+import { getSessionGeneration } from '../api/token'
 import { currentPath, renderApp } from '../test/render'
+
+afterEach(() => vi.restoreAllMocks())
 
 function renderAccount() {
   server.use(refreshSuccessHandler('access-user', regularUser))
@@ -47,7 +51,7 @@ describe('계정 설정 — 비밀번호 변경', () => {
     await user.type(screen.getByLabelText('새 비밀번호 확인'), 'brand-new-pass-9!')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
-    expect(await screen.findByText(/비밀번호를 변경했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/비밀번호를 변경했어요/)).toBeInTheDocument()
   })
 
   test('새 비밀번호 확인이 다르면 클라이언트에서 막는다', async () => {
@@ -60,7 +64,7 @@ describe('계정 설정 — 비밀번호 변경', () => {
     await user.type(screen.getByLabelText('새 비밀번호 확인'), 'different-pass-9!')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
-    expect(await screen.findByText('새 비밀번호가 일치하지 않습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('새 비밀번호가 일치하지 않아요.')).toBeInTheDocument()
   })
 
   test('구조 규칙에 걸리는 새 비밀번호는 제출 전에 막는다', async () => {
@@ -76,7 +80,7 @@ describe('계정 설정 — 비밀번호 변경', () => {
     expect(
       await screen.findByText('비밀번호는 8자 이상 72자 이하여야 해요.'),
     ).toBeInTheDocument()
-    expect(screen.queryByText(/비밀번호를 변경했습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/비밀번호를 변경했어요/)).not.toBeInTheDocument()
   })
 
   test('현재 비밀번호가 틀리면 서버 오류(403)를 보여준다', async () => {
@@ -108,7 +112,7 @@ describe('계정 설정 — 회원 탈퇴', () => {
     expect(confirmBtn).toBeEnabled()
     await user.click(confirmBtn)
 
-    expect(await screen.findByText(/탈퇴가 완료되었습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/회원 탈퇴를 마쳤어요/)).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.queryByRole('heading', { name: '계정 설정' })).not.toBeInTheDocument(),
     )
@@ -147,7 +151,7 @@ describe('계정 설정 — 2단계 인증', () => {
     await user.type(screen.getByLabelText('인증 코드 (6자리)'), MFA_VALID_CODE)
     await user.click(screen.getByRole('button', { name: '활성화' }))
 
-    expect(await screen.findByText(/복구 코드는 지금 한 번만 표시됩니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/복구 코드는 지금 한 번만 표시돼요/)).toBeInTheDocument()
     expect(screen.getByText('aaaa-bbbb-cccc')).toBeInTheDocument()
   })
 
@@ -176,7 +180,7 @@ describe('계정 설정 — 2단계 인증', () => {
     // 등록은 비밀번호 확인을 거치므로(MfaService) 채울 수 없는 폼을 열어 봐야
     // 막다른 길이다. 행의 안내가 이유를 말하는 쪽이 맞다.
     // 탈퇴 행도 같은 문장을 쓰므로 2단계 인증 쪽만 집는다.
-    await screen.findByText(/등록은 비밀번호 확인을 거칩니다/)
+    await screen.findByText(/비밀번호를 설정한 뒤 등록할 수 있어요/)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await waitFor(() => expect(currentPath()).toBe('/console/account'))
   })
@@ -198,7 +202,7 @@ describe('계정 설정 — 2단계 인증', () => {
 
     // 숨기지 않고 비활성으로 두고 사유를 적는다. 숨기면 왜 못 하는지 알 길이 없다.
     expect(
-      screen.getByText(/복구 코드 재발급과 해제는 비밀번호 확인을 거칩니다/),
+      screen.getByText(/복구 코드 재발급과 해제에는 비밀번호가 필요해요/),
     ).toBeInTheDocument()
 
     // 잠긴 버튼이 모달을 열지 않는다는 것까지 봐야 한다 — 사유만 적고 모달이 열리면
@@ -220,7 +224,7 @@ describe('계정 설정 — 2단계 인증', () => {
     await user.type(dialog.getByLabelText('인증 코드 (6자리)'), MFA_VALID_CODE)
     await user.click(dialog.getByRole('button', { name: '해제하기' }))
 
-    expect(await screen.findByText('2단계 인증을 해제했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('2단계 인증을 해제했어요.')).toBeInTheDocument()
   })
 })
 
@@ -243,5 +247,79 @@ test('a sole workspace owner sees the server refusal without signing out', async
   expect(body).toEqual({ password: USER_PASSWORD })
   expect(currentPath()).toBe('/console/account')
   expect(screen.getByRole('heading', { name: '계정 설정' })).toBeInTheDocument()
-  expect(screen.queryByText(/탈퇴가 완료되었습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/회원 탈퇴를 마쳤어요/)).not.toBeInTheDocument()
+})
+
+test('keeps new recovery codes after profile refresh until storage is acknowledged', async () => {
+  let enrolled = false
+  let enrolledProfileReads = 0
+  server.use(
+    http.get('*/api/v1/me', () => {
+      if (enrolled) enrolledProfileReads += 1
+      return HttpResponse.json({
+        ...regularProfile,
+        name: enrolled ? '등록 확인 계정' : regularProfile.name,
+        mfaEnabled: enrolled,
+      })
+    }),
+    http.post('*/api/v1/me/mfa/totp/activate', () => {
+      enrolled = true
+      return HttpResponse.json({ recoveryCodes: ['aaaa-bbbb-cccc'] })
+    }),
+  )
+  const user = userEvent.setup()
+  renderAccount()
+  await openSection(user, '2단계 인증')
+  await user.type(await screen.findByLabelText('비밀번호 확인'), USER_PASSWORD)
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  await screen.findByText(/설정 키:/)
+  await user.type(screen.getByLabelText('인증 코드 (6자리)'), MFA_VALID_CODE)
+  await user.click(screen.getByRole('button', { name: '활성화' }))
+  await screen.findByText('등록 확인 계정', { selector: 'p' })
+  expect(enrolledProfileReads).toBeGreaterThan(0)
+  expect(screen.getByText('사용 중')).toBeInTheDocument()
+  expect(screen.getByText('aaaa-bbbb-cccc')).toBeInTheDocument()
+  await user.keyboard('{Escape}')
+  const dialog = screen.getByRole('dialog', { name: '2단계 인증 등록' })
+  expect(within(dialog).getByText('aaaa-bbbb-cccc')).toBeInTheDocument()
+  await user.click(within(dialog).getByRole('button', { name: '보관했어요' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(screen.queryByText('aaaa-bbbb-cccc')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '복구 코드 재발급' })).toBeInTheDocument()
+})
+
+test('clears pending MFA setup and ignores its late recovery response after identity replacement', async () => {
+  let replaced = false
+  let finishActivation!: (value: Awaited<ReturnType<typeof queries.activateMfa>>) => void
+  const activation = new Promise<Awaited<ReturnType<typeof queries.activateMfa>>>((resolve) => {
+    finishActivation = resolve
+  })
+  const activate = vi.spyOn(queries, 'activateMfa').mockReturnValueOnce(activation)
+  vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+  server.use(http.get('*/api/v1/me', () => HttpResponse.json(replaced
+    ? { ...mfaProfile, name: '대체 계정' }
+    : regularProfile)))
+  const user = userEvent.setup()
+  renderAccount()
+  await openSection(user, '2단계 인증')
+  await user.type(await screen.findByLabelText('비밀번호 확인'), USER_PASSWORD)
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  await screen.findByText(/설정 키:/)
+  await user.type(screen.getByLabelText('인증 코드 (6자리)'), MFA_VALID_CODE)
+  const originalGeneration = getSessionGeneration()
+  await user.click(screen.getByRole('button', { name: '활성화' }))
+  expect(activate).toHaveBeenCalledExactlyOnceWith(MFA_VALID_CODE)
+  replaced = true
+  fireEvent(window, new Event('focus'))
+  await screen.findByText('대체 계정', { selector: 'p' })
+  expect(getSessionGeneration()).toBe(originalGeneration)
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.queryByText(/설정 키:/)).not.toBeInTheDocument()
+  await act(async () => {
+    finishActivation({ recoveryCodes: ['old-account-recovery'] })
+    await activation
+  })
+  expect(screen.queryByText('old-account-recovery')).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '복구 코드 재발급' })).toBeInTheDocument()
 })

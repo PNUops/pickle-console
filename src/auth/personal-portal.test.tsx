@@ -173,7 +173,7 @@ test('an administrator without a workspace can create one and submit a personal 
   )
   const user = userEvent.setup()
   renderApp('/console/workspaces')
-  await screen.findByText('속한 워크스페이스가 없습니다. 새 워크스페이스를 만들어 시작해 보세요.')
+  await screen.findByText('속한 워크스페이스가 없어요. 새 워크스페이스를 만들어 시작해 보세요.')
   await user.click(screen.getByRole('button', { name: '새 워크스페이스 만들기' }))
   await user.selectOptions(screen.getByLabelText('유형'), 'PROJECT')
   await user.type(screen.getByLabelText('워크스페이스 이름'), '개인 연구 프로젝트')

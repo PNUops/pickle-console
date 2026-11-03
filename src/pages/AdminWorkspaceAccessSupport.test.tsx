@@ -113,7 +113,7 @@ test.each([
   const dialog = within(await screen.findByRole('dialog', { name: '소유자 지정' }))
   expect(bodies).toHaveLength(0)
   expect(dialog.getByRole('button', { name: '소유자로 지정' })).toBeDisabled()
-  expect(dialog.getByText(/기존 소유자의 권한은 그대로 유지됩니다/)).toBeInTheDocument()
+  expect(dialog.getByText(/기존 소유자의 권한도 유지돼요/)).toBeInTheDocument()
   await user.type(dialog.getByLabelText('확인 이메일'), 'sysadmin.lee@pusan.ac.kr')
   await user.click(dialog.getByRole('button', { name: '소유자로 지정' }))
   await waitFor(() => expect(bodies).toEqual([{ role: 'OWNER' }]))
