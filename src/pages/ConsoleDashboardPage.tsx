@@ -117,7 +117,7 @@ export function ConsoleDashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">대시보드</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {user?.name}님, 환영합니다.
+            {user?.name}님, 환영해요.
           </p>
         </div>
         <div className="flex gap-2">
@@ -219,12 +219,12 @@ export function ConsoleDashboardPage() {
         )}
         {resources.isError && (
           <p className="px-5 py-8 text-center text-sm text-neutral-500">
-            리소스 목록을 불러오지 못했습니다.
+            리소스 목록을 불러오지 못했어요.
           </p>
         )}
         {resources.isSuccess && activeResources.length === 0 && (
           <div className="px-5 py-10 text-center">
-            <p className="text-sm text-neutral-500">아직 사용 중인 리소스가 없습니다.</p>
+            <p className="text-sm text-neutral-500">아직 사용 중인 리소스가 없어요.</p>
             <Link
               to={consolePaths.newRequest(scope)}
               className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary-600 px-4 text-sm font-medium text-white hover:bg-primary-700"
@@ -329,11 +329,11 @@ export function ConsoleDashboardPage() {
         )}
         {recentNotifications.isError && (
           <p className="px-5 py-8 text-center text-sm text-neutral-500">
-            알림을 불러오지 못했습니다.
+            알림을 불러오지 못했어요.
           </p>
         )}
         {recentNotifications.currentResponse && recentNotifications.data?.content.length === 0 && (
-          <p className="px-5 py-8 text-center text-sm text-neutral-500">알림이 없습니다.</p>
+          <p className="px-5 py-8 text-center text-sm text-neutral-500">알림이 없어요.</p>
         )}
         {recentNotifications.data && recentNotifications.data.content.length > 0 && (
           <ul className="divide-y divide-neutral-100">

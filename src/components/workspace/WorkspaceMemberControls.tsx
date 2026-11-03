@@ -23,6 +23,6 @@ export function RemoveWorkspaceMemberModal({ target, pending, onCancel, onConfir
     <Button variant="secondary" onClick={onCancel} disabled={pending}>취소</Button>
     <Button variant="danger" loading={pending} onClick={onConfirm}>제거</Button>
   </>}>
-    <p className="text-sm text-neutral-600">{target?.name}{target?.email ? ` (${target.email})` : ''} 님을 이 워크스페이스에서 제거합니다.</p>
+    <p className="text-sm text-neutral-600">{target?.name}{target?.email ? ` (${target.email})` : ''} 님을 이 워크스페이스에서 제거해요.</p>
   </Modal>
 }

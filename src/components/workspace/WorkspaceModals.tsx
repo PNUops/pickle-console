@@ -48,7 +48,7 @@ export function EditWorkspaceModal({
         params: { path: { workspaceId: workspace.id } },
         body,
       })
-      if (!data) throw toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.')
+      if (!data) throw toApiError(err, '워크스페이스 정보를 수정하지 못했어요.')
       return data
     },
     onSuccess: async () => {
@@ -56,7 +56,7 @@ export function EditWorkspaceModal({
       await queryClient.invalidateQueries({ queryKey: ['admin', 'workspaces'] })
       if (active.current) onClose()
     },
-    onError: (err) => { if (active.current) setError(toApiError(err, '워크스페이스 정보를 수정하지 못했습니다.').message) },
+    onError: (err) => { if (active.current) setError(toApiError(err, '워크스페이스 정보를 수정하지 못했어요.').message) },
   })
 
   const submit = (event: FormEvent) => {
@@ -159,15 +159,14 @@ export function OwnershipTransferModal({
     >
       <div className="space-y-4">
         <p className="text-sm text-neutral-600">
-          {target?.name} 님을 소유자로 지정합니다. 소유자는 워크스페이스 정보와 구성원을 관리하고,
-          워크스페이스가 소유한 리소스를 조회·삭제하며 접근 권한을 관리할 수 있습니다. 기존
-          소유자의 권한은 그대로 유지됩니다.
+          {target?.name}님을 소유자로 지정해요. 워크스페이스 정보와 구성원, 리소스 접근 권한을
+          관리하고 리소스를 삭제할 수 있어요. 기존 소유자의 권한도 유지돼요.
         </p>
         {children}
         <FormField
           label={target?.email ? '확인 이메일' : '대상 사용자 ID 확인'}
           required
-          description={target?.email ? `계속하려면 새 소유자의 이메일(${target.email})을 입력해 주세요.` : `이메일을 제공할 수 없어 새 소유자의 사용자 ID(${target?.userId ?? ''})로 대상을 확인합니다.`}
+          description={target?.email ? `계속하려면 새 소유자의 이메일(${target.email})을 입력해 주세요.` : `계속하려면 사용자 ID(${target?.userId ?? ''})를 입력해 주세요.`}
         >
           <Input
             value={confirmEmail}

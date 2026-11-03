@@ -83,8 +83,8 @@ describe('콘솔 대시보드 — 합성 지표·목록', () => {
     )
     renderDashboard()
 
-    expect(await screen.findByText('알림을 불러오지 못했습니다.')).toBeInTheDocument()
-    expect(screen.queryByText('알림이 없습니다.')).not.toBeInTheDocument()
+    expect(await screen.findByText('알림을 불러오지 못했어요.')).toBeInTheDocument()
+    expect(screen.queryByText('알림이 없어요.')).not.toBeInTheDocument()
   })
 
   test('공지사항 카드가 상위 공지와 게시판 링크를 보여준다', async () => {
