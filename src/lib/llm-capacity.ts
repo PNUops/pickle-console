@@ -34,7 +34,7 @@ export function capacityState(params: URLSearchParams, fallback: ReturnType<type
   const to = params.has('to') ? instant(params.get('to')) : fallback.to
   let error: string | null = null
   if (!from || !to || Date.parse(to) <= Date.parse(from) || Date.parse(to) - Date.parse(from) > 90 * 86400_000) {
-    error = '조회 시작·종료 시각을 확인해 주세요. 기간은 0보다 크고 90일 이하여야 해요.'
+    error = '조회 시작 시각과 종료 시각을 확인해 주세요. 기간은 0보다 크고 90일 이하여야 해요.'
   }
   const ids: Pick<LlmCapacityQuery, 'workspaceId' | 'upstreamId' | 'telemetrySourceId' | 'openrouterAccountId'> = {}
   for (const field of ['workspaceId', 'upstreamId', 'telemetrySourceId', 'openrouterAccountId'] as const) {

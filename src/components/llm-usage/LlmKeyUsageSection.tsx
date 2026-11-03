@@ -358,7 +358,7 @@ export default function LlmKeyUsageSection({
                   </section>
                 )}
 
-                </> : <Alert>토큰·모델·오류·지연 관측은 현재 업무로 제공되지 않아요.</Alert>}
+                </> : <Alert>토큰과 모델, 오류, 지연 관측은 현재 업무로 제공되지 않아요.</Alert>}
                 <BudgetSection budget={data.budget} />
                 {/* 여기부터는 관리자만 본다. 키 소유자는 모델별 금액까지만 보고
                     일별 금액도 경로별 분해도 보지 않는다 — 그 경계가 응답 모양에

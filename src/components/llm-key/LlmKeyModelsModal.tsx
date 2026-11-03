@@ -83,7 +83,7 @@ function ModelsBody({
       <p className="text-sm text-neutral-600">
         요청 본문의 <code className="font-mono">model</code> 필드에 아래 이름을 그대로 넣어 주세요.
       </p>
-      <p className="text-xs text-neutral-500">이 목록은 저장된 모델 정책의 후보예요. 부여된 기능 권한과 키 상태·기한·한도, 자격증명 및 공급자 지원은 별도 호출 조건이며, 이름이 있어도 호출 성공을 보장하지 않아요.</p>
+      <p className="text-xs text-neutral-500">이 목록은 저장된 모델 정책의 후보예요. 기능 권한과 키 상태, 기한, 한도, 자격증명, 공급자 지원도 별도 호출 조건이며, 이름이 있어도 호출 성공을 보장하지 않아요.</p>
 
       <Input
         value={term}

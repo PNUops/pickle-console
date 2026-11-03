@@ -103,7 +103,7 @@ export const RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
 export const LLM_KEY_RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
   OWNER: '발급·재발급, 접근 권한 관리, 폐기까지',
   EDITOR: '이름과 본문 기록 설정 변경까지',
-  MEMBER: '키 상세 조회 — 평문은 발급한 사람만 봐요',
+  MEMBER: '키 상세 조회(평문은 발급한 사람만 봐요)',
   VIEWER: '키 상세 조회',
 }
 
