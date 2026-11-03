@@ -103,7 +103,7 @@ export function IpAllocationsSection() {
       {allocations.isError && <Alert variant="danger">{allocations.error.message}</Alert>}
       {allocations.isSuccess && allocations.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          조건에 맞는 할당 이력이 없습니다.
+          조건에 맞는 할당 이력이 없어요.
         </Card>
       )}
       {allocations.isSuccess && allocations.data.content.length > 0 && (

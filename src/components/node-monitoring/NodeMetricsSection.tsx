@@ -33,8 +33,8 @@ export default function NodeMetricsSection({
         timeframe,
       ]}
       queryFn={(timeframe: MetricsTimeframe) => fetchAdminNodeMetrics(nodeId, timeframe)}
-      emptyMessage="아직 쌓인 사용량 데이터가 없습니다."
-      blankWindowMessage="이 구간 동안 노드가 응답한 값이 없습니다."
+      emptyMessage="기록된 사용량 데이터가 없어요."
+      blankWindowMessage="이 구간에는 측정된 사용량 값이 없어요."
     >
       {({ data, times, axisFormat }) => (
         <>

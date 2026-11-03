@@ -81,13 +81,13 @@ describe('노드/용량', () => {
     const row = (await screen.findByText('pve1')).closest('tr')!
     await user.click(within(row).getByRole('button', { name: '상태 전환' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '노드 상태 전환 — pve1' })
+    const dialog = await screen.findByRole('dialog', { name: '노드 상태 전환: pve1' })
     await user.selectOptions(within(dialog).getByLabelText('노드 상태'), 'MAINTENANCE')
-    expect(within(dialog).getByText(/신규 VM 배치가 불가능해집니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/새 VM을 배치할 수 없어요/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '전환' }))
 
     expect(
-      await screen.findByText('노드 pve1의 상태를 점검 중(으)로 전환했습니다.'),
+      await screen.findByText('노드 pve1의 상태를 점검 중으로 변경했어요.'),
     ).toBeInTheDocument()
   })
 })
@@ -174,7 +174,7 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     renderNodes()
 
     expect(
-      await screen.findByText('오프라인으로 지정된 노드여서 사용량을 수집하지 않습니다.'),
+      await screen.findByText('오프라인으로 지정되어 이 화면에서는 사용량을 조회하지 않아요.'),
     ).toBeInTheDocument()
     // 사용량 영역 자체를 띄우지 않으므로 조회 구간 스위처도, 조회도 없다.
     expect(

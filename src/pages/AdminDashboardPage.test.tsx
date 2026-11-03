@@ -135,7 +135,7 @@ describe('관리자 대시보드 — 하이퍼바이저 실측', () => {
 
     const systemRow = await screen.findByRole('region', { name: '시스템 요약' })
     expect(
-      within(systemRow).getAllByText(/노드 2대 중 1대에서 읽은 값입니다/),
+      within(systemRow).getAllByText(/노드 2대 중 1대에서 읽은 값이에요/),
     ).toHaveLength(2)
   })
 })
@@ -215,7 +215,7 @@ describe('관리자 대시보드 — 할당 추이', () => {
 
     expect(
       await screen.findByText(
-        '최근 90일 동안 할당 vCPU가 12개에서 20개로 늘었습니다. 메모리는 32 GiB에서 48 GiB로 늘었습니다.',
+        '최근 90일 동안 할당 vCPU가 12개에서 20개로 늘었어요. 메모리는 32 GiB에서 48 GiB로 늘었어요.',
       ),
     ).toBeInTheDocument()
     const trend = screen.getByRole('heading', { name: '가상머신 할당 추이 (최근 90일)' })
@@ -270,11 +270,11 @@ describe('관리자 대시보드 — 실측값이 비어 있을 때', () => {
     const connection = within(systemRow).getByText('Proxmox 연결').parentElement!
     expect(within(connection).getByText('노드 없음')).toHaveClass('text-danger-600')
     expect(
-      within(connection).getByText('연결된 하이퍼바이저가 없습니다'),
+      within(connection).getByText('등록된 하이퍼바이저가 없어요'),
     ).toBeInTheDocument()
-    expect(within(systemRow).getAllByText('등록된 노드가 없습니다')).toHaveLength(2)
+    expect(within(systemRow).getAllByText('등록된 노드가 없어요')).toHaveLength(2)
     expect(
-      within(systemRow).queryByText('오프라인 노드만 있어 측정값이 없습니다'),
+      within(systemRow).queryByText('오프라인 노드만 있어 측정값이 없어요'),
     ).not.toBeInTheDocument()
   })
 })

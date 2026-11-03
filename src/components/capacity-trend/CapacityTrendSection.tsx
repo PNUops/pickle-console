@@ -108,12 +108,12 @@ export default function CapacityTrendSection({
         {trend.isError && !data && <Alert variant="danger">{trend.error.message}</Alert>}
         {trend.isError && data && (
           <Alert variant="warning">
-            할당 추이를 일시적으로 불러오지 못했습니다. 이전에 받은 값을 표시합니다.
+            할당 추이를 일시적으로 불러오지 못했어요. 이전에 받은 값을 표시해요.
           </Alert>
         )}
 
         {data && points.length === 0 && (
-          <p className="py-2 text-sm text-neutral-500">이 기간에는 기록된 스냅샷이 없습니다.</p>
+          <p className="py-2 text-sm text-neutral-500">이 기간에는 기록된 스냅샷이 없어요.</p>
         )}
 
         {data && points.length > 0 && (
@@ -185,7 +185,7 @@ export default function CapacityTrendSection({
                 splitBase="binary"
                 caption={
                   data.capacityDiskGb == null
-                    ? '풀 용량이 등록되지 않은 노드가 있어 현재 용량 기준선은 표시하지 않습니다.'
+                    ? '풀 용량이 등록되지 않은 노드가 있어 현재 용량 기준선은 표시하지 않아요.'
                     : undefined
                 }
               />
