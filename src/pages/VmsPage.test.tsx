@@ -58,7 +58,7 @@ describe('가상머신 목록', () => {
     expect(within(limitedRow).getByText('실행 중')).toBeInTheDocument()
     expect(within(limitedRow).getByText('—')).toBeInTheDocument()
     expect(
-      within(limitedRow).getByText(/접근 권한이 없습니다 — 김철수 님에게 요청하세요/),
+      within(limitedRow).getByText(/접근 권한이 없어요\. 김철수님에게 요청해 주세요/),
     ).toBeInTheDocument()
     // 접근 권한이 없는 구성원에게는 관리 진입점도 없다.
     expect(

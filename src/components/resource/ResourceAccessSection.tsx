@@ -110,12 +110,12 @@ const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
     updateGrant: updateGpuAccessGrant,
     removeGrant: removeGpuAccessGrant,
     roleHints: { OWNER: '접근 권한 관리와 반납까지', EDITOR: 'VM 연결·해제와 임대 연장까지', MEMBER: 'GPU 상세 조회', VIEWER: 'GPU 상세 조회' },
-    listIntro: 'GPU의 상태와 임대 정보를 볼 사람, VM 연결을 변경할 사람을 정합니다.',
+    listIntro: '이 GPU의 접근 권한은 워크스페이스 역할과 별개예요.',
     workspaceWideWho: '이 GPU를 소유한 워크스페이스의 구성원 전원',
-    emptyList: 'GPU 접근 권한이 부여된 사람이 없습니다.',
-    grantEligibility: '같은 워크스페이스의 구성원에게 부여할 수 있습니다. 워크스페이스 전체에는 참여자 또는 열람자까지만 부여할 수 있습니다.',
-    revokeSentence: (who) => `${who}의 GPU 접근 권한을 회수합니다.`,
-    revokeCaveats: <p>연결된 VM은 그대로 유지됩니다. VM 접근 권한은 해당 VM에서 관리해 주세요.</p>,
+    emptyList: '접근 목록이 비어 있어요.',
+    grantEligibility: '같은 워크스페이스의 구성원에게 부여할 수 있어요. 워크스페이스 전체에는 참여자 또는 열람자까지만 부여할 수 있어요.',
+    revokeSentence: (who) => `${who}의 GPU 접근 권한을 회수할까요?`,
+    revokeCaveats: <p>연결된 VM은 그대로 유지돼요. VM 접근 권한은 해당 VM에서 관리해 주세요.</p>,
   },
   VM: {
     queryKey: 'vms',
@@ -125,20 +125,20 @@ const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
     removeGrant: removeVmAccessGrant,
     roleHints: RESOURCE_ROLE_HINTS,
     listIntro:
-      '이 VM에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스라도 목록에 없으면 이름과 상태만 보입니다.',
+      '이 VM의 접근 권한은 워크스페이스 역할과 별개예요.',
     workspaceWideWho: '이 VM을 소유한 워크스페이스의 구성원 전원',
-    emptyList: '이 VM에 닿을 수 있는 사람이 없습니다.',
+    emptyList: '접근 목록이 비어 있어요.',
     grantEligibility:
-      '이 VM을 소유한 워크스페이스의 구성원만 부여 대상이 됩니다. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있습니다.',
-    revokeSentence: (who) => `${who}의 이 VM 접근 권한을 회수합니다.`,
+      '이 VM을 소유한 워크스페이스의 구성원만 부여 대상이 돼요. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있어요.',
+    revokeSentence: (who) => `${who}의 VM 접근 권한을 회수할까요?`,
     revokeCaveats: (
       <ul className="list-disc space-y-1 pl-4">
         <li>
-          이미 열람한 초기 비밀번호는 그대로 남습니다. 완전히 막으려면 개요 탭에서
+          이미 열람한 초기 비밀번호는 회수되지 않아요. 그 값을 바꾸려면 개요 탭에서
           비밀번호를 재생성해 주세요.
         </li>
         <li>
-          이미 열려 있는 SSH 세션은 끊기지 않습니다. 웹 터미널은 1분 안에 닫힙니다.
+          이미 열려 있는 SSH 세션은 끊기지 않아요. 웹 터미널은 1분 안에 닫혀요.
         </li>
       </ul>
     ),
@@ -151,15 +151,15 @@ const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
     removeGrant: removeDnsDomainAccessGrant,
     roleHints: DNS_DOMAIN_RESOURCE_ROLE_HINTS,
     listIntro:
-      '이 도메인에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스라도 목록에 없으면 이름과 상태만 보입니다.',
+      '이 도메인의 접근 권한은 워크스페이스 역할과 별개예요.',
     workspaceWideWho: '이 도메인을 소유한 워크스페이스의 구성원 전원',
-    emptyList: '이 도메인에 닿을 수 있는 사람이 없습니다.',
+    emptyList: '접근 목록이 비어 있어요.',
     grantEligibility:
-      '이 도메인을 소유한 워크스페이스의 구성원만 부여 대상이 됩니다. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있습니다.',
-    revokeSentence: (who) => `${who}의 이 도메인 접근 권한을 회수합니다.`,
+      '이 도메인을 소유한 워크스페이스의 구성원만 부여 대상이 돼요. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있어요.',
+    revokeSentence: (who) => `${who}의 도메인 접근 권한을 회수할까요?`,
     revokeCaveats: (
       <ul className="list-disc space-y-1 pl-4">
-        <li>이미 존에 들어간 레코드는 그대로 남습니다. 필요하면 레코드를 먼저 정리해 주세요.</li>
+        <li>등록된 DNS 레코드는 그대로 남아요. 필요하면 먼저 정리해 주세요.</li>
       </ul>
     ),
   },
@@ -171,19 +171,19 @@ const ACCESS_KINDS: Record<AccessCapableType, AccessKind> = {
     removeGrant: removeLlmKeyAccessGrant,
     roleHints: LLM_KEY_RESOURCE_ROLE_HINTS,
     listIntro:
-      '이 LLM API 키에는 아래 목록에 있는 사람만 접근할 수 있습니다. 같은 워크스페이스라도 목록에 없으면 이름과 상태만 보입니다.',
+      '이 LLM API 키의 접근 권한은 워크스페이스 역할과 별개예요.',
     workspaceWideWho: '이 키를 소유한 워크스페이스의 구성원 전원',
-    emptyList: '이 LLM API 키에 닿을 수 있는 사람이 없습니다.',
+    emptyList: '접근 목록이 비어 있어요.',
     grantEligibility:
-      '이 키를 소유한 워크스페이스의 구성원만 부여 대상이 됩니다. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있습니다.',
-    revokeSentence: (who) => `${who}의 이 LLM API 키 접근 권한을 회수합니다.`,
+      '이 키를 소유한 워크스페이스의 구성원만 부여 대상이 돼요. 워크스페이스 전체에는 참여자 또는 열람자까지만 줄 수 있어요.',
+    revokeSentence: (who) => `${who}의 LLM API 키 접근 권한을 회수할까요?`,
     revokeCaveats: (
       <ul className="list-disc space-y-1 pl-4">
         <li>
-          이미 발급받아 확인한 키 평문은 회수되지 않습니다. 그 값을 못 쓰게 하려면
+          이미 발급받아 확인한 키 평문은 회수되지 않아요. 그 값을 못 쓰게 하려면
           키를 재발급해 주세요.
         </li>
-        <li>회수 직후 진행 중인 요청은 그대로 처리될 수 있습니다.</li>
+        <li>회수 직후 진행 중인 요청은 그대로 처리될 수 있어요.</li>
       </ul>
     ),
   },
@@ -264,9 +264,9 @@ function ResourceAccessContent({ type, resourceId, support }: { type: AccessCapa
       invalidate()
       if (!active.current) return
       setError(null)
-      setReceipt(`${result.id} · ${RESOURCE_ROLE_LABELS[result.role]} 등급으로 변경했습니다.`)
+      setReceipt(`${RESOURCE_ROLE_LABELS[result.role]} 등급으로 변경했어요.`)
     },
-    onError: (err) => { if (active.current) setError(toApiError(err, '등급을 변경하지 못했습니다.').message) },
+    onError: (err) => { if (active.current) setError(toApiError(err, '등급을 변경하지 못했어요.').message) },
   })
 
   const revoke = useMutation({
@@ -280,7 +280,7 @@ function ResourceAccessContent({ type, resourceId, support }: { type: AccessCapa
     onError: (err) => {
       if (!active.current) return
       setRevokeTarget(null)
-      setError(toApiError(err, '접근 권한을 회수하지 못했습니다.').message)
+      setError(toApiError(err, '접근 권한을 회수하지 못했어요.').message)
     },
   })
 
@@ -308,7 +308,7 @@ function ResourceAccessContent({ type, resourceId, support }: { type: AccessCapa
           {access.isPending ? (
             <Spinner />
           ) : access.isError ? (
-            <Alert variant="warning" title="접근 권한을 불러오지 못했습니다">
+            <Alert variant="warning" title="접근 권한을 불러오지 못했어요">
               <Button size="sm" variant="secondary" onClick={() => void access.refetch()}>
                 다시 시도
               </Button>
@@ -366,8 +366,8 @@ function ResourceAccessContent({ type, resourceId, support }: { type: AccessCapa
         </CardContent>
       </Card>
 
-      {canManage && workspace.isError && <Alert variant="danger">구성원 후보를 불러오지 못했습니다. {workspace.error.message}</Alert>}
-      {canManage && support && access.data?.eligibleMembers == null && <Alert>현재 권한으로 새 부여 대상자 참조를 제공할 수 없습니다. 기존 부여의 변경과 회수는 별도로 확인합니다.</Alert>}
+      {canManage && workspace.isError && <Alert variant="danger">구성원 후보를 불러오지 못했어요. {workspace.error.message}</Alert>}
+      {canManage && support && access.data?.eligibleMembers == null && <Alert>새로 권한을 받을 구성원 정보가 제공되지 않았어요.</Alert>}
       {canManage && (!support || access.data?.eligibleMembers != null) && <AddGrantForm
         kind={kind}
         resourceId={resourceId}
@@ -439,11 +439,11 @@ function AddGrantForm({
       onDone()
       if (!active.current) return
       onError(null)
-      onReceipt(`${result.id} · ${RESOURCE_ROLE_LABELS[result.role]} 등급을 부여했습니다.`)
+      onReceipt(`${RESOURCE_ROLE_LABELS[result.role]} 등급을 부여했어요.`)
       setTarget('')
       setRole('MEMBER')
     },
-    onError: (err) => { if (active.current) onError(toApiError(err, '접근 권한을 부여하지 못했습니다.').message) },
+    onError: (err) => { if (active.current) onError(toApiError(err, '접근 권한을 부여하지 못했어요.').message) },
   })
 
   const submit = (event: FormEvent) => {
@@ -529,7 +529,7 @@ function RevokeModal({
     >
       <div className="space-y-3 text-sm text-neutral-600">
         <p>{kind.revokeSentence(who)}</p>
-        <Alert variant="warning" title="회수가 되돌리지 못하는 것">
+        <Alert variant="warning" title="회수 후에도 남는 것">
           {kind.revokeCaveats}
         </Alert>
       </div>

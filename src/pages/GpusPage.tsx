@@ -22,7 +22,7 @@ export function GpusPage() {
     {allocations.isPending && <Spinner label="GPU 할당 불러오는 중" />}
     {allocations.isError && <Alert variant="danger">{allocations.error.message}</Alert>}
     {allocations.data && (allocations.data.content.length === 0
-      ? <EmptyState title="할당받은 GPU가 없습니다" description={scope == null ? '접근 권한을 가진 GPU가 없습니다. 워크스페이스를 고르면 그 워크스페이스의 GPU를 볼 수 있습니다.' : '신청이 승인되면 이곳에서 대기 순서와 할당 상태를 확인할 수 있습니다.'} />
+      ? <EmptyState title="표시할 GPU 할당이 없어요" description={scope == null ? '접근 권한을 가진 GPU가 없어요. 워크스페이스를 고르면 그 워크스페이스의 GPU를 볼 수 있어요.' : undefined} />
       : <><GpuAllocationTable rows={allocations.data.content} /><Pagination page={allocations.data.page} totalPages={allocations.data.totalPages} onPageChange={setPage} /></>)}
   </div>
 }

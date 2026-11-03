@@ -29,7 +29,7 @@ export function NoticesPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">공지사항</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          서비스 점검·장애와 정책 변경을 이곳에 알립니다.
+          서비스 점검과 장애, 정책 변경을 이곳에서 안내해요.
         </p>
       </div>
 
@@ -42,7 +42,7 @@ export function NoticesPage() {
         {notices.isError && <Alert variant="danger">{notices.error.message}</Alert>}
         {notices.isSuccess && notices.data.content.length === 0 && (
           <Card className="p-8 text-center text-sm text-neutral-500">
-            등록된 공지사항이 없습니다.
+            표시할 공지사항이 없어요.
           </Card>
         )}
         {notices.isSuccess && notices.data.content.length > 0 && (

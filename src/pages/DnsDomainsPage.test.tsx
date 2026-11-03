@@ -40,7 +40,7 @@ describe('domain list', () => {
       screen.queryByRole('link', { name: 'someone-else.pusan.dev' }),
     ).not.toBeInTheDocument()
     // Hiding the row would leave no way to learn whom to ask: it stands, closed.
-    expect(screen.getByText(/김철수 님에게 요청하세요/)).toBeInTheDocument()
+    expect(screen.getByText(/김철수님에게 요청해 주세요/)).toBeInTheDocument()
     // A workspace owner who cannot open it may still decide who can, and the
     // list is their only way in — so the link has to point at this row.
     expect(screen.getByRole('link', { name: '접근 권한 관리' })).toHaveAttribute(
@@ -84,7 +84,7 @@ describe('domain list', () => {
     // name and its slot against the cap already, and the 30-day reservation can
     // run out inside an approval queue.
     const row = (await screen.findByText('myblog.pusan.dev')).closest('tr')!
-    expect(within(row).getByText(/되살릴 수 있습니다/)).toBeInTheDocument()
+    expect(within(row).getByText(/되살릴 수 있어요/)).toBeInTheDocument()
     await user.click(within(row).getByRole('button', { name: '되살리기' }))
 
     await waitFor(() => expect(dnsDomainStore.rows[0].domain.releasedAt).toBeNull())

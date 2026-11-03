@@ -13,15 +13,15 @@ export function UsageMailPreference({ reader }: { reader: NotificationReader }) 
   const [result, setResult] = useState<{ reader: NotificationReader; message: string; failed: boolean } | null>(null)
   const query = useQuery({ queryKey: preferenceKey(reader), staleTime: 0, refetchOnMount: 'always',
     queryFn: async ({ signal }) => {
-      if (!sameNotificationReader(current.current, reader)) throw new ApiError(null, '로그인 상태가 바뀌었습니다.')
+      if (!sameNotificationReader(current.current, reader)) throw new ApiError(null, '로그인 상태가 바뀌었어요.')
       const response = await fetchMyNotificationPreferences(signal)
-      if (!sameNotificationReader(current.current, reader)) throw new ApiError(null, '로그인 상태가 바뀌었습니다.')
+      if (!sameNotificationReader(current.current, reader)) throw new ApiError(null, '로그인 상태가 바뀌었어요.')
       return { reader, response }
     } })
   const data = sameNotificationReader(query.data?.reader, reader) ? query.data?.response : undefined
   const save = useMutation({ mutationKey: ['notification-preference-write', reader.account, reader.context],
     mutationFn: (operation: { reader: NotificationReader; value: boolean }) => {
-      if (!sameNotificationReader(current.current, operation.reader)) throw new ApiError(null, '로그인 상태가 바뀌었습니다.')
+      if (!sameNotificationReader(current.current, operation.reader)) throw new ApiError(null, '로그인 상태가 바뀌었어요.')
       return updateMyNotificationPreferences({ usageMailEnabled: operation.value })
     },
     onSuccess: async (response, operation) => {
@@ -29,11 +29,11 @@ export function UsageMailPreference({ reader }: { reader: NotificationReader }) 
       await client.cancelQueries({ queryKey: preferenceKey(operation.reader), exact: true })
       if (!sameNotificationReader(current.current, operation.reader)) return
       client.setQueryData(preferenceKey(operation.reader), { reader: operation.reader, response })
-      setResult({ reader: operation.reader, message: '사용량 알림 메일 설정을 저장했습니다.', failed: false })
+      setResult({ reader: operation.reader, message: '사용량 알림 메일 설정을 저장했어요.', failed: false })
     },
     onError: (error, operation) => {
       if (!sameNotificationReader(current.current, operation.reader)) return
-      setResult({ reader: operation.reader, message: toApiError(error, '메일 설정을 저장하지 못했습니다.').message, failed: true })
+      setResult({ reader: operation.reader, message: toApiError(error, '메일 설정을 저장하지 못했어요.').message, failed: true })
     } })
   const ownResult = sameNotificationReader(result?.reader, reader) ? result : null
   const saving = save.isPending && sameNotificationReader(save.variables?.reader, reader)

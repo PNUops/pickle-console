@@ -93,10 +93,10 @@ export function ResourcesPage() {
                 filter directly above, so nothing else offers one. */}
             <p>
               {type != null
-                ? '이 종류의 리소스가 없습니다.'
+                ? '이 종류의 리소스가 없어요.'
                 : scope == null
-                  ? '접근 권한을 가진 리소스가 없습니다. 워크스페이스를 고르면 그 워크스페이스의 리소스를 볼 수 있습니다.'
-                  : '이 워크스페이스에는 아직 리소스가 없습니다. 신청이 승인되면 이곳에 표시됩니다.'}
+                  ? '접근 권한을 가진 리소스가 없어요. 워크스페이스를 고르면 그 워크스페이스의 리소스를 볼 수 있어요.'
+                  : '이 워크스페이스에 표시할 리소스가 없어요.'}
             </p>
             <LinkButton to={consolePaths.newRequest(scope)}>리소스 신청</LinkButton>
           </div>
@@ -145,9 +145,9 @@ export function ResourcesPage() {
                       )}
                       {resource.accessLimited && (
                         <p className="mt-0.5 text-xs text-neutral-500">
-                          접근 권한이 없습니다
+                          접근 권한이 없어요.
                           {resource.ownerNames.length > 0 &&
-                            ` — ${resource.ownerNames.join(', ')} 님에게 요청하세요`}
+                            ` ${resource.ownerNames.join(', ')}님에게 요청해 주세요.`}
                           {resource.accessManageAllowed && entry.accessPath && (
                             <>
                               {' '}

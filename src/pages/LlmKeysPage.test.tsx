@@ -64,7 +64,7 @@ describe('LLM API 키 목록', () => {
     // 값이 0이거나 빈 것이 아니라 필드가 없는 것이다.
     expect(within(limitedRow).getAllByText('—').length).toBeGreaterThan(0)
     expect(
-      within(limitedRow).getByText(/접근 권한이 없습니다 — 김철수 님에게 요청하세요/),
+      within(limitedRow).getByText(/접근 권한이 없어요\. 김철수님에게 요청해 주세요/),
     ).toBeInTheDocument()
     expect(
       within(limitedRow).queryByRole('link', { name: '접근 권한 관리' }),
@@ -136,6 +136,6 @@ describe('LLM API 키 접근 권한 화면', () => {
     expect(screen.getByText(/데이터베이스 실습 소유/)).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: '접근 권한' })).toBeInTheDocument()
     // 회수 안내는 키의 것이어야 한다 — VM 비밀번호 이야기가 나오면 거짓말이다.
-    expect(screen.getByText(/이 LLM API 키에는 아래 목록에 있는 사람만/)).toBeInTheDocument()
+    expect(screen.getByText(/이 LLM API 키의 접근 권한은 워크스페이스 역할과 별개/)).toBeInTheDocument()
   })
 })

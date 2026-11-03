@@ -63,7 +63,7 @@ export function useNotificationList(reader: NotificationReader | null,
     queryFn: async () => {
       if (reader == null || !sameNotificationReader(current.current, reader)) throw new Error('로그인 상태를 확인해 주세요.')
       const response = await fetchNotifications(params)
-      if (!sameNotificationReader(current.current, reader)) throw new Error('알림 조회 상태가 바뀌었습니다. 다시 조회해 주세요.')
+      if (!sameNotificationReader(current.current, reader)) throw new Error('알림 조회 상태가 바뀌었어요. 다시 조회해 주세요.')
       return { reader, response }
     },
     enabled: reader != null && enabled,
@@ -92,7 +92,7 @@ export function useNotificationUnread(reader: NotificationReader | null) {
     queryFn: async () => {
       if (reader == null || !sameNotificationReader(current.current, reader)) throw new Error('로그인 상태를 확인해 주세요.')
       const response = await fetchUnreadCount()
-      if (!sameNotificationReader(current.current, reader)) throw new Error('알림 조회 상태가 바뀌었습니다. 다시 조회해 주세요.')
+      if (!sameNotificationReader(current.current, reader)) throw new Error('알림 조회 상태가 바뀌었어요. 다시 조회해 주세요.')
       return { reader, response }
     },
     enabled: reader != null,
@@ -119,14 +119,14 @@ export function useNotificationActions(reader: NotificationReader | null) {
   }
   const fail = async (error: unknown, operation: { reader: NotificationReader | null }) => {
     if (operation.reader && sameNotificationReader(current.current, operation.reader)) {
-      setFailure({ reader: operation.reader, message: toApiError(error, '알림을 읽음 처리하지 못했습니다.').message })
+      setFailure({ reader: operation.reader, message: toApiError(error, '알림을 읽음으로 표시하지 못했어요.').message })
       await client.invalidateQueries({ queryKey: notificationKeys.reader(operation.reader) })
     }
   }
   const read = useMutation({
     mutationKey: notificationKeys.read(reader),
     mutationFn: (operation: { id: string; reader: NotificationReader | null }) => {
-      if (!sameNotificationReader(current.current, operation.reader)) throw new Error('알림 조회 상태가 바뀌었습니다.')
+      if (!sameNotificationReader(current.current, operation.reader)) throw new Error('알림 조회 상태가 바뀌었어요.')
       return markNotificationRead(operation.id)
     },
     onSuccess: (_data, operation) => success(operation), onError: fail,
@@ -134,7 +134,7 @@ export function useNotificationActions(reader: NotificationReader | null) {
   const all = useMutation({
     mutationKey: notificationKeys.read(reader),
     mutationFn: (operation: { reader: NotificationReader | null }) => {
-      if (!sameNotificationReader(current.current, operation.reader)) throw new Error('알림 조회 상태가 바뀌었습니다.')
+      if (!sameNotificationReader(current.current, operation.reader)) throw new Error('알림 조회 상태가 바뀌었어요.')
       return markAllNotificationsRead()
     },
     onSuccess: (_data, operation) => success(operation), onError: fail,
