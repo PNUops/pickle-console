@@ -117,7 +117,7 @@ describe('알림 보내기', () => {
     expect(within(dialog).getByText('전체 사용자')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '발송' }))
 
-    expect(await screen.findByText(new RegExp(`${expected}명의 콘솔 알림을 저장하고 이메일 큐에 접수했습니다`))).toBeInTheDocument()
+    expect(await screen.findByText(new RegExp(`알림을 저장했어요. 대상은 ${expected}명이에요`))).toBeInTheDocument()
     // 폼이 초기화되고 최근 발송 목록에 추가된다.
     await waitFor(() =>
       expect(screen.getByText('8월 서비스 업데이트')).toBeInTheDocument(),

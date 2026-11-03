@@ -311,7 +311,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     const next = profileWith(['institution.staff.read'])
     next.role = 'ORG_MANAGER'; next.institutionAuthority!.accountRole = 'ORG_MANAGER'
     frame.update(next)
-    await within(dialog).findByText(/수신 설정 권한이 없어졌습니다/)
+    await within(dialog).findByText(/권한이 없거나 바뀌어 저장할 수 없어요/)
     expect(save).toBeDisabled()
     expect(orgMailSaves).toHaveLength(0)
   })
