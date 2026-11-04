@@ -111,7 +111,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     renderApp(`/admin/requests/${uuid(204)}?org=${uuid(1)}`)
 
     expect(
-      await screen.findByText('선택한 관리 범위의 신청이 아닙니다'),
+      await screen.findByText('선택한 관리 범위의 신청이 아니에요'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '신청 상세' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: '신청 목록으로 돌아가기' })).toHaveAttribute(
@@ -168,7 +168,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     renderDetail(uuid(201))
 
     expect(
-      await screen.findByText('승인 참고 정보를 불러오지 못했습니다'),
+      await screen.findByText('승인 참고 정보를 불러오지 못했어요'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '승인하기' })).toBeInTheDocument()
   })
@@ -256,7 +256,7 @@ describe('승인 폼', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    expect(await screen.findByText(/이미 처리된 신청입니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/이미 처리된 신청이에요/)).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('검토 결정')).not.toBeInTheDocument())
     expect(approveBodies).toHaveLength(0)
   })

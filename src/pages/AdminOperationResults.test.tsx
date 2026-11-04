@@ -233,7 +233,7 @@ test.each([sysManagerUser, sysViewerUser, orgViewerUser])('$role context errors 
   server.use(refreshSuccessHandler(`access-${role.role.toLowerCase().replace('_', '-')}`, role),
     http.get('*/api/v1/admin/requests/:id/context', () => HttpResponse.json({ status: 503, detail: '합성 참고 조회 실패' }, { status: 503 })))
   renderApp(`/admin/requests/${uuid(201)}`)
-  await screen.findByText('승인 참고 정보를 불러오지 못했습니다')
-  expect(screen.queryByText('참고 정보 없이도 승인 또는 반려할 수 있습니다.')).not.toBeInTheDocument()
+  await screen.findByText('승인 참고 정보를 불러오지 못했어요')
+  expect(screen.queryByText('참고 정보 없이도 승인하거나 반려할 수 있어요.')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '승인하기' })).not.toBeInTheDocument()
 })

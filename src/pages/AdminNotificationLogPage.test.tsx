@@ -338,7 +338,7 @@ describe('Request selection snapshots', () => {
   test('legacy requests explicitly report the absent selection snapshot', async () => {
     requestMailSelectionStore[uuid(201)] = null
     system(`/admin/requests/${uuid(201)}?org=${uuid(1)}`)
-    expect(await screen.findByText(/이 신청의 접수 당시 기관 알림 선정 명단은 기록되지 않았습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/이 신청에는 접수 당시 기관 알림 선정 기록이 없어요/)).toBeInTheDocument()
   })
 
   test('institution roles never request the system-only selection data', async () => {

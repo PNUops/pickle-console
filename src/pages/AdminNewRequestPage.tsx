@@ -22,7 +22,7 @@ export function AdminNewRequestPage() {
   const { activeOrgId } = useAdminScope()
   const [searchParams] = useSearchParams()
   if (!hasRosterWork(user)) {
-    return <Alert variant="danger">명단을 지급할 업무가 없습니다.</Alert>
+    return <Alert variant="danger">명단 지급 업무가 없어요.</Alert>
   }
   const found = requestKind(searchParams.get('kind') ?? '')
   const kind = found?.supportsRecipients && hasRosterWork(user, found.type) ? found : undefined
