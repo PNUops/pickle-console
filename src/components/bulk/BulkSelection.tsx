@@ -103,7 +103,7 @@ export function BulkSelectionBar({
       />
       {capped && (
         <MessageBar variant="warning">
-          한 번에 {BULK_SELECTION_CAP}개까지 선택할 수 있습니다.
+          한 번에 {BULK_SELECTION_CAP}개까지 선택할 수 있어요.
         </MessageBar>
       )}
     </div>
