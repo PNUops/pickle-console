@@ -37,8 +37,8 @@ describe('Explicit institution permission drafts', () => {
   })
 
   test('a selected group must explicitly choose scope and unknown work fails closed', () => {
-    expect(permissionProblem({ mode: 'SELECTED', work: ['vm.power'], scopes: {}, expectedRevision: 0 }, MOCK_WORK_CATALOGUE)).toContain('범위를 명시적으로')
-    expect(permissionProblem({ mode: 'SELECTED', work: ['unknown.job'], scopes: {}, expectedRevision: 0 }, MOCK_WORK_CATALOGUE)).toContain('등록된 선택 업무')
+    expect(permissionProblem({ mode: 'SELECTED', work: ['vm.power'], scopes: {}, expectedRevision: 0 }, MOCK_WORK_CATALOGUE)).toContain('범위를 직접')
+    expect(permissionProblem({ mode: 'SELECTED', work: ['unknown.job'], scopes: {}, expectedRevision: 0 }, MOCK_WORK_CATALOGUE)).toContain('현재 선택할 수 없는 업무')
     expect(permissionProblem({ mode: 'SELECTED', work: [], scopes: {}, expectedRevision: 0 }, MOCK_WORK_CATALOGUE)).toContain('하나 이상')
   })
 
@@ -56,6 +56,6 @@ describe('Explicit institution permission drafts', () => {
   test('hidden permission cannot fabricate a FULL source revision', () => {
     const baseline = evaluateOrgOperations(uuid(1))!
     baseline.members[0].permission = null
-    expect(() => permissionSaveBody(baseline, [], '')).toThrow('원천 버전')
+    expect(() => permissionSaveBody(baseline, [], '')).toThrow('기관 권한 버전')
   })
 })

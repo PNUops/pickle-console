@@ -54,17 +54,17 @@ export function selectedFromFull(catalogue: readonly InstitutionWorkView[], expe
 }
 
 export function permissionProblem(permission: PermissionInput, catalogue: readonly InstitutionWorkView[]): string | null {
-  if (permission.mode === 'FULL') return permission.work.length || Object.keys(permission.scopes).length ? '전체 관리자 모드의 업무와 범위는 비워야 합니다.' : null
-  if (permission.work.length === 0) return '선택 업무를 하나 이상 지정하세요. 담당 자격 회수는 별도 버튼을 사용하세요.'
-  if (new Set(permission.work).size !== permission.work.length) return '중복된 업무를 확인하세요.'
+  if (permission.mode === 'FULL') return permission.work.length || Object.keys(permission.scopes).length ? '전체 관리자 모드에서는 업무와 범위를 비워야 해요.' : null
+  if (permission.work.length === 0) return '선택 업무를 하나 이상 지정해 주세요. 담당 자격을 회수하려면 별도 버튼을 사용해 주세요.'
+  if (new Set(permission.work).size !== permission.work.length) return '중복된 업무를 확인해 주세요.'
   for (const id of permission.work) {
     const work = catalogue.find((item) => item.id === id && item.selectable)
-    if (!work) return '현재 등록된 선택 업무가 아닌 값이 있습니다. 최신 권한 정보를 확인하세요.'
-    if (work.group && !['ALL', 'LISTED'].includes(permission.scopes[work.group]?.mode ?? '')) return `${WORK_GROUP_LABELS[work.group]}의 범위를 명시적으로 선택하세요.`
+    if (!work) return '현재 선택할 수 없는 업무가 있어요. 최신 권한 정보를 확인해 주세요.'
+    if (work.group && !['ALL', 'LISTED'].includes(permission.scopes[work.group]?.mode ?? '')) return `${WORK_GROUP_LABELS[work.group]}의 범위를 직접 선택해 주세요.`
   }
   for (const [group, scope] of Object.entries(permission.scopes)) {
-    if (!WORK_GROUPS.includes(group as WorkGroup) || !catalogue.some((work) => work.group === group && permission.work.includes(work.id))) return '선택한 업무의 고정 그룹 범위만 지정하세요.'
-    if (scope.mode === 'ALL' && scope.workspaceIds.length) return '모든 워크스페이스 범위에는 지정 ID를 함께 보낼 수 없습니다.'
+    if (!WORK_GROUPS.includes(group as WorkGroup) || !catalogue.some((work) => work.group === group && permission.work.includes(work.id))) return '선택한 업무에 해당하는 그룹의 범위만 지정해 주세요.'
+    if (scope.mode === 'ALL' && scope.workspaceIds.length) return '모든 워크스페이스 범위에는 지정 ID를 함께 보낼 수 없어요.'
   }
   return null
 }
@@ -90,7 +90,7 @@ export function permissionSummary(permission: InstitutionPermission | Permission
 export function permissionSaveBody(baseline: OrgOperations, members: PermissionMember[], reason: string): SaveOrgOperations {
   const expectedPermissionRevisions: Record<string, number> = {}
   for (const member of baseline.members) {
-    if (!member.permission || member.permission.revision < 1) throw new Error('기관 권한 원천 버전을 확인할 수 없습니다. 최신 명단을 다시 불러와 주세요.')
+    if (!member.permission || member.permission.revision < 1) throw new Error('기관 권한 버전을 확인할 수 없어요. 최신 명단을 다시 불러와 주세요.')
     expectedPermissionRevisions[member.userId] = member.permission.revision
   }
   return { expectedRevision: baseline.revision, expectedPermissionRevisions,
