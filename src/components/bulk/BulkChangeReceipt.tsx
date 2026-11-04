@@ -10,12 +10,12 @@ const EFFECT_OUTCOME: Record<string, string> = { REGISTERED: '후속 처리 등�
 const QUEUE_STATE: Record<string, string> = { ENQUEUED: '큐에서 대기', SCHEDULED: '예약됨', PROCESSING: '작업 실행 중', SUCCEEDED: '작업 성공(외부 완료 별도)', FAILED: '작업 실패', DELETED: '작업 삭제됨', AWAITING: '선행 작업 대기', UNKNOWN: '현재 작업 상태 확인 불가' }
 
 export function BulkChangeReceipt({ operation }: { operation: AdminBulkOperation }) {
-  if (operation.status !== 'COMMITTED' || operation.result.batchId !== operation.operationId) return <MessageBar variant="warning">이 적용의 커밋 결과를 확인하지 못했습니다.</MessageBar>
+  if (operation.status !== 'COMMITTED' || operation.result.batchId !== operation.operationId) return <MessageBar variant="warning">이 적용의 저장 결과를 확인하지 못했어요.</MessageBar>
   const names = new Map(operation.result.items.map((item) => [item.targetId, item.name]))
   const hidden = new Set(operation.observations.filter((item) => item.refusal).map((item) => item.targetId))
   const name = (id: string) => hidden.has(id) ? id : names.get(id) ?? id
   return <section className="space-y-4">
-    <MessageBar variant="success" title="적용 결과가 저장됐습니다">
+    <MessageBar variant="success" title="적용 결과를 저장했어요">
       저장 시각: {formatDateTime(operation.committedAt)}
     </MessageBar>
     <p className="break-all text-sm">적용 ID: <code>{operation.operationId}</code></p>

@@ -185,7 +185,7 @@ describe('AdminLlmKeysPage row selection', () => {
     }
     const toolbar = screen.getByRole('toolbar', { name: '선택한 항목 동작' })
     expect(toolbar).toHaveTextContent('200개 선택됨')
-    expect(screen.getByText('한 번에 200개까지 선택할 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByText('한 번에 200개까지 선택할 수 있어요.')).toBeInTheDocument()
   })
 
   test('renders no selection for viewer roles', async () => {

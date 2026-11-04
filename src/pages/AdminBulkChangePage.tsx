@@ -187,7 +187,7 @@ function AdminBulkPageContext({ family }: { family: BulkFamily }) {
     return <div className="space-y-5">{header}<MessageBar variant="danger">{INVALID_ID_MESSAGE}</MessageBar></div>
   }
   if (!user || kinds.length === 0) {
-    return <div className="space-y-5">{header}<MessageBar variant="danger">이 계정으로 할 수 있는 일괄 변경이 없습니다.</MessageBar></div>
+    return <div className="space-y-5">{header}<MessageBar variant="danger">이 계정으로 할 수 있는 일괄 변경이 없어요.</MessageBar></div>
   }
   if (!owned && (savedIds.previewId || savedIds.operationId)) {
     return <div className="space-y-5">{header}<BulkChangeReentry key={`${savedIds.previewId ?? ''}:${savedIds.operationId ?? ''}`} family={family} {...savedIds} reader={reader} orgId={scope.activeOrgId} returnTo={family === 'llm-keys' ? listPath : undefined}
@@ -309,7 +309,7 @@ function BulkChangeFlow({
       setFieldErrors({})
       setStep('preview')
     },
-    onError: (failure) => { if (active.current) fail(failure, '일괄 변경 미리보기를 불러오지 못했습니다.') },
+    onError: (failure) => { if (active.current) fail(failure, '일괄 변경 미리보기를 불러오지 못했어요.') },
   })
 
   const recoverMutation = useMutation({
@@ -317,7 +317,7 @@ function BulkChangeFlow({
     onSuccess: (data) => {
       if (!active.current) return
       if (data.operationId !== attempted.current?.operationId || data.previewId !== attempted.current?.previewId || data.targetType !== BULK_TARGET_TYPES[family] || data.status !== 'COMMITTED') {
-        setError('현재 적용 ID에 해당하는 커밋 결과를 확인하지 못했습니다.')
+        setError('현재 적용 ID의 저장 결과를 확인하지 못했어요.')
         return
       }
       setOperation(data)
@@ -326,7 +326,7 @@ function BulkChangeFlow({
       setError(null)
       setStep('result')
     },
-    onError: () => { if (active.current) setError('같은 적용 ID의 저장 결과를 아직 확인하지 못했습니다. 잠시 후 다시 조회해 주세요.') },
+    onError: () => { if (active.current) setError('같은 적용 ID의 저장 결과를 아직 확인하지 못했어요. 잠시 후 다시 조회해 주세요.') },
   })
 
   const consumedMutation = useMutation({
@@ -349,7 +349,7 @@ function BulkChangeFlow({
       setStep('result')
       remember({ previewId: saved.previewId, operationId: receipt.operationId })
     },
-    onError: () => { if (active.current) setError('이 미리보기로 이미 저장된 결과를 아직 확인하지 못했습니다. 다시 조회해 주세요.') },
+    onError: () => { if (active.current) setError('이 미리보기로 저장된 결과를 아직 확인하지 못했어요. 다시 조회해 주세요.') },
   })
 
   const applied = (data: AdminBulkChangeApply, change: AdminBulkChangeSpec) => {
@@ -360,7 +360,7 @@ function BulkChangeFlow({
     if (change.kind === 'LLM_KEY_LIMITS') invalidations.push(queryClient.invalidateQueries({ queryKey: ['admin', 'llm-accounts'] }))
     void Promise.all(invalidations)
     if (!active.current) return
-    if (data.batchId !== attempted.current?.operationId) { setUncertain(true); setError('현재 적용 ID와 응답의 ID가 다릅니다. 저장된 결과를 다시 조회해 주세요.'); return }
+    if (data.batchId !== attempted.current?.operationId) { setUncertain(true); setError('현재 적용 ID와 응답의 ID가 달라요. 저장된 결과를 다시 조회해 주세요.'); return }
     setResult(data)
     setUncertain(false)
     setError(null)
@@ -371,16 +371,16 @@ function BulkChangeFlow({
 
   const applicationFailed = (failure: unknown) => {
     if (!active.current) return
-    const problem = toApiError(failure, '일괄 변경을 적용하지 못했습니다.')
+    const problem = toApiError(failure, '일괄 변경 결과를 확인하지 못했어요.')
     setUncertain(!!attempted.current)
-    fail(failure, '일괄 변경을 적용하지 못했습니다.')
+    fail(failure, '일괄 변경 결과를 확인하지 못했어요.')
     if (attempted.current && problem.problem?.status === 409) consumedMutation.mutate()
   }
 
   const applyMutation = useMutation({
     mutationFn: async ({ change, judged }: { change: AdminBulkChangeSpec; judged: AdminBulkChangePreview }) => {
       if (attempted.current) throw new Error('기존 적용 ID의 결과를 먼저 조회하거나 같은 요청을 재확인해 주세요.')
-      if (judged.consumedOperationId || !(Date.now() < Date.parse(judged.expiresAt))) throw new Error('이미 사용됐거나 새 적용 가능 시간이 지난 미리보기입니다. 다시 조회해 주세요.')
+      if (judged.consumedOperationId || !(Date.now() < Date.parse(judged.expiresAt))) throw new Error('이미 사용했거나 새 적용 가능 시간이 지난 미리보기예요. 다시 조회해 주세요.')
       const accessConfirmations: Record<string, AccessConfirmation> = {}
       for (const item of judged.items) {
         if (!active.current) return null
@@ -390,7 +390,7 @@ function BulkChangeFlow({
         if (accessConfirmation) accessConfirmations[item.targetId] = accessConfirmation
       }
       if (!active.current) return null
-      if (!(Date.now() < Date.parse(judged.expiresAt))) throw new Error('미리보기의 새 적용 가능 시간이 지났습니다. 새 미리보기를 만들어 주세요.')
+      if (!(Date.now() < Date.parse(judged.expiresAt))) throw new Error('미리보기의 새 적용 가능 시간이 지났어요. 새 미리보기를 만들어 주세요.')
       const body: AdminBulkChangeRequest = {
         ...request(change),
         previewId: judged.previewId,
@@ -435,7 +435,7 @@ function BulkChangeFlow({
   return (
     <>
       {accessReview.modal}
-      {uncertain && attempted.current && <MessageBar variant="warning" title="적용 응답을 확인하지 못했습니다" actions={<>
+      {uncertain && attempted.current && <MessageBar variant="warning" title="적용 응답을 확인하지 못했어요" actions={<>
         <Button variant="secondary" loading={recoverMutation.isPending} onClick={() => recoverMutation.mutate()}>같은 적용 결과 다시 조회</Button>
         <Button variant="secondary" loading={consumedMutation.isPending} onClick={() => consumedMutation.mutate()}>이 미리보기의 저장 결과 확인</Button>
         <Button variant="secondary" loading={repeatMutation.isPending} disabled={recoverMutation.isPending} onClick={() => repeatMutation.mutate()}>같은 ID로 동일 요청 재확인</Button>
@@ -568,10 +568,10 @@ function BulkChangeFlow({
 
       {step === 'preview' && preview && !sent && <section className="space-y-4">
         {error && <MessageBar variant="danger">{error}</MessageBar>}
-        <MessageBar variant="warning">현재 권한으로 이 변경안을 제공할 수 없습니다. 업무 권한을 다시 확인한 뒤 목록에서 새로 선택해 주세요.</MessageBar>
+        <MessageBar variant="warning">현재 권한으로 이 변경안을 제공할 수 없어요. 업무 권한을 다시 확인한 뒤 목록에서 새로 선택해 주세요.</MessageBar>
         <BulkChangePreviewTable items={preview.items} targetType={targetType} />
         <div className="flex flex-wrap gap-3">
-          <Button variant="secondary" onClick={() => { void refreshProfile().catch(() => setError('현재 업무 권한을 확인하지 못했습니다. 다시 시도해 주세요.')) }}>업무 권한 다시 확인</Button>
+          <Button variant="secondary" onClick={() => { void refreshProfile().catch(() => setError('현재 업무 권한을 확인하지 못했어요. 다시 시도해 주세요.')) }}>업무 권한 다시 확인</Button>
           <Link to={listPath} className="text-brand-foreground underline">목록에서 새로 선택</Link>
         </div>
       </section>}
@@ -623,7 +623,7 @@ function BulkChangeFlow({
                 {changes.length}개에 적용
               </Button>
             ) : (
-              <MessageBar>적용할 변경이 없습니다.</MessageBar>
+              <MessageBar>적용할 변경이 없어요.</MessageBar>
             )}
           </div>
         </section>
@@ -687,29 +687,29 @@ function requiresTypedCount(change: AdminBulkChangeSpec): boolean {
 function IrreversibleNotice({ change }: { change: AdminBulkChangeSpec }) {
   if (change.llmKeyStatus?.action === 'REVOKE') {
     return (
-      <MessageBar variant="danger" title="되돌릴 수 없습니다">
-        폐기한 키로 보낸 모든 요청이 거부되고, 다시 쓸 수 없습니다.
+      <MessageBar variant="danger" title="되돌릴 수 없어요">
+        게이트웨이에 반영되면 폐기한 키의 새 요청을 거부해요. 처리 중인 요청은 계속될 수 있어요.
       </MessageBar>
     )
   }
   if (change.kind === 'DOMAIN_FORCE_RELEASE') {
     return (
-      <MessageBar variant="danger" title="되돌릴 수 없습니다">
-        이름이 즉시 회수되어 다른 사용자가 사용할 수 있게 됩니다.
+      <MessageBar variant="danger" title="되돌릴 수 없어요">
+        이름을 즉시 반환해 다른 사용자가 새로 신청할 수 있어요. 연결된 라우트와 플랫폼이 관리하는 DNS 레코드는 비동기로 내려가요. 라우트 변경은 반영된 뒤 새 연결부터 적용돼요.
       </MessageBar>
     )
   }
   if (change.vmPower?.action === 'FORCE_STOP') {
     return (
       <MessageBar variant="warning">
-        전원을 강제로 차단합니다. 저장되지 않은 데이터는 유실될 수 있습니다.
+        전원을 강제로 차단하도록 요청해요. 저장하지 않은 데이터는 유실될 수 있어요.
       </MessageBar>
     )
   }
   if (change.vmDeletion?.action === 'SCHEDULE') {
     return (
       <MessageBar variant="warning">
-        접수 즉시 각 VM의 사용자에게 사유가 담긴 통보 메일이 발송됩니다.
+        각 VM의 소유자와 워크스페이스 소유자 중 활성 계정에 사유가 담긴 알림을 남기고 메일 발송을 요청해요.
       </MessageBar>
     )
   }

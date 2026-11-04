@@ -53,14 +53,14 @@ const LIMITS = 'change.llmKeyLimits'
 // description; adding and removing touch only the named entries.
 const MODEL_RULE_DESCRIPTIONS: Record<AdminBulkListOp, string | undefined> = {
   REPLACE: undefined,
-  ADD: '한 줄에 하나씩, 허용 목록에 넣을 모델은 +, 차단 목록에 넣을 모델은 -를 붙입니다. 적은 줄만 각 키의 목록에 더합니다.',
-  REMOVE: '한 줄에 하나씩, 허용 목록에서 뺄 모델은 +, 차단 목록에서 뺄 모델은 -를 붙입니다. 적은 줄만 각 키의 목록에서 뺍니다.',
+  ADD: '한 줄에 하나씩, 허용 목록에 넣을 모델은 +, 차단 목록에 넣을 모델은 -를 붙여요. 적은 줄만 각 키의 목록에 더해요.',
+  REMOVE: '한 줄에 하나씩, 허용 목록에서 뺄 모델은 +, 차단 목록에서 뺄 모델은 -를 붙여요. 적은 줄만 각 키의 목록에서 빼요.',
 }
 
 const PASSTHROUGH_DESCRIPTIONS: Record<AdminBulkListOp, string | undefined> = {
   REPLACE: undefined,
-  ADD: '체크한 기능을 각 키에 더합니다.',
-  REMOVE: '체크한 기능을 각 키에서 뺍니다.',
+  ADD: '체크한 기능을 각 키에 더해요.',
+  REMOVE: '체크한 기능을 각 키에서 빼요.',
 }
 
 function ListOpSelect({
@@ -195,10 +195,10 @@ export function LimitsForm({
           {(clearing.allowed || clearing.denied) && (
             <MessageBar variant="warning">
               {clearing.allowed && clearing.denied
-                ? '선택한 모든 키의 유료 모델 허용·차단 목록이 비워집니다.'
+                ? '변경이 적용되는 키의 유료 모델 허용 목록과 차단 목록을 모두 비워요.'
                 : clearing.allowed
-                  ? '선택한 모든 키의 유료 모델 허용 목록이 비워집니다.'
-                  : '선택한 모든 키의 유료 모델 차단 목록이 비워집니다.'}
+                  ? '변경이 적용되는 키의 유료 모델 허용 목록을 비워요.'
+                  : '변경이 적용되는 키의 유료 모델 차단 목록을 비워요.'}
             </MessageBar>
           )}
         </div>
@@ -230,12 +230,12 @@ export function LimitsForm({
             description={PASSTHROUGH_DESCRIPTIONS[draft.passthroughOp]}
           />
           {clearing.passthrough ? (
-            <MessageBar variant="warning" title="모든 기능 권한이 회수됩니다">
-              선택한 모든 키에서 Chat을 포함한 모든 기능을 쓸 수 없게 됩니다.
+            <MessageBar variant="warning" title="모든 기능 권한을 회수해요">
+              변경이 게이트웨이에 반영되면 적용 대상 키의 새 요청부터 Chat을 포함한 모든 기능을 쓸 수 없어요. 처리 중인 요청은 계속될 수 있어요.
             </MessageBar>
           ) : clearing.chat ? (
-            <MessageBar variant="warning" title="새 목록에 Chat이 없습니다">
-              선택한 모든 키에서 텍스트 생성과 에이전트 연결을 쓸 수 없게 됩니다.
+            <MessageBar variant="warning" title="새 목록에 Chat이 없어요">
+              변경이 게이트웨이에 반영되면 적용 대상 키의 새 요청부터 텍스트 생성과 에이전트 연결을 쓸 수 없어요. 처리 중인 요청은 계속될 수 있어요.
             </MessageBar>
           ) : null}
         </div>
@@ -327,7 +327,7 @@ export function PeriodForm({
         onChange={(mode) => onChange({ ...draft, mode })}
         options={[
           { value: 'date', title: '종료일 지정' },
-          { value: 'clear', title: '무기한', description: '종료일을 지웁니다. 만료로 자동 중지되지 않습니다.' },
+          { value: 'clear', title: '무기한', description: '종료일을 지워요. 만료로 자동 중지되지 않아요.' },
         ]}
         columns={2}
       />
@@ -412,7 +412,7 @@ export function DeletionForm({
           </FormField>
           {scheduleDate && isShortNotice(scheduleDate) && (
             <MessageBar variant="warning">
-              권장 통보 기간(7일)보다 이른 삭제 예정 시각입니다.
+              권장 통보 기간(7일)보다 이른 삭제 예정 시각이에요.
             </MessageBar>
           )}
           <FormField label="삭제 사유" required error={errors['change.vmDeletion.reason']}>
@@ -420,7 +420,7 @@ export function DeletionForm({
               rows={2}
               value={draft.reason}
               onChange={(event) => onChange({ ...draft, reason: event.target.value })}
-              placeholder="사용자 통보 메일에 그대로 포함됩니다."
+              placeholder="사유는 사용자 알림과 메일에 포함돼요."
             />
           </FormField>
         </>
@@ -450,7 +450,7 @@ export function DomainRenewalForm({
         onChange={(date) => onChange({ ...draft, date })}
         error={errors['change.domainRenewal.renewDueAt']}
       />
-      <FormField label="사유 (감사 기록에 남습니다)" error={errors['change.domainRenewal.reason']}>
+      <FormField label="사유 (감사 기록에 남아요)" error={errors['change.domainRenewal.reason']}>
         <Input
           value={draft.reason}
           maxLength={200}
@@ -511,9 +511,9 @@ export function AccessForm({
             />
           </FormField>
           {source.pending && <Spinner label="구성원과 기존 권한 확인 중" />}
-          {source.errors.length > 0 && <MessageBar variant="warning">일부 대상의 구성원 또는 기존 권한을 확인하지 못했습니다. {source.errors.join(' ')} 미리보기에서 자원별 적용 조건을 확인해 주세요.</MessageBar>}
+          {source.errors.length > 0 && <MessageBar variant="warning">일부 대상의 구성원이나 기존 권한을 확인하지 못했어요. {source.errors.join(' ')} 미리보기에서 자원별 적용 조건을 확인해 주세요.</MessageBar>}
           {!source.pending && q.length > 0 && users.length === 0 && (
-            <p className="text-sm text-foreground-muted">찾은 사용자가 없습니다.</p>
+            <p className="text-sm text-foreground-muted">찾은 사용자가 없어요.</p>
           )}
           {q.length > 0 && users.length > 0 && (
             <ul aria-label="검색된 사용자" className="divide-y divide-stroke-subtle rounded-control border border-stroke-subtle">
@@ -535,7 +535,7 @@ export function AccessForm({
           )}
         </div>
       )}
-      <p className="text-sm text-foreground-muted">선택 자원의 구성원에서 대상을 고릅니다. 회수는 비활성 계정이나 이전 구성원의 기존 개인 권한도 선택할 수 있습니다. 여러 워크스페이스의 자격은 자원별 미리보기에서 판정합니다.</p>
+      <p className="text-sm text-foreground-muted">선택한 리소스가 속한 워크스페이스의 구성원에서 대상을 골라요. 회수할 때는 비활성 계정이나 이전 구성원의 기존 개인 권한도 고를 수 있어요. 워크스페이스별 자격은 리소스별 미리보기에서 판정해요.</p>
       <CardRadioGroup
         legend="접근 권한 변경"
         value={draft.action}
