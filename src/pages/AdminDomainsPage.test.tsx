@@ -112,7 +112,7 @@ describe('공개 서비스 — 도메인 탭', () => {
     // 내릴 라우트가 없는 행이므로 확인 문구도 이름 회수만 말해야 한다.
     await user.click(drawer.getByRole('button', { name: '강제 해제' }))
     const confirm = within(await screen.findByRole('dialog', { name: '도메인 강제 해제' }))
-    expect(confirm.getByText(/예약이 만료되기를 기다리지 않고/)).toBeInTheDocument()
+    expect(confirm.getByText(/예약 기한을 기다리지 않고/)).toBeInTheDocument()
   })
 
   test('종류 필터로 커스텀 도메인만 볼 수 있다', async () => {
@@ -187,7 +187,7 @@ describe('공개 서비스 — 외부 도메인과 루트 정책', () => {
     await user.type(field, '2027-06-30')
     await user.click(drawer.getByRole('button', { name: '기한 조정' }))
 
-    expect(await screen.findByText(/사용 기한을 옮겼습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/사용 기한을 변경했어요/)).toBeInTheDocument()
     expect(externalDomains[0].renewDueAt?.startsWith('2027-06-30')).toBe(true)
   })
 
@@ -205,7 +205,7 @@ describe('공개 서비스 — 외부 도메인과 루트 정책', () => {
     expect(await within(row).findByText('승인 필요')).toBeInTheDocument()
     // 정책이 무엇을 덮는지 그 자리가 말한다 — 켜는 사람이 범위를 모른 채
     // 켜지 않도록.
-    expect(screen.getByText(/외부 도메인 발급뿐입니다/)).toBeInTheDocument()
+    expect(screen.getByText(/외부 도메인 발급에만 적용해요/)).toBeInTheDocument()
   })
 
   test('기관 등급 관리자는 남의 기관 루트를 바꿀 수 없다', async () => {

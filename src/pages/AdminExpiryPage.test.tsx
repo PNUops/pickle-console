@@ -356,7 +356,7 @@ describe('Resource deadline projection', () => {
     const dialog = await screen.findByRole('dialog', { name: '도메인 상세' })
     fireEvent.change(await within(dialog).findByLabelText('새 기한'), { target: { value: '2030-06-30' } })
     await userEvent.setup().click(within(dialog).getByRole('button', { name: '기한 조정' }))
-    await screen.findByText(/사용 기한을 옮겼습니다/)
+    await screen.findByText(/사용 기한을 변경했어요/)
     expect(domain.renewDueAt?.startsWith('2030-06-30')).toBe(true)
     await waitFor(() => expect(client.getQueryState(key)?.isInvalidated).toBe(true))
   })

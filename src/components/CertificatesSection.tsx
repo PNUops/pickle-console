@@ -58,7 +58,7 @@ export function CertificatesSection({ orgId }: { orgId?: string }) {
     queryFn: () => fetchAdminCertificates({ status, orgId, expiringInDays, page, size: PAGE_SIZE }),
     enabled: canRead,
   })
-  if (!canRead) return <Alert variant="danger">인증서를 조회할 권한이 없습니다.</Alert>
+  if (!canRead) return <Alert variant="danger">인증서를 조회할 권한이 없어요.</Alert>
   return (
     <div className="space-y-6">
       <FilterBar
@@ -91,7 +91,7 @@ export function CertificatesSection({ orgId }: { orgId?: string }) {
       {certs.isError && <Alert variant="danger">{certs.error.message}</Alert>}
       {certs.isSuccess && certs.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          표시할 인증서가 없습니다.
+          표시할 인증서가 없어요.
         </Card>
       )}
       {certs.isSuccess && certs.data.content.length > 0 && (
