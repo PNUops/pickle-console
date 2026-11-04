@@ -298,11 +298,11 @@ function GatewayNotice({
       <MessageBar
         title={
           systemView
-            ? 'Gateway 보고를 받은 적이 없습니다'
-            : '서비스 상태를 확인한 기록이 없습니다'
+            ? 'Gateway 보고 기록 없음'
+            : '서비스 상태 확인 기록 없음'
         }
       >
-        연결 상태를 판단할 자료가 아직 없습니다.
+        연결 상태를 판단할 자료가 없어요.
       </MessageBar>
     )
   }
@@ -310,9 +310,9 @@ function GatewayNotice({
     return (
       <MessageBar
         variant="warning"
-        title={systemView ? 'Gateway 보고가 늦습니다' : '서비스 상태 확인이 늦습니다'}
+        title={systemView ? 'Gateway 보고 지연' : '서비스 상태 확인 지연'}
       >
-        아래 값은 마지막 보고 시점의 기록입니다. 마지막 연결은 {moment(status.lastContactAt)}입니다.
+        마지막 보고 시점의 값이에요. 마지막 연결은 {moment(status.lastContactAt)}이에요.
       </MessageBar>
     )
   }
@@ -399,7 +399,7 @@ function PipelineDiagnostics({ status }: { status: AdminLlmStatus['gateway'] }) 
       <CardHeader>
         <CardTitle>사용량 전달 상태</CardTitle>
         <p className="type-caption mt-1 text-foreground-muted">
-          게이트웨이가 스스로 보고한 값입니다.
+          게이트웨이가 보고한 값이에요.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -416,8 +416,8 @@ function PipelineDiagnostics({ status }: { status: AdminLlmStatus['gateway'] }) 
           ]}
         />
         {queueObservationStale && (
-          <MessageBar variant="warning" title="전송 대기열을 지금 값으로 확인할 수 없습니다">
-            전송 대기가 0건으로 보여도 지금 비어 있다는 뜻은 아닙니다.
+          <MessageBar variant="warning" title="전송 대기열의 현재 상태를 확인할 수 없어요">
+            0건으로 보여도 현재 대기열이 비었다는 뜻은 아니에요.
           </MessageBar>
         )}
         <DataTable caption="게이트웨이가 재시작된 뒤로 쌓인 진단 수치" captionVisible>
@@ -457,11 +457,11 @@ function UpstreamStatusTable({
   if (upstreams.length === 0) {
     return (
       <EmptyState
-        title="표시할 LLM 서비스가 없습니다"
+        title="표시할 LLM 서비스가 없어요"
         description={
           systemView
-            ? '등록되거나 Gateway가 보고한 upstream이 없습니다.'
-            : '선택한 기관이 소유하거나 연결된 공용 서비스가 없습니다.'
+            ? '현재 범위에 등록되거나 Gateway가 보고한 upstream이 없어요.'
+            : '선택한 기관이 소유하거나 연결된 공용 서비스가 없어요.'
         }
       />
     )
@@ -531,7 +531,7 @@ function StatusView({ data, systemView }: { data: AdminLlmStatus; systemView: bo
       </section>
       <section aria-labelledby="llm-model-connections-heading" className="space-y-3">
         <h2 id="llm-model-connections-heading" className="type-section-title">모델 구성 연결</h2>
-        <p className="text-sm text-foreground-muted">현재 읽을 수 있는 등록 공급원과 연결된 공개·활성 TOKEN 모델만 표시합니다. 전체 모델 목록이나 실제 요청 처리 경로가 아닙니다. 공급원의 관측 상태와 실제 호출 조건은 별도로 확인해 주세요.</p>
+        <p className="text-sm text-foreground-muted">읽을 수 있는 등록 공급원에 연결된 공개 상태의 활성 TOKEN 모델만 보여 줘요. 전체 모델 목록이나 실제 요청 경로를 뜻하지는 않아요. 공급원 상태와 호출 조건도 확인해 주세요.</p>
         {data.modelRoutes?.length ? <DataTable caption="모델과 공급원 구성 연결" captionVisible>
           <thead><tr><th scope="col">공개 모델명</th><th scope="col">주 공급원</th><th scope="col">대체 공급원</th></tr></thead>
           <tbody>{data.modelRoutes.map((route) => <tr key={route.publicName}>
@@ -540,7 +540,7 @@ function StatusView({ data, systemView }: { data: AdminLlmStatus; systemView: bo
               {edge.state === 'VISIBLE' ? edge.upstreamName ?? '표시 이름 미보고' : edge.state === 'NOT_CONFIGURED' ? '미설정' : '제공되지 않음'}
             </td>)}
           </tr>)}</tbody>
-        </DataTable> : <p className="text-sm">현재 범위에서 모델 연결을 확인할 수 없습니다. 모델이 없다는 뜻은 아닙니다.</p>}
+        </DataTable> : <p className="text-sm">현재 범위에서 모델 연결을 확인할 수 없어요. 모델이 없다는 뜻은 아니에요.</p>}
       </section>
       {systemView && <PipelineDiagnostics status={data.gateway} />}
     </div>
@@ -645,24 +645,24 @@ function MetricsView({ data, systemView }: { data: AdminLlmMetrics; systemView: 
         (data.attributionCoverage < 1 || data.attemptCoverage < 1 || data.estimatedCoverage > 0) && (
         <MessageBar variant="warning">
           {systemView
-            ? '귀속되지 않은 event와 시도 횟수가 없는 event는 upstream·다중 시도 계산에서 빠집니다. 추정 토큰은 Gateway가 산정한 값입니다.'
-            : '처리 서비스나 시도 횟수를 확인할 수 없는 요청 기록은 일부 계산에서 빠집니다. 추정 토큰은 시스템이 산정한 값입니다.'}
+            ? '귀속되지 않은 event는 upstream별 집계에서, 시도 횟수가 없는 event는 다중 시도 계산에서 빠져요. 추정 토큰은 Gateway가 산정한 값이에요.'
+            : '처리 서비스를 확인할 수 없는 요청은 서비스별 집계에서, 시도 횟수를 모르는 요청은 다중 시도 계산에서 빠져요. 추정 토큰은 시스템이 산정한 값이에요.'}
         </MessageBar>
       )}
 
       <MessageBar>
         {systemView
-          ? '중간 시도의 서비스와 retry·fallback 경로는 현재 event로 구분할 수 없습니다.'
-          : '중간 시도의 서비스와 재시도·전환 경로는 현재 요청 기록으로 구분할 수 없습니다.'}
+          ? '중간 시도의 서비스와 retry, fallback 경로는 현재 event로 구분할 수 없어요.'
+          : '중간 시도의 서비스와 재시도, 전환 경로는 현재 요청 기록으로 구분할 수 없어요.'}
       </MessageBar>
 
       {data.upstreams.length === 0 ? (
         <EmptyState
-          title={systemView ? '집계할 upstream 요청이 없습니다' : '집계할 서비스 요청이 없습니다'}
+          title={systemView ? '집계할 upstream 요청이 없어요' : '집계할 서비스 요청이 없어요'}
           description={
             systemView
-              ? '선택한 범위와 기간에 upstream까지 도달해 최종 처리된 요청이 없습니다.'
-              : '선택한 범위와 기간에 서비스까지 도달해 최종 처리된 요청이 없습니다.'
+              ? '선택한 범위와 기간에 upstream까지 도달해 최종 처리된 요청 기록이 없어요.'
+              : '선택한 범위와 기간에 서비스까지 도달해 최종 처리된 요청 기록이 없어요.'
           }
         />
       ) : (
@@ -730,11 +730,11 @@ function MetricsView({ data, systemView }: { data: AdminLlmMetrics; systemView: 
         </h2>
         {data.localRejections.length === 0 ? (
           <EmptyState
-            title="로컬 거절이 없습니다"
+            title="표시할 로컬 거절이 없어요"
             description={
               systemView
-                ? '선택한 범위와 기간에 upstream 도달 전 끝난 요청이 없습니다.'
-                : '선택한 범위와 기간에 서비스 도달 전 끝난 요청이 없습니다.'
+                ? '선택한 범위와 기간에 upstream 도달 전 거절로 집계된 기록이 없어요.'
+                : '선택한 범위와 기간에 서비스 도달 전 거절로 집계된 기록이 없어요.'
             }
           />
         ) : (
@@ -815,8 +815,8 @@ export function AdminLlmStatusPage() {
         title="LLM 서비스"
         description={
           systemView
-            ? `${activeOrg?.name ?? '플랫폼 전체'}의 Gateway 보고, 연결 확인과 최종 처리 지표를 관측합니다.`
-            : `${activeOrg?.name ?? '선택한 기관'}이 사용하는 LLM 서비스의 상태와 처리 결과를 확인합니다.`
+            ? `${activeOrg?.name ?? '플랫폼 전체'}의 Gateway 보고와 연결 확인, 최종 처리 지표를 확인해요.`
+            : `${activeOrg?.name ?? '선택한 기관'}이 사용하는 LLM 서비스의 상태와 처리 결과를 확인해요.`
         }
       />
 
@@ -848,7 +848,7 @@ export function AdminLlmStatusPage() {
             else next.delete('view')
             setSearchParams(next, { replace: true })
           }} />
-        {!permitted && <MessageBar>선택한 기관 범위의 LLM 관측 업무가 없습니다.</MessageBar>}
+        {!permitted && <MessageBar>선택한 기관 범위의 LLM 관측 업무가 없어요.</MessageBar>}
         {capacityView ? <Suspense fallback={<LoadingBlock label="수요 비교 화면 불러오는 중" />}><LlmCapacityView /></Suspense>
           : metricsData && <MetricsView data={metricsData} systemView={systemView} />}
       </TabPanel>

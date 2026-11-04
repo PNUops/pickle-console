@@ -32,7 +32,7 @@ const REASONS: Record<string, string> = {
   credit_only_parameter: '유료 모델 전용 설정', upstream_rejected: '공급자 요청 거절', upstream_timeout: '공급자 시간 초과',
   upstream_error: '공급자 오류', request_too_large: '요청 크기 초과', input_too_long: '입력 길이 초과',
   api_key_expired: '키 만료', api_key_revoked: '키 폐기', account_suspended: '키 이용 정지',
-  invalid_api_key: '유효하지 않은 키', missing_api_key: '키 미제공', service_disabled: '서비스 점검',
+  invalid_api_key: '유효하지 않은 키', missing_api_key: '키 미제공', service_disabled: '서비스 이용 중지',
   credit_unavailable: '유료 모델 연결 불가', credit_pending: '유료 모델 연결 대기',
 }
 const CATEGORIES: Record<string, string> = {
@@ -107,7 +107,7 @@ function CurrentLimits({ value }: { value: Consumer['currentLimits'] }) {
     <p>저장된 현재 설정 · {at(value.configurationObservedAt)}</p>
     <p>일일 {value.dailyTokens == null ? '무제한' : value.dailyTokens === 0 ? 'TOKEN 사용 불가' : <TokenValue value={value.dailyTokens} />}{value.quotaExhausted ? ' · 소진 상태' : ''}</p>
     <p>RPM {value.rpm == null ? '기본값 미보고' : count(value.rpm)} · TPM {value.tpm == null ? '기본값 미보고' : <TokenValue value={value.tpm} />} · 동시 요청 {value.concurrency == null ? '기본값 미보고' : count(value.concurrency)}</p>
-    <p>과거 요청 당시 설정이나 서비스 반영 완료를 뜻하지 않습니다.</p>
+    <p>과거 요청 당시 설정이나 서비스 반영 완료를 뜻하지는 않아요.</p>
   </div>
 }
 
@@ -174,24 +174,24 @@ export default function LlmCapacityView() {
       {scope.ready && permitted && <ModelFilter key={JSON.stringify([reader, scope.activeOrgId, query.publicModelName])} value={query.publicModelName ?? ''} onApply={(value) => update({ publicModelName: value })} />}
       {FILTER_KEYS.some((key) => params.has(key)) && <div className="space-y-1">
         <Button variant="secondary" disabled={!scope.ready} onClick={() => update(Object.fromEntries(FILTER_KEYS.map((key) => [key, undefined])))}>조회 필터 초기화</Button>
-        <p className="text-xs text-foreground-muted">기관과 기간은 유지합니다.</p>
+        <p className="text-xs text-foreground-muted">기관과 기간은 유지해요.</p>
       </div>}
     </div>
     {parsed.error && <MessageBar variant="danger">{parsed.error}</MessageBar>}
-    {!responseMatches && <MessageBar variant="danger">응답의 사업 계정 또는 정렬 조건이 현재 조회와 다릅니다. 이 값을 현재 결과로 표시하지 않습니다.</MessageBar>}
-    {query.upstreamId && <MessageBar title="최종 처리 경로로 좁힌 결과입니다">
-      <p>이 공급원에 귀속된 기록만 표시합니다. 경로 판정 전 거절과 공급원 미귀속 기록은 제외되므로, 표시된 0을 해당 장비의 거절 수요가 없다는 뜻으로 해석하지 마세요.</p>
+    {!responseMatches && <MessageBar variant="danger">응답의 조회 조건이 현재 선택과 달라 이 값을 표시하지 않아요.</MessageBar>}
+    {query.upstreamId && <MessageBar title="최종 처리 경로로 좁힌 결과예요">
+      <p>이 공급원에 귀속된 기록만 보여 줘요. 경로 판정 전 거절과 공급원 미귀속 기록은 빠져요. 0건이어도 이런 거절 수요까지 없었다는 뜻은 아니에요.</p>
       <Button variant="secondary" size="sm" onClick={() => update({ upstreamId: undefined })}>경로 제한 없이 보기</Button>
     </MessageBar>}
-    {!permitted && <MessageBar>선택한 기관·공간 범위의 LLM 관측 업무가 없습니다.</MessageBar>}
+    {!permitted && <MessageBar>선택한 기관과 워크스페이스 범위의 LLM 관측 업무가 없어요.</MessageBar>}
     {permitted && capacity.isPending && !parsed.error && <LoadingBlock label="수요 비교 자료 불러오는 중" />}
-    {capacity.isFetching && data && <MessageBar>새 조회 결과를 기다리고 있습니다. 아래에는 마지막 성공 응답의 기간을 표시합니다.</MessageBar>}
-    {capacity.isError && <MessageBar variant="danger">갱신하지 못했습니다. {capacity.error.message} {data ? '마지막 성공 결과는 해당 조회 기간의 값입니다.' : '성공한 조회 결과가 없습니다.'}</MessageBar>}
+    {capacity.isFetching && data && <MessageBar>새 결과를 불러오는 중이에요. 마지막 성공 결과의 기간을 표시해요.</MessageBar>}
+    {capacity.isError && <MessageBar variant="danger">갱신하지 못했어요. {capacity.error.message} {data ? '아래 값은 마지막 조회에 성공한 기간의 값이에요.' : '성공한 조회 결과가 없어요.'}</MessageBar>}
     {data && <>
       <Card>
         <CardHeader><CardTitle>같은 시간창의 수요</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          {windowChanged && <MessageBar variant="warning">이전 조회 결과입니다.</MessageBar>}
+          {windowChanged && <MessageBar variant="warning">이전 조회 결과예요.</MessageBar>}
           <DescriptionList columns={2} items={[
             { term: '실제 응답 기간', description: `${at(data.from)} 이상 ~ ${at(data.to)} 미만` },
             { term: '최근 조회', description: at(result?.fetchedAt) },
@@ -205,8 +205,8 @@ export default function LlmCapacityView() {
       <Card>
         <CardHeader><CardTitle>기록의 보존과 전달</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {data.quality.rawHistoryState === 'FULLY_SWEPT' ? <MessageBar variant="warning">조회 기간의 원문 수요 기록이 보존되어 있지 않습니다. 미확인을 0으로 표시하지 않습니다.</MessageBar>
-            : data.quality.rawHistoryState === 'PARTIALLY_SWEPT' ? <MessageBar variant="warning">조회 기간 일부가 삭제되어 보존된 구간만 집계했습니다.</MessageBar> : null}
+          {data.quality.rawHistoryState === 'FULLY_SWEPT' ? <MessageBar variant="warning">조회 기간의 원문 수요 기록이 보존되지 않았어요. 미확인 값은 0으로 표시하지 않아요.</MessageBar>
+            : data.quality.rawHistoryState === 'PARTIALLY_SWEPT' ? <MessageBar variant="warning">조회 기간 일부가 삭제돼 보존된 구간만 집계했어요.</MessageBar> : null}
           <DescriptionList columns={3} items={[
             { term: '원문 기록의 보존 경계', description: data.quality.rawRetainedFrom ? at(data.quality.rawRetainedFrom) : '삭제 경계 보고 없음' },
             { term: '설정된 보존 기간', description: data.quality.configuredRetentionDays === 0 ? '무기한' : `${data.quality.configuredRetentionDays}일` },
@@ -238,19 +238,19 @@ export default function LlmCapacityView() {
             {CONSUMER_SORTS.map((value) => <option key={value} value={value} disabled={value === 'REPORTED_COST_DESC' && !data.summary.financeVisible}>{CONSUMER_SORT_LABELS[value]}</option>)}
           </Select></label>
         </div>
-        {accounts.isError && <MessageBar variant="warning">계정 선택 목록을 불러오지 못했습니다. 현재 필터는 유지합니다.</MessageBar>}
-        {!accounts.isEnabled && <MessageBar>계정 선택 목록은 현재 업무에서 조회하지 않습니다.</MessageBar>}
-        {referenceWarning && <MessageBar>선택 목록은 일부만 표시됩니다. 현재 조건과 권한에서 읽을 수 있는 대상만 조회합니다.</MessageBar>}
+        {accounts.isError && <MessageBar variant="warning">계정 선택 목록을 불러오지 못했어요. 현재 필터는 유지해요.</MessageBar>}
+        {!accounts.isEnabled && <MessageBar>현재 업무에서는 계정 선택 목록을 조회하지 않아요.</MessageBar>}
+        {referenceWarning && <MessageBar>선택 목록은 일부만 보여 줘요. 현재 조건과 권한으로 읽을 수 있는 대상만 조회해요.</MessageBar>}
         <Card><CardHeader><CardTitle>거절·오류 원인</CardTitle></CardHeader><CardContent className="space-y-3">
           {(query.errorType || query.errorTypeMissing || query.reasonCategory) && <div className="flex flex-wrap items-center gap-2"><p className="break-all text-sm">선택한 원인: {query.errorTypeMissing ? '원인 미기록' : query.errorType ? reasonLabel(query.errorType, query.reasonCategory) : '모든 원인'} · {query.reasonCategory ? CATEGORIES[query.reasonCategory] ?? '미분류' : '모든 분류'}</p><Button variant="secondary" size="sm" onClick={() => update({ errorType: undefined, errorTypeMissing: undefined, reasonCategory: undefined })}>원인 전체로</Button></div>}
-          {data.reasons.length === 0 ? <EmptyState title="보존된 거절·오류 기록이 없습니다" /> : <DataTable caption="같은 조건의 거절·오류 원인"><THead><TR><TH>원인</TH><TH>분류</TH><TH>요청</TH><TH>확인된 키</TH></TR></THead><TBody>{data.reasons.map((reason, index) => <TR key={`${reason.errorType}:${index}`}>
+          {data.reasons.length === 0 ? <EmptyState title="보존된 거절이나 오류 기록이 없어요" /> : <DataTable caption="같은 조건의 거절·오류 원인"><THead><TR><TH>원인</TH><TH>분류</TH><TH>요청</TH><TH>확인된 키</TH></TR></THead><TBody>{data.reasons.map((reason, index) => <TR key={`${reason.errorType}:${index}`}>
             <TD><button type="button" className="cursor-pointer text-left text-brand-foreground underline [overflow-wrap:anywhere]" onClick={() => update({ errorType: reason.errorType ?? undefined, errorTypeMissing: reason.errorType == null ? 'true' : undefined, reasonCategory: reason.category, group: 'KEY' })}>{reasonLabel(reason.errorType, reason.category)}</button></TD>
             <TD>{CATEGORIES[reason.category] ?? '미분류'}</TD><TD>{count(reason.requests)}건</TD><TD>{count(reason.knownKeys)}개</TD>
           </TR>)}</TBody></DataTable>}
-          <p className="text-sm text-foreground-muted">거절 전 모델·공급원이 결정되지 않은 기록은 특정 장비의 처리 부하로 귀속하지 않습니다. 구성 연결은 실제 처리 경로나 영향 키 목록이 아닙니다.</p>
+          <p className="text-sm text-foreground-muted">공급원을 확인할 수 없는 거절 기록은 특정 장비의 처리 부하로 볼 수 없어요. 구성 연결은 실제 처리 경로나 영향 키 목록을 뜻하지 않아요.</p>
         </CardContent></Card>
         <Card><CardHeader><CardTitle>같은 조건의 소비처</CardTitle><p className="text-sm text-foreground-muted">전체 {count(data.consumers.totalElements)}개 · {data.consumers.page + 1}페이지</p></CardHeader><CardContent className="space-y-3">
-          {data.consumers.items.length === 0 ? <EmptyState title="현재 조건의 보존된 소비처가 없습니다" /> : <DataTable caption="같은 조건의 소비처"><THead><TR><TH>소비처</TH><TH>요청</TH><TH>입력 / 출력 토큰</TH><TH>보고된 금액</TH>{data.consumers.group === 'KEY' && <TH>현재 키 설정</TH>}</TR></THead><TBody>{data.consumers.items.map((item, index) => <TR key={item.keyId ?? item.workspaceId ?? item.orgId ?? index}>
+          {data.consumers.items.length === 0 ? <EmptyState title="현재 조건에 맞는 보존된 소비처가 없어요" /> : <DataTable caption="같은 조건의 소비처"><THead><TR><TH>소비처</TH><TH>요청</TH><TH>입력 / 출력 토큰</TH><TH>보고된 금액</TH>{data.consumers.group === 'KEY' && <TH>현재 키 설정</TH>}</TR></THead><TBody>{data.consumers.items.map((item, index) => <TR key={item.keyId ?? item.workspaceId ?? item.orgId ?? index}>
             <TD>{item.keyId ? <Link className="text-brand-foreground underline [overflow-wrap:anywhere]" to={withListReturn(adminPaths.llmKeyDetail(item.keyId, scope.activeOrgId), returnTo)}>{item.keyName ?? '이름 없는 키'}</Link>
               : data.consumers.group === 'ORG' && item.orgId ? <button type="button" className="cursor-pointer text-left text-brand-foreground underline" onClick={() => update({ org: item.orgId!, workspaceId: undefined, group: 'WORKSPACE' })}>{item.orgName ?? '이름 없는 기관'}</button>
                 : item.workspaceId ? <button type="button" className="cursor-pointer text-left text-brand-foreground underline" onClick={() => update({ workspaceId: item.workspaceId!, group: 'KEY' })}>{item.workspaceName ?? '이름 없는 워크스페이스'}</button> : '귀속 대상 미상'}</TD>

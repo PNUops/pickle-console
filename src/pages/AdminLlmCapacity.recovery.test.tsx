@@ -49,7 +49,7 @@ test.each([{ label: 'blank', invalid: '   ' }, { label: 'overlong', invalid: 'm'
   await user.clear(screen.getByRole('textbox', { name: '요청한 공개 모델' }))
   await user.type(screen.getByRole('textbox', { name: '요청한 공개 모델' }), invalid)
   await user.click(screen.getByRole('button', { name: '모델 적용' }))
-  await screen.findByText(/갱신하지 못했습니다/)
+  await screen.findByText(/갱신하지 못했어요/)
   expect(queries.at(-1)?.get('publicModelName')).toBe(invalid)
   expect(screen.queryByRole('table', { name: '같은 조건의 소비처' })).not.toBeInTheDocument()
   const editor = screen.getByRole('textbox', { name: '요청한 공개 모델' })
@@ -75,7 +75,7 @@ test.each(['publicModelName', 'errorType'])('clears an initial rejected %s filte
   const queries: URLSearchParams[] = []
   capacityHandler(queries)
   renderApp(`${base}&group=KEY&${field}=${encodeURIComponent('   ')}&page=2`)
-  await screen.findByText(/성공한 조회 결과가 없습니다/)
+  await screen.findByText(/성공한 조회 결과가 없어요/)
   expect(queries).toHaveLength(1)
   expect(queries[0].get(field)).toBe('   ')
   await user.click(screen.getByRole('button', { name: '조회 필터 초기화' }))
@@ -112,7 +112,7 @@ test('retries a first transport failure with the exact original filter', async (
   const queries: URLSearchParams[] = []
   capacityHandler(queries, true)
   renderApp(`${base}&publicModelName=campus%2Fstart`)
-  await screen.findByText(/갱신하지 못했습니다/)
+  await screen.findByText(/갱신하지 못했어요/)
   await user.click(screen.getByRole('button', { name: '다시 조회' }))
   await screen.findByRole('heading', { name: '같은 시간창의 수요' })
   await waitFor(() => expect(queries).toHaveLength(2))
@@ -136,7 +136,7 @@ test('drops an unsubmitted model draft and stale selectors when another institut
   await user.clear(editor)
   await user.type(editor, 'unsubmitted/private-draft')
   await user.selectOptions(screen.getByRole('combobox', { name: '관리 기관 선택' }), uuid(2))
-  await screen.findByText(/갱신하지 못했습니다/)
+  await screen.findByText(/갱신하지 못했어요/)
   expect(screen.getByRole('textbox', { name: '요청한 공개 모델' })).toHaveValue('campus/start')
   expect(screen.queryByText('이전 기관의 선택 이름')).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox', { name: '수요 워크스페이스' })).not.toBeInTheDocument()
@@ -175,7 +175,7 @@ test('resets a draft after a same-role authority revision without exposing old s
   changed.assignments[0].permission.revision = 41
   AUTHORITY_OVERRIDES[orgViewerProfile.id] = changed
   await act(async () => { await auth.refreshProfile() })
-  await screen.findByText(/갱신하지 못했습니다/)
+  await screen.findByText(/갱신하지 못했어요/)
   expect(auth.user?.role).toBe('ORG_VIEWER')
   expect(screen.getByRole('textbox', { name: '요청한 공개 모델' })).toHaveValue('campus/start')
   expect(screen.queryByText('이전 권한의 선택 이름')).not.toBeInTheDocument()
@@ -206,7 +206,7 @@ test('clears a now-denied workspace filter without replaying the previous author
   changed.assignments[0].permission = { mode: 'SELECTED', work: ['llm.observe'], scopes: { LLM: { mode: 'LISTED', workspaceIds: [uuid(13)] } }, revision: 41 }
   AUTHORITY_OVERRIDES[orgViewerProfile.id] = changed
   await act(async () => { await auth.refreshProfile() })
-  await screen.findByText('선택한 기관·공간 범위의 LLM 관측 업무가 없습니다.')
+  await screen.findByText('선택한 기관과 워크스페이스 범위의 LLM 관측 업무가 없어요.')
   expect(queries).toHaveLength(1)
   expect(screen.queryByText('이전 권한의 공간')).not.toBeInTheDocument()
   expect(screen.queryByRole('textbox', { name: '요청한 공개 모델' })).not.toBeInTheDocument()

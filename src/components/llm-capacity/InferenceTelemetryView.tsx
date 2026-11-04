@@ -110,9 +110,9 @@ function MetricChart({ points, metrics, choice, intervalStates }: {
   const states = new Set(metrics.filter((x) => x != null).map((x) => x.state))
   const windowMillis = points.length ? Date.parse(points.at(-1)!.to) - Date.parse(points[0].from) : 0
   return <div className="space-y-2">
-    {states.size === 1 && states.has('UNSUPPORTED') && <MessageBar>지원하지 않는 지표입니다.</MessageBar>}
-    {states.has('SOURCE_FAILED') && <MessageBar variant="warning">일부 관측에 실패했습니다.</MessageBar>}
-    {(states.has('UNKNOWN') || states.has('NOT_REPORTED')) && <MessageBar>보고되지 않은 값이 있습니다.</MessageBar>}
+    {states.size === 1 && states.has('UNSUPPORTED') && <MessageBar>지원하지 않는 지표예요.</MessageBar>}
+    {states.has('SOURCE_FAILED') && <MessageBar variant="warning">일부 관측에 실패했어요.</MessageBar>}
+    {(states.has('UNKNOWN') || states.has('NOT_REPORTED')) && <MessageBar>미확인 값이 있어요.</MessageBar>}
     <TimeSeriesChart title={`${choice.kind === 'host' ? '장비 관측' : '엔진 관측'}: ${info.label}`}
       times={points.map((p) => Date.parse(p.from) / 1000)}
       series={(['mean', 'min', 'max'] as const).map((key, index) => ({ label: names[index], data: values(key) }))}
@@ -144,7 +144,7 @@ function DeviceHistory({ device, previousWindow }: { device: InferenceDevice; pr
   const engineMetric = metricChoices.find((choice) => choiceId(choice) === engineMetricChoice) ?? metricChoices[0]
   const evidence = device.evidence
   return <div className="space-y-4">
-    {previousWindow && <MessageBar variant="warning">이전 조회 기간의 장비 이력입니다.</MessageBar>}
+    {previousWindow && <MessageBar variant="warning">이전 조회 기간의 장비 이력이에요.</MessageBar>}
     <DescriptionList columns={3} items={[
       { term: '관측 원천 연결', description: device.upstreamName ?? '이름 미보고' },
       { term: '관측 원천 ID', description: <span className="break-all">{device.sourceId}</span> },
@@ -157,16 +157,16 @@ function DeviceHistory({ device, previousWindow }: { device: InferenceDevice; pr
       { term: '최신 API 수신', description: at(evidence.latestReceivedAt) },
       { term: '실패 / baseline / reset / gap', description: [evidence.failedSamples, evidence.baselineIntervals, evidence.resetIntervals, evidence.gapIntervals].map(count).join(' / ') },
     ]} />
-    {evidence.freshness === 'STALE' && <MessageBar variant="warning">장비 보고가 지연되고 있습니다.</MessageBar>}
-    {evidence.freshness === 'NOT_REPORTED' && <MessageBar>장비 보고 시각이 없습니다.</MessageBar>}
-    {evidence.gapIntervals != null && evidence.gapIntervals > 0 && <MessageBar>보고가 끊긴 구간이 있습니다.</MessageBar>}
-    {evidence.retentionState === 'OUTSIDE' ? <MessageBar variant="warning">조회 기간이 보존 범위 밖입니다.</MessageBar> : <>
-      {evidence.retentionState === 'PARTIAL' && <MessageBar variant="warning">조회 기간 일부의 이력이 없습니다.</MessageBar>}
-      {evidence.truncated && <MessageBar variant="warning">일부 모델·엔진만 표시합니다.</MessageBar>}
+    {evidence.freshness === 'STALE' && <MessageBar variant="warning">마지막 장비 보고가 오래됐어요.</MessageBar>}
+    {evidence.freshness === 'NOT_REPORTED' && <MessageBar>장비 보고 시각이 없어요.</MessageBar>}
+    {evidence.gapIntervals != null && evidence.gapIntervals > 0 && <MessageBar>보고가 끊긴 구간이 있어요.</MessageBar>}
+    {evidence.retentionState === 'OUTSIDE' ? <MessageBar variant="warning">조회 기간이 보존 범위 밖이에요.</MessageBar> : <>
+      {evidence.retentionState === 'PARTIAL' && <MessageBar variant="warning">조회 기간 일부의 이력이 없어요.</MessageBar>}
+      {evidence.truncated && <MessageBar variant="warning">관측 자료 일부가 표시되지 않아요.</MessageBar>}
       {hostMetric ? <div className="space-y-3">
         <label className="block min-w-0 text-sm">장비 관측 지표<Select aria-label="장비 관측 지표" value={hostMetric} onChange={(event) => setHostChoice(event.target.value)}>{hostKeys.map((key) => <option key={key} value={key}>{metricInfo({ kind: 'host', key }).label}</option>)}</Select></label>
         <MetricChart key={`host:${hostMetric}`} points={points} metrics={points.map((p) => p.host[hostMetric])} choice={{ kind: 'host', key: hostMetric }} />
-      </div> : <EmptyState title="조회 기간의 이력이 없습니다." />}
+      </div> : <EmptyState title="조회 기간의 장비 지표가 없어요." />}
       {selected && engineMetric && <div className="space-y-3 border-t border-stroke-subtle pt-4">
         <label className="block min-w-0 text-sm">관측 모델·엔진<Select aria-label="관측 모델·엔진" value={selectedGroup} onChange={(event) => setEngineChoice(event.target.value)}>{groups.map(([key, engine], index) => <option key={key} value={key}>{engine.modelName} · 엔진 {engine.engineId} · 구성 {engine.configId ?? '미보고'} · 구분 {index + 1}</option>)}</Select></label>
         <DescriptionList columns={2} items={[
@@ -176,7 +176,7 @@ function DeviceHistory({ device, previousWindow }: { device: InferenceDevice; pr
           { term: '구성 구분', description: <span className="break-all">{selected.configId ?? '미보고'}</span> },
           { term: '선택 구분의 유효 / 기준 / reset / gap 구간', description: (['validIntervals', 'baselineIntervals', 'resetIntervals', 'gapIntervals'] as const).map((key) => count(enginePoints.reduce((sum, engine) => sum + (engine?.[key] ?? 0), 0))).join(' / ') },
         ]} />
-        {enginePoints.some((engine) => engine?.intervalState === 'PARTIAL') && <MessageBar variant="warning">일부 지표만 확인할 수 있습니다.</MessageBar>}
+        {enginePoints.some((engine) => engine?.intervalState === 'PARTIAL') && <MessageBar variant="warning">일부 지표만 확인할 수 있어요.</MessageBar>}
         <label className="block min-w-0 text-sm">엔진 관측 지표<Select aria-label="엔진 관측 지표" value={choiceId(engineMetric)} onChange={(event) => setEngineMetricChoice(event.target.value)}>{metricChoices.map((choice) => <option key={choiceId(choice)} value={choiceId(choice)}>{metricInfo(choice).label}{choice.kind === 'histogramMeans' ? ' · 구간 분포 평균' : ''}</option>)}</Select></label>
         <MetricChart key={JSON.stringify([selectedGroup, engineMetric.kind, engineMetric.key])} points={points} metrics={enginePoints.map((e) => e?.[engineMetric.kind === 'host' ? 'gauges' : engineMetric.kind][engineMetric.key])} choice={engineMetric} intervalStates={enginePoints.map((e) => e?.intervalState)} />
       </div>}
@@ -193,11 +193,11 @@ export function InferenceTelemetryView({ telemetry, from, to, previousWindow, re
   return <Card>
     <CardHeader><CardTitle>장비 전체와 추론 관측</CardTitle></CardHeader>
     <CardContent className="space-y-3">
-      {telemetry.status === 'NOT_CONFIGURED' ? <MessageBar>장비 수집이 구성되지 않았습니다.</MessageBar>
-        : telemetry.status === 'NOT_PROVIDED' ? <MessageBar>장비·추론 관측이 제공되지 않습니다.</MessageBar>
-          : !device ? <MessageBar>보고된 장비·추론 표본이 없습니다.</MessageBar>
-            : !sameSource ? <MessageBar variant="warning">선택한 관측 원천과 다릅니다.</MessageBar>
-              : !sameWindow ? <MessageBar variant="warning">장비 이력의 응답 기간이 다릅니다.</MessageBar>
+      {telemetry.status === 'NOT_CONFIGURED' ? <MessageBar>장비 수집이 설정되지 않았어요.</MessageBar>
+        : telemetry.status === 'NOT_PROVIDED' ? <MessageBar>장비와 추론 관측이 제공되지 않았어요.</MessageBar>
+          : !device ? <MessageBar>보고된 장비와 추론 표본이 없어요.</MessageBar>
+            : !sameSource ? <MessageBar variant="warning">선택한 관측 원천과 다른 자료예요.</MessageBar>
+              : !sameWindow ? <MessageBar variant="warning">장비 이력의 응답 기간이 조회 기간과 달라요.</MessageBar>
               : <DeviceHistory key={device.sourceId} device={device} previousWindow={previousWindow} />}
     </CardContent>
   </Card>
