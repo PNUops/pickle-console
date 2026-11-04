@@ -83,7 +83,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     let reads = 0
     server.use(http.get('*/api/v1/admin/orgs/:orgId/operations', () => { reads += 1; return HttpResponse.json(evaluateOrgOperations(uuid(1))) }))
     setup({ ...ACCESS_TOKENS['access-org-admin'], institutionAuthority: null })
-    expect(await screen.findByText('이 기관의 담당자 정보나 수신 설정을 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('이 기관의 담당자 정보나 수신 설정을 조회할 권한이 없어요.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '기관 권한 편집' })).not.toBeInTheDocument()
     expect(reads).toBe(0)
   })
@@ -92,14 +92,14 @@ describe('Explicit institution authority and independent mail settings', () => {
     const profile = profileWith([], 'FULL')
     profile.institutionAuthority = { ...profile.institutionAuthority!, state: 'INVALID', assignments: [], failure: 'INCONSISTENT' }
     setup(profile)
-    await screen.findByText('이 기관의 담당자 정보나 수신 설정을 조회할 권한이 없습니다.')
+    await screen.findByText('이 기관의 담당자 정보나 수신 설정을 조회할 권한이 없어요.')
     expect(screen.queryByRole('button', { name: '기관 권한 편집' })).not.toBeInTheDocument()
   })
 
   test('staff read is permission read-only and does not expose mail fields or profile links', async () => {
     setup(profileWith(['institution.staff.read']))
     await screen.findByRole('heading', { name: '기관 담당자 명단' })
-    expect(screen.getByText('수신 설정 조회 권한이 없습니다. 담당자 권한 정보만 확인할 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByText('수신 설정을 조회할 권한이 없어요. 담당자 권한 정보만 확인할 수 있어요.')).toBeInTheDocument()
     expect(screen.getByText('전체 관리자 · 모든 워크스페이스 · 기관 위임 가능')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '기관 권한 편집' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '신청 메일 수신 설정' })).not.toBeInTheDocument()
@@ -119,7 +119,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     await user.click(within(dialog).getByLabelText('김관리 메일 수신자 지정'))
     await user.click(within(dialog).getByRole('button', { name: '수신 변경안 미리보기' }))
     await user.click(await within(dialog).findByRole('button', { name: '검토한 수신 설정 저장' }))
-    await screen.findByText(/신청 메일 수신 설정을 저장했습니다/)
+    await screen.findByText(/신청 메일 수신 설정을 저장했어요/)
     expect(orgMailSaves[0].body).toEqual({ expectedRevision: 0, mailMode: 'DESIGNATED', recipientIds: [uuid(7)], reason: null })
     expect(orgOperationSaves).toHaveLength(0)
     expect(evaluateOrgOperations(uuid(1))!.members[0].permission?.mode).toBe('FULL')
@@ -166,10 +166,10 @@ describe('Explicit institution authority and independent mail settings', () => {
     expect(within(dialog).queryByRole('button', { name: '검토한 기관 권한 저장' })).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '권한 변경안 미리보기' }))
     await within(dialog).findByRole('button', { name: '검토한 기관 권한 저장' })
-    await user.click(within(dialog).getByLabelText('FULL 담당자 또는 신청 결정 담당자 공백 예외를 적용합니다'))
+    await user.click(within(dialog).getByLabelText('FULL 담당자 또는 신청 결정 담당자 공백 예외를 적용해요'))
     await user.type(within(dialog).getByLabelText('예외 대상 기관 이름 확인'), orgs[0].name)
     await user.click(within(dialog).getByRole('button', { name: '검토한 기관 권한 저장' }))
-    await screen.findByText(/기관 권한을 저장했습니다/)
+    await screen.findByText(/기관 권한을 저장했어요/)
     expect(orgOperationSaves[0].body).toMatchObject({ allowVacancy: true, confirmedOrgId: uuid(1), reason: '담당 범위 조정' })
     const nextActor = mockAuthorityActor(ACCESS_TOKENS['access-org-admin'])
     expect(nextActor.role).toBe('ORG_MANAGER')
@@ -243,7 +243,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     const next = profileWith([], 'FULL')
     next.institutionAuthority!.authorityFingerprint = 'new-revision-with-identical-role'
     frame.update(next)
-    await within(dialog).findByText(/본인의 권한 문맥이 변경됐습니다/)
+    await within(dialog).findByText(/본인의 권한 정보가 바뀌었어요/)
     expect(save).toBeDisabled()
     await user.click(save)
     expect(orgOperationSaves).toHaveLength(0)
@@ -256,7 +256,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     next.role = 'ORG_ADMIN'
     next.institutionAuthority!.accountRole = 'ORG_ADMIN'
     frame.update(next)
-    await within(dialog).findByText(/편집 중 본인의 권한 문맥이 변경됐습니다/)
+    await within(dialog).findByText(/편집 중 본인의 권한 정보가 바뀌었어요/)
     expect(within(dialog).getByRole('button', { name: '권한 변경안 미리보기' })).toBeDisabled()
   })
 
@@ -270,7 +270,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     addMember(58, { mode: 'SELECTED', work: ['institution.staff.read'], scopes: {}, revision: 50 })
     orgOperationRevisions[uuid(1)] = 1
     await user.click(within(dialog).getByRole('button', { name: '검토한 기관 권한 저장' }))
-    await within(dialog).findByText('기관 설정이 다른 화면에서 변경됐습니다')
+    await within(dialog).findByText('최신 기관 설정을 다시 확인해 주세요')
     expect(orgOperationSaves).toHaveLength(0)
     await user.click(within(dialog).getByRole('button', { name: '최신 현재값으로 다시 검토' }))
     await within(dialog).findByText('충돌 전에 작성한 초안 (비교용 · 자동 적용 안 함)')
@@ -325,7 +325,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     await user.click(within(dialog).getByRole('button', { name: '수신 변경안 미리보기' }))
     expect(await within(dialog).findByText('신청 메일을 받을 기관 수신자가 0명입니다.')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '검토한 수신 설정 저장' }))
-    await screen.findByText(/신청 메일 수신 설정을 저장했습니다/)
+    await screen.findByText(/신청 메일 수신 설정을 저장했어요/)
     expect(orgMailSaves[0].body.recipientIds).toEqual([])
     expect(evaluateOrgOperations(uuid(1))!.currentMailRecipientCount).toBe(0)
     expect(evaluateOrgOperations(uuid(1))!.legacyFallback).toBe(false)
@@ -356,7 +356,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     await within(dialog).findByRole('button', { name: '검토한 기관 권한 저장' })
     orgOperationPermissions[`${uuid(7)}:${uuid(1)}`] = { mode: 'FULL', work: [], scopes: {}, revision: 200 }
     await user.click(within(dialog).getByRole('button', { name: '검토한 기관 권한 저장' }))
-    await within(dialog).findByText('기관 설정이 다른 화면에서 변경됐습니다')
+    await within(dialog).findByText('최신 기관 설정을 다시 확인해 주세요')
     expect(orgOperationSaves).toHaveLength(0)
   })
 
@@ -368,7 +368,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     await screen.findByText('조회 실패')
     await user.click(screen.getByRole('button', { name: '다시 조회' }))
     await waitFor(() => expect(calls).toBe(2))
-    expect(screen.queryByText(/버전 .*저장했습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/을 저장했어요/)).not.toBeInTheDocument()
   })
 
   test('typed recipient reads distinguish kind, workspace scope and known unlisted workspace IDs', async () => {
@@ -415,7 +415,7 @@ describe('Explicit institution authority and independent mail settings', () => {
     expect(orgMailPreviews[0].target).toEqual({ requestType: 'VM', workspaceId: uuid(12) })
     expect(orgMailPreviews[0].body.recipientIds).toEqual([member.id])
     await user.click(within(dialog).getByRole('button', { name: '검토한 수신 설정 저장' }))
-    await screen.findByText(/신청 메일 수신 설정을 저장했습니다/)
+    await screen.findByText(/신청 메일 수신 설정을 저장했어요/)
     expect(orgMailSaves[0].body).toEqual({ expectedRevision: 0, mailMode: 'DESIGNATED', recipientIds: [member.id], reason: null })
     expect(evaluateOrgOperations(uuid(1))!.members.find((row) => row.userId === member.id)!.requestMail).toBe(true)
     expect(orgOperationPermissions[`${member.id}:${uuid(1)}`].revision).toBe(17)

@@ -23,12 +23,12 @@ export function AdminOrgOperationsPage() {
   const scope = useAdminScope()
   if (!scope.activeOrgId) return <div className="space-y-5">
     <h1 className="text-2xl font-bold">기관 운영</h1>
-    <p className="text-sm text-neutral-600">기관을 선택해 허용된 담당자 정보와 신청 알림 설정을 확인합니다.</p>
+    <p className="text-sm text-neutral-600">기관을 선택해 허용된 담당자 정보와 신청 알림 설정을 확인해요.</p>
     {scope.catalogPending && <Spinner label="기관 목록 불러오는 중" />}
-    {scope.error && <Alert variant="danger">기관 목록을 불러오지 못했습니다.<Button variant="secondary" onClick={scope.retry}>기관 목록 다시 조회</Button></Alert>}
+    {scope.error && <Alert variant="danger">기관 목록을 불러오지 못했어요.<Button variant="secondary" onClick={scope.retry}>기관 목록 다시 조회</Button></Alert>}
     {!scope.catalogPending && !scope.error && <Card><Table><THead><TR><TH>기관</TH><TH>상태</TH><TH>운영</TH></TR></THead><TBody>
       {scope.options.map((org) => <TR key={org.id}><TD>{org.name}</TD><TD>{org.status === 'DISABLED' ? '비활성' : '활성'}</TD><TD><Link className="text-primary-700 hover:underline" to={adminPaths.orgOperations(org.id)}>명단과 수신 설정 보기</Link></TD></TR>)}
-    </TBody></Table>{scope.options.length === 0 && <p className="p-5 text-sm">등록된 기관이 없습니다.</p>}</Card>}
+    </TBody></Table>{scope.options.length === 0 && <p className="p-5 text-sm">등록된 기관이 없어요.</p>}</Card>}
   </div>
   return <OrgOperationsBody key={scope.activeOrgId} orgId={scope.activeOrgId} />
 }
@@ -70,15 +70,15 @@ function OrgOperationsBody({ orgId }: { orgId: string }) {
     if (active.current) { setEditing(null); setStored({ kind, revision: saved.revision }) }
   }
   return <div className="min-w-0 space-y-6">
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold">기관 운영</h1><p className="mt-1 text-sm text-neutral-600">{scope.activeOrg?.name}의 담당 업무와 신청 알림을 각각 관리합니다.</p></div>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold">기관 운영</h1><p className="mt-1 text-sm text-neutral-600">{scope.activeOrg?.name}의 담당 업무와 신청 알림을 각각 관리해요.</p></div>
       {data && !operations.isError && <div className="flex flex-wrap gap-2">{canDelegate && <Button disabled={operations.isFetching} onClick={() => { setStored(null); setEditing({ kind: 'permission', initial: data }) }}>기관 권한 편집</Button>}{canConfigureMail && <Button variant="secondary" disabled={operations.isFetching} onClick={() => { setStored(null); setEditing({ kind: 'mail', initial: data }) }}>신청 메일 수신 설정</Button>}</div>}
     </div>
     <nav aria-label="기관 업무 연결" className="flex flex-wrap gap-4 text-sm text-primary-700">
       {permissions.canAnyWork(['vm.request.read', 'vm.request.support.read', 'llm.request.read', 'llm.request.support.read', 'domain.request.read', 'domain.request.support.read', 'gpu.request.read', 'gpu.request.support.read'], SYS_READERS) && <Link to={adminPaths.requests(orgId)}>기관 신청 보기</Link>}
       {canAudit && <Link to={adminPaths.orgAudit(orgId)}>기관 변경 이력</Link>}{scope.tier === 'system' && <Link to={adminPaths.orgOperations()}>전체 기관 목록</Link>}
     </nav>
-    {stored && <OperationResult stage="stored">{stored.kind === 'permission' ? '기관 권한' : '신청 메일 수신 설정'}을 저장했습니다.</OperationResult>}
-    {!mayRead && <Alert variant="warning">이 기관의 담당자 정보나 수신 설정을 조회할 권한이 없습니다.</Alert>}
+    {stored && <OperationResult stage="stored">{stored.kind === 'permission' ? '기관 권한' : '신청 메일 수신 설정'}을 저장했어요.</OperationResult>}
+    {!mayRead && <Alert variant="warning">이 기관의 담당자 정보나 수신 설정을 조회할 권한이 없어요.</Alert>}
     {mayRead && operations.isPending && <Spinner label="기관 운영 설정 불러오는 중" />}
     {operations.isError && <Alert variant="danger">{operations.error.message}<Button variant="secondary" onClick={() => void operations.refetch()}>다시 조회</Button>{effectiveTarget && <Button variant="secondary" onClick={() => setSelectionTarget(null)}>일반 자격 조회로 돌아가기</Button>}</Alert>}
     {data && !operations.isError && <>
@@ -90,11 +90,11 @@ function OrgOperationsBody({ orgId }: { orgId: string }) {
           <p className="text-sm">메일 방식: {data.mailMode === 'ALL_APPROVERS' ? '실제 신청 결정 담당자 전체' : data.mailMode === 'DESIGNATED' ? '지정한 수신자만' : '기존 수신 정책 유지'}</p>
           <p className="text-sm">기관 전체 활성 FULL 담당자 {data.activeAdminCount}명 · 일반 자격의 신청 결정 담당자 {data.activeApproverCount}명</p>
           <p className="text-sm">표시 대상의 현재 메일 수신자 {data.currentMailRecipientCount}명</p>
-          {data.legacyFallback && <p className="text-sm">현재는 기존 FULL 담당자 대체 수신 정책이 적용됩니다.</p>}
-          {data.currentMailRecipientCount === 0 && <Alert variant="warning">신청 메일 수신자가 0명입니다. 다른 사람에게 자동으로 보내지 않습니다.</Alert>}
+          {data.legacyFallback && <p className="text-sm">현재는 기존 FULL 담당자 대체 수신 정책을 적용해요.</p>}
+          {data.currentMailRecipientCount === 0 && <Alert variant="warning">현재 신청 메일 수신자가 0명이에요. 다른 사람에게 자동으로 보내지는 않아요.</Alert>}
           <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); if (!requesterInput || isUuid(requesterInput)) setRequesterId(requesterInput.toLowerCase() || undefined) }}><FormField label="신청자 제외 미리보기"><Input value={requesterInput} onChange={(event) => setRequesterInput(event.target.value)} placeholder="사용자 ID (선택)" aria-invalid={!!requesterInput && !isUuid(requesterInput)} /></FormField><Button type="submit" variant="secondary" disabled={!!requesterInput && !isUuid(requesterInput)}>수신자 확인</Button></form>
-          {data.requesterId && <p className="break-all text-sm">신청자 {data.requesterId}를 제외한 결과입니다.</p>}
-        </> : <p className="text-sm">수신 설정 조회 권한이 없습니다. 담당자 권한 정보만 확인할 수 있습니다.</p>}
+          {data.requesterId && <p className="break-all text-sm">신청자 {data.requesterId}를 제외한 결과예요.</p>}
+        </> : <p className="text-sm">수신 설정을 조회할 권한이 없어요. 담당자 권한 정보만 확인할 수 있어요.</p>}
         <p className="text-xs text-neutral-500">조회 시각 {formatDateTime(data.observedAt)} · {data.org.status === 'DISABLED' ? '비활성 기관' : '활성 기관'}</p>
       </Card>
       <section className="min-w-0 space-y-4"><h2 className="font-semibold">기관 담당자 명단</h2>
@@ -102,7 +102,7 @@ function OrgOperationsBody({ orgId }: { orgId: string }) {
           <Select aria-label="기관 표시 역할 필터" className="w-44" value={list.role ?? ''} onChange={(event) => change({ role: event.target.value }, true)}><option value="">모든 표시 역할</option>{ORG_ROLES.map((role) => <option key={role} value={role}>{USER_ROLE_LABELS[role]}</option>)}</Select>
           <Select aria-label="계정 상태 필터" className="w-44" value={list.status ?? ''} onChange={(event) => change({ status: event.target.value }, true)}><option value="">모든 계정 상태</option>{Object.entries(USER_STATUS_LABELS).map(([code, label]) => <option key={code} value={code}>{label}</option>)}</Select></div>
         <p className="text-sm">전체 담당자 {data.members.length}명 · 조건에 맞는 명단 {list.total}명</p>
-        <Card><Table><THead><TR><TH>사용자</TH><TH>표시 역할·상태</TH><TH>이 기관의 권한</TH><TH>신청 메일</TH></TR></THead><TBody>{list.rows.map((member) => <TR key={member.userId}><TD>{canProfile ? <Link className="font-medium text-primary-700 hover:underline" to={adminPaths.users(orgId, member.userId)}>{member.name}</Link> : member.name}<span className="block text-xs">{member.email}</span></TD><TD>{USER_ROLE_LABELS[member.role]}<span className="block text-xs">{USER_STATUS_LABELS[member.status]}</span></TD><TD><PermissionDescription member={member} /></TD><TD>{member.currentMailRecipient == null ? '조회 권한 없음' : <><Badge variant={member.currentMailRecipient ? 'success' : 'neutral'}>{member.currentMailRecipient ? '수신 가능' : '제외'}</Badge><span className="block text-xs">{orgRecipientReason(member.currentMailRecipient ? member.selectionReason : member.exclusionReason)}</span></>}</TD></TR>)}</TBody></Table>{list.rows.length === 0 && <p className="p-6 text-sm">조건에 맞는 담당자가 없습니다.</p>}</Card>
+        <Card><Table><THead><TR><TH>사용자</TH><TH>표시 역할·상태</TH><TH>이 기관의 권한</TH><TH>신청 메일</TH></TR></THead><TBody>{list.rows.map((member) => <TR key={member.userId}><TD>{canProfile ? <Link className="font-medium text-primary-700 hover:underline" to={adminPaths.users(orgId, member.userId)}>{member.name}</Link> : member.name}<span className="block text-xs">{member.email}</span></TD><TD>{USER_ROLE_LABELS[member.role]}<span className="block text-xs">{USER_STATUS_LABELS[member.status]}</span></TD><TD><PermissionDescription member={member} /></TD><TD>{member.currentMailRecipient == null ? '조회 권한 없음' : <><Badge variant={member.currentMailRecipient ? 'success' : 'neutral'}>{member.currentMailRecipient ? '수신 가능' : '제외'}</Badge><span className="block text-xs">{orgRecipientReason(member.currentMailRecipient ? member.selectionReason : member.exclusionReason)}</span></>}</TD></TR>)}</TBody></Table>{list.rows.length === 0 && <p className="p-6 text-sm">조건에 맞는 담당자가 없어요.</p>}</Card>
         <Pagination page={list.page} totalPages={list.totalPages} onPageChange={(page) => change({ page })} />
       </section>
     </>}
