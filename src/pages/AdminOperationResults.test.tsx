@@ -78,7 +78,7 @@ test('guard edits are canceled without saving, and errors stay inside the editor
   await user.type(editor.getByLabelText('동시 연결 상한'), '256')
   await user.click(editor.getByRole('button', { name: '가드 저장' }))
   expect(await editor.findByText('합성 저장 실패')).toBeInTheDocument()
-  expect(screen.queryByText(/연결 가드가 저장되었습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/연결 가드를 저장했어요/)).not.toBeInTheDocument()
 })
 
 test('mapping deletion acknowledgment is not removal completion', async () => {
@@ -90,7 +90,7 @@ test('mapping deletion acknowledgment is not removal completion', async () => {
   await user.click(screen.getByRole('button', { name: '삭제' }))
   await user.click(within(await screen.findByRole('dialog', { name: '포트 매핑 삭제' })).getByRole('button', { name: '삭제' }))
   expect(await screen.findByText('작업 접수')).toBeInTheDocument()
-  expect(screen.getByText(/이 응답만으로 실제 연결 정리 완료/)).toBeInTheDocument()
+  expect(screen.getByText(/응답만으로 실제 연결 정리 완료/)).toBeInTheDocument()
   expect(screen.queryByText('삭제 완료')).not.toBeInTheDocument()
 })
 
@@ -103,7 +103,7 @@ test('revoked campus address is historical and its status is a manual record', a
   await user.click(await screen.findByRole('button', { name: 'shop-app' }))
   const drawer = within(await screen.findByRole('dialog', { name: '캠퍼스 IP 신청 상세' }))
   expect(drawer.getByText('이전 할당 주소')).toBeInTheDocument()
-  expect(drawer.getByText(/실제 외부 연결 상태를 자동으로 측정한 결과는 아닙니다/)).toBeInTheDocument()
+  expect(drawer.getByText(/실제 외부 연결 상태를 자동으로 측정한 결과는 아니에요/)).toBeInTheDocument()
   expect(drawer.queryByRole('button', { name: '회수' })).not.toBeInTheDocument()
 })
 
@@ -196,7 +196,7 @@ test('a late guard save cannot report success over another mapping', async () =>
   await act(async () => { finish(); await gate })
   await waitFor(() => expect(client.isMutating()).toBe(0))
   expect(next.getByText('stuck-vm')).toBeInTheDocument()
-  expect(screen.queryByText(/연결 가드가 저장되었습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/연결 가드를 저장했어요/)).not.toBeInTheDocument()
 })
 
 test('a dismissed delete request cannot close a newly selected mapping', async () => {
