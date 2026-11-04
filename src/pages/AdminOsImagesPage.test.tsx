@@ -164,7 +164,7 @@ describe('catalogue navigation and selection impact', () => {
     renderApp('/admin/os-images?tab=periods&q=지난')
     expect(await screen.findByText('지난 학기')).toBeInTheDocument()
     expect(screen.queryByText('이번 학기')).not.toBeInTheDocument()
-    expect(screen.getByText(/표시명을 수정하면 기존 신청/)).toBeInTheDocument()
+    expect(screen.getByText(/표시명을 바꾸면 기존 신청/)).toBeInTheDocument()
   })
 
   test('keeps empty filter results distinct from missing catalogs', async () => {
@@ -351,7 +351,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
     await user.type(within(dialog).getByLabelText('종료일'), '2027-06-30')
     await user.click(within(dialog).getByRole('button', { name: '추가' }))
 
-    expect(await screen.findByText('사용 기간을 추가했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사용 기간을 추가했어요.')).toBeInTheDocument()
     const created = await findPeriodRow('2027학년도 1학기')
     expect(within(created).getByText('2027-06-30')).toBeInTheDocument()
   })
@@ -389,7 +389,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
     await user.type(endDate, '2027-02-28')
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('사용 기간을 수정했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사용 기간을 수정했어요.')).toBeInTheDocument()
     expect(within(await findPeriodRow('이번 방학')).getByText('2027-02-28')).toBeInTheDocument()
   })
 

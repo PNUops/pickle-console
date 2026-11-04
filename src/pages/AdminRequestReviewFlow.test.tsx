@@ -142,7 +142,7 @@ test('a midnight change must be reviewed before the approval sends a new start d
     await user.click(modal.getByRole('button', { name: '승인 확정' }))
     expect(approveBodies).toHaveLength(0)
     expect(modal.getByText('부여 사용 시작일: 2026-10-05')).toBeInTheDocument()
-    expect(modal.getByText(/승인 내용이 갱신되었습니다/)).toBeInTheDocument()
+    expect(modal.getByText(/승인 내용이 바뀌었어요/)).toBeInTheDocument()
     await user.click(modal.getByRole('button', { name: '승인 확정' }))
     await waitFor(() => expect(approveBodies[0]?.body.grantedStartDate).toBe('2026-10-05'))
   } finally {
@@ -271,7 +271,7 @@ test('a missing context retains actual recipient names without inventing support
   const recipients = await screen.findByRole('table', { name: '대상자' })
   expect(within(recipients).getByText('홍길동')).toBeInTheDocument()
   expect(within(recipients).queryByRole('link', { name: '홍길동' })).not.toBeInTheDocument()
-  await screen.findByText('승인 참고 정보를 불러오지 못했습니다')
+  await screen.findByText('승인 참고 정보를 불러오지 못했어요')
   expect(screen.queryByRole('table', { name: '신청에서 등록된 자원 상태' })).not.toBeInTheDocument()
 })
 
@@ -454,7 +454,7 @@ test('a default LLM request with no dedicated context fixture receives its actua
   const panel = within(await screen.findByRole('complementary', { name: '승인 판단 참고 정보' }))
   expect(panel.getByText('active-admin-key')).toBeInTheDocument()
   expect(panel.queryByText(/물리 용량/)).not.toBeInTheDocument()
-  expect(screen.queryByText('승인 참고 정보를 불러오지 못했습니다')).not.toBeInTheDocument()
+  expect(screen.queryByText('승인 참고 정보를 불러오지 못했어요')).not.toBeInTheDocument()
   expect(screen.queryByRole('table', { name: '신청에서 등록된 자원 상태' })).not.toBeInTheDocument()
 })
 
@@ -570,8 +570,8 @@ test('a late approval response cannot replace another institution confirmation',
   await user.click(await screen.findByRole('button', { name: '승인하기' }))
   await user.click(within(screen.getByRole('dialog', { name: '신청 승인' })).getByRole('button', { name: '승인 확정' }))
   fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(2) } })
-  await screen.findByText('선택한 관리 범위의 신청이 아닙니다')
+  await screen.findByText('선택한 관리 범위의 신청이 아니에요')
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)) })
   expect(resolved).toBe(true)
-  expect(screen.queryByText('승인 내용이 저장됐어요. VM 생성 진행과 실제 완료는 가상머신 상세에서 확인해 주세요.')).not.toBeInTheDocument()
+  expect(screen.queryByText('승인했어요.')).not.toBeInTheDocument()
 })
