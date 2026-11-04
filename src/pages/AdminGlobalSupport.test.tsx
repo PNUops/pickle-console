@@ -66,7 +66,7 @@ test('a role downgrade discards a profile editor and an in-flight correction res
     expect(screen.queryByRole('dialog', { name: '프로필 정정' })).not.toBeInTheDocument()
     await act(async () => { release(); await pending })
     await screen.findByText('202012345')
-    expect(screen.queryByText(/프로필을 정정했습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/프로필을 정정했어요/)).not.toBeInTheDocument()
     expect(screen.queryByText('계정 변경 후 연결 결과')).not.toBeInTheDocument()
   } finally {
     ACCESS_TOKENS['access-org-manager'] = original

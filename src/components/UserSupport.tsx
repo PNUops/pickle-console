@@ -58,13 +58,13 @@ export function ProfileImpactView({ impact }: { impact: ProfileImpact }) {
     <h3 className="font-semibold">변경 영향</h3>
     <p>변경 후 계정 상태: {impact.candidateStatus === 'ACTIVE' ? '활성' : impact.candidateStatus === 'PENDING_VERIFICATION' ? '인증 대기' : impact.candidateStatus === 'DISABLED' ? '비활성' : '탈퇴'}</p>
     <p>{impact.claimsPossible
-      ? '일치하는 대기 초대를 수락할 수 있습니다. 승인된 신청의 자원 생성은 대상자별 조건에 따라 접수됩니다.'
-      : '이 변경만으로 초대 수락이나 자원 생성이 진행되지 않습니다.'}</p>
-    {impact.invitations.length === 0 ? <p className="text-neutral-500">이 변경과 연결된 초대가 없습니다.</p>
+      ? '일치하는 대기 초대를 수락할 수 있어요. 승인된 신청의 리소스 생성은 대상자별 조건에 따라 접수돼요.'
+      : '이 변경만으로 초대 수락이나 리소스 생성이 진행되지는 않아요.'}</p>
+    {impact.invitations.length === 0 ? <p className="text-neutral-500">이 변경과 연결된 초대가 없어요.</p>
       : <ul className="space-y-3">{impact.invitations.map((invitation) => <li key={invitation.id}>
         <span className="font-medium">{invitation.workspaceName}</span>{' '}
         <span>{labelForWorkspaceKind(invitation.workspaceKind)} / {WORKSPACE_ROLE_LABELS[invitation.role]}</span>
-        {invitation.alreadyMember && <span className="block text-neutral-500">이미 구성원인 워크스페이스입니다.</span>}
+        {invitation.alreadyMember && <span className="block text-neutral-500">이미 구성원인 워크스페이스예요.</span>}
         {invitation.recipients.length > 0 && <ul className="mt-1 space-y-1">{invitation.recipients.map((recipient, index) => <li key={`${recipient.requestId}-${index}`}>
           <Link to={adminPaths.requestDetail(recipient.requestId, recipient.orgId)} className="text-primary-700 hover:underline">{resourceName(recipient.type)} 신청</Link>{' '}
           {REQUEST_STATUS_LABELS[recipient.requestStatus]} / 현재 {requestRecipientStatusLabel(recipient.requestStatus, recipient.status, true)} → 예상 {requestRecipientStatusLabel(recipient.requestStatus, recipient.projectedStatus, true)}
@@ -95,18 +95,18 @@ export function UserChangeOutcome({ impact, actualStatus }: { impact: ProfileImp
     <section aria-label="계정 변경 후 연결 결과" className="space-y-3">
       <h2 className="font-semibold">계정 변경 후 연결 결과</h2>
       <p>변경 응답의 계정 상태: {USER_STATUS_LABELS[actualStatus]}</p>
-      <p className="text-neutral-500">변경 전 확인한 초대와 신청의 현재 결과를 허용된 업무와 대상 범위에서 조회합니다.</p>
+      <p className="text-neutral-500">변경 전에 확인한 초대와 신청의 현재 결과를 허용된 업무와 대상 범위에서 조회해요.</p>
       <Link to={adminPaths.userSupport(impact.userId)} className="inline-flex text-primary-700 hover:underline">현재 업무 범위에서 사용자 관계 다시 조회</Link>
-      {invitationIds.size === 0 ? <p>이 변경에서 확인한 초대 대상이 없습니다.</p>
-        : !hasWork(viewer, 'student.support.read', {}, SYS_READERS) ? <p>계정 변경은 저장했습니다. 관계 결과는 별도 지원 업무가 필요합니다.</p>
+      {invitationIds.size === 0 ? <p>이 변경에서 확인한 초대 대상이 없어요.</p>
+        : !hasWork(viewer, 'student.support.read', {}, SYS_READERS) ? <p>계정 변경은 저장했어요. 관계 결과를 보려면 별도 지원 업무가 필요해요.</p>
         : results.isPending ? <Spinner label="계정 변경 후 실제 연결 결과 확인 중" />
           : results.isError ? <Alert variant="danger">{results.error.message}</Alert>
             : <>
               <ul className="space-y-2">{impact.invitations.map((before) => {
                 const actual = results.data.invitations?.find((invitation) => invitation.id === before.id)
-                return <li key={before.id}>{before.workspaceName}: {actual ? actual.status === 'ACCEPTED' ? '가입 완료' : actual.status === 'PENDING' ? '초대 대기' : '초대 취소' : '현재 조회에서 초대를 확인하지 못했습니다.'}</li>
+                return <li key={before.id}>{before.workspaceName}: {actual ? actual.status === 'ACCEPTED' ? '가입 완료' : actual.status === 'PENDING' ? '초대 대기' : '초대 취소' : '현재 조회에서 초대를 확인하지 못했어요.'}</li>
               })}</ul>
-              {requests.length === 0 && requestIds.size > 0 && <p>현재 조회에서 연결된 신청 결과를 확인하지 못했습니다.</p>}
+              {requests.length === 0 && requestIds.size > 0 && <p>현재 조회에서 연결된 신청 결과를 확인하지 못했어요.</p>}
               <ul className="space-y-3">{requests.map((request) => <li key={`${request.id}-${request.recipientId ?? 'none'}`}>
                 <Link className="text-primary-700 hover:underline" to={adminPaths.requestDetail(request.id, request.orgId)}>{request.orgName} / {resourceName(request.type)} 신청</Link>{' '}
                 {request.recipientStatus ? requestRecipientStatusLabel(request.status, request.recipientStatus, true) : '대상자별 생성 상태 없음'}
@@ -133,7 +133,7 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
     queryFn: () => fetchUserSupport(userId, activeOrgId),
     enabled: supportAllowed,
   })
-  if (!supportAllowed) return <Alert>관계를 조회할 권한이 없습니다.</Alert>
+  if (!supportAllowed) return <Alert>관계를 조회할 권한이 없어요.</Alert>
   if (support.isPending) return <><GrantReceiptCard receipt={receipt} /><Spinner label="사용자 관계와 신청 결과 불러오는 중" /></>
   if (support.isError) return <><GrantReceiptCard receipt={receipt} /><Alert variant="danger">{support.error.message}<Button variant="secondary" size="sm" onClick={() => void support.refetch()}>다시 조회</Button></Alert></>
   const data = support.data
@@ -146,8 +146,8 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
     </div>
     <Card className="space-y-3 p-4">
       <h2 className="font-semibold">워크스페이스 관계</h2>
-      <p className="text-sm text-neutral-500">자원 개수에는 종료 이력을 포함하며 도메인은 VM에 연결한 이름도 포함합니다.</p>
-      {data.memberships == null ? <p className="text-sm text-neutral-500">워크스페이스 관계를 제공할 수 없습니다.</p> : data.memberships.length === 0 ? <p className="text-sm text-neutral-500">조회 범위에 연결된 워크스페이스가 없습니다.</p> : <ul className="space-y-3 text-sm">{data.memberships.map((membership) => <li key={membership.workspaceId}>
+      <p className="text-sm text-neutral-500">리소스 개수에는 종료 이력도 포함해요. 도메인은 VM에 연결한 이름도 세어요.</p>
+      {data.memberships == null ? <p className="text-sm text-neutral-500">워크스페이스 관계가 제공되지 않았어요.</p> : data.memberships.length === 0 ? <p className="text-sm text-neutral-500">조회 범위에 연결된 워크스페이스가 없어요.</p> : <ul className="space-y-3 text-sm">{data.memberships.map((membership) => <li key={membership.workspaceId}>
         <Link to={adminPaths.workspaceDetail(membership.workspaceId, activeOrgId, 'members')} className="font-medium text-primary-700 hover:underline">{membership.workspaceName}</Link>{' '}
         {labelForWorkspaceKind(membership.workspaceKind)} / {WORKSPACE_ROLE_LABELS[membership.role]}
         <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-neutral-600">{membership.resourceCounts.map((count) => <li key={count.type}>{resourceName(count.type)} {count.count == null ? '개수 제공되지 않음' : `${count.count}개`}</li>)}</ul>
@@ -155,8 +155,8 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
     </Card>
     <Card className="space-y-3 p-4">
       <h2 className="font-semibold">초대와 가입 결과</h2>
-      {!data.invitationsVisible || data.invitations == null ? <p className="text-sm text-neutral-500">초대 관계를 제공할 수 없습니다.</p>
-        : data.invitations.length === 0 ? <p className="text-sm text-neutral-500">조회 가능한 연결 초대가 없습니다.</p>
+      {!data.invitationsVisible || data.invitations == null ? <p className="text-sm text-neutral-500">초대 관계가 제공되지 않았어요.</p>
+        : data.invitations.length === 0 ? <p className="text-sm text-neutral-500">조회할 수 있는 연결 초대가 없어요.</p>
           : <ul className="space-y-3 text-sm">{data.invitations.map((invitation) => <li key={invitation.id}>
             <Link to={adminPaths.workspaceDetail(invitation.workspaceId, activeOrgId, 'members')} className="text-primary-700 hover:underline">{invitation.workspaceName}</Link>{' '}
             <Badge variant={invitation.status === 'ACCEPTED' ? 'success' : 'warning'}>{invitation.status === 'ACCEPTED' ? '가입 완료' : invitation.status === 'PENDING' ? '초대 대기' : '초대 취소'}</Badge>
@@ -166,7 +166,7 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
     <Card className="space-y-3 p-4">
       <h2 className="font-semibold">신청과 대상자별 결과</h2>
       {data.requests != null && <Link className="inline-flex text-sm text-primary-700 hover:underline" to={adminPaths.userRequests(userId, activeOrgId)}>이 사용자의 관련 신청 보기</Link>}
-      {data.requests == null ? <p className="text-sm text-neutral-500">신청 관계를 제공할 수 없습니다.</p> : data.requests.length === 0 ? <p className="text-sm text-neutral-500">현재 관리 범위에서 연결된 신청이 없습니다.</p> : <DataTable caption="사용자 관련 신청 결과">
+      {data.requests == null ? <p className="text-sm text-neutral-500">신청 관계가 제공되지 않았어요.</p> : data.requests.length === 0 ? <p className="text-sm text-neutral-500">현재 관리 범위에 연결된 신청이 없어요.</p> : <DataTable caption="사용자 관련 신청 결과">
         <THead><TR><TH>신청</TH><TH>관계</TH><TH>검토</TH><TH>생성 결과</TH><TH>기간</TH></TR></THead>
         <TBody>{data.requests.map((request) => <TR key={`${request.id}-${request.recipientId ?? 'applicant'}`}>
           <TD><Link to={adminPaths.requestDetail(request.id, request.orgId)} className="text-primary-700 hover:underline">{resourceName(request.type)} 신청</Link><span className="block text-xs text-neutral-500">{request.workspaceName} / {request.orgName}</span></TD>
@@ -182,8 +182,8 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
     </Card>
     <Card className="space-y-3 p-4">
       <h2 className="font-semibold">자원 접근과 남은 권한</h2>
-      <p className="text-sm text-neutral-500">도메인 접근 조건은 VM에 연결하지 않은 독립 도메인을 대상으로 합니다.</p>
-      {data.resources == null ? <p className="text-sm text-neutral-500">자원 관계를 제공할 수 없습니다.</p> : data.resources.length === 0 ? <p className="text-sm text-neutral-500">현재 관리 범위에서 연결된 자원이 없습니다.</p> : <ul className="space-y-3 text-sm">{data.resources.map((resource) => <li key={`${resource.type}-${resource.id}`} className="rounded border border-neutral-200 p-3">
+      <p className="text-sm text-neutral-500">도메인 접근 조건은 VM에 연결하지 않은 독립 도메인을 대상으로 해요.</p>
+      {data.resources == null ? <p className="text-sm text-neutral-500">리소스 관계가 제공되지 않았어요.</p> : data.resources.length === 0 ? <p className="text-sm text-neutral-500">현재 관리 범위에 연결된 리소스가 없어요.</p> : <ul className="space-y-3 text-sm">{data.resources.map((resource) => <li key={`${resource.type}-${resource.id}`} className="rounded border border-neutral-200 p-3">
         {resource.standingRights == null ? <strong>{resource.name}</strong> : <Link to={accessPath(returnPath, resource.type, resource.id)} className="font-medium text-primary-700 hover:underline">{resource.name} 접근 조건</Link>}
         <p className="mt-1 text-neutral-500">{resourceName(resource.type)} / {resource.orgName} / {resource.workspaceName}</p>
         <AccessSummary resource={resource} userId={userId} onRevokeResult={setReceipt} />
@@ -193,18 +193,18 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
 }
 
 const REASONS: Record<string, string> = {
-  ACCOUNT_INACTIVE: '계정이 활성 상태가 아닙니다.',
-  NOT_WORKSPACE_MEMBER: '이 자원의 워크스페이스 구성원이 아닙니다.',
-  NO_RESOURCE_GRANT: '실효 자원 접근 권한이 없습니다.',
-  RESOURCE_ENDED: '사용 기간이 지났거나 종료 상태입니다.',
-  RESOURCE_NOT_READY: '이 자원은 아직 이용 준비가 완료되지 않았습니다.',
+  ACCOUNT_INACTIVE: '계정이 활성 상태가 아니에요.',
+  NOT_WORKSPACE_MEMBER: '이 리소스의 워크스페이스 구성원이 아니에요.',
+  NO_RESOURCE_GRANT: '이 리소스의 접근 권한이 없어요.',
+  RESOURCE_ENDED: '사용 기간이 지났거나 종료 상태예요.',
+  RESOURCE_NOT_READY: '현재 상태에서는 이 리소스를 이용할 수 없어요.',
 }
 
 const REVOKE_REASONS: Record<string, string> = {
-  FORBIDDEN: '이 역할과 관리 기관에서는 사용자 지정 권한을 회수할 수 없습니다.',
-  RESOURCE_NOT_FOUND: '이미 제거된 자원의 사용자 지정 권한은 이 화면에서 회수할 수 없습니다.',
-  NO_PERSONAL_GRANT: '이 사용자에게 직접 부여된 권한이 없습니다.',
-  ALLOWED: '현재 사용자 지정 권한을 회수할 수 있습니다.',
+  FORBIDDEN: '이 역할과 관리 기관에서는 사용자 지정 권한을 회수할 수 없어요.',
+  RESOURCE_NOT_FOUND: '이미 제거된 리소스의 사용자 지정 권한은 이 화면에서 회수할 수 없어요.',
+  NO_PERSONAL_GRANT: '이 사용자에게 직접 부여한 권한이 없어요.',
+  ALLOWED: '현재 사용자 지정 권한을 회수할 수 있어요.',
 }
 
 type GrantReceipt = { userId: string; type: ResourceType; resourceId: string; name: string; result: AdminBulkChangeApply }
@@ -223,15 +223,15 @@ function GrantReceiptCard({ receipt }: { receipt: GrantReceipt | null }) {
 }
 
 function AccessSummary({ resource, userId, onRevokeResult }: { resource: UserResourceAccess; userId: string; onRevokeResult?: (receipt: GrantReceipt) => void }) {
-  if (resource.standingRights == null || resource.reasons == null) return <p className="mt-2 text-sm text-neutral-500">접근권한 진단은 별도 업무가 필요합니다.</p>
+  if (resource.standingRights == null || resource.reasons == null) return <p className="mt-2 text-sm text-neutral-500">접근 권한을 진단하려면 별도 업무가 필요해요.</p>
   return <div className="mt-2 space-y-2">
     <ResourceState resource={resource} />
     <p>구성원: {resource.workspaceRole ? WORKSPACE_ROLE_LABELS[resource.workspaceRole] : '아님'} / 실효 등급: {resource.effectiveRole ? RESOURCE_ROLE_LABELS[resource.effectiveRole] : '없음'}</p>
     <p>사용자 지정 권한: {resource.personalGrantRole ? RESOURCE_ROLE_LABELS[resource.personalGrantRole] : '없음'} / 워크스페이스 전체 권한: {resource.workspaceGrantRole ? RESOURCE_ROLE_LABELS[resource.workspaceGrantRole] : '없음'}</p>
     {resource.reasons.length > 0 ? <ul className="list-inside list-disc text-danger-700">{resource.reasons.map((reason) => <li key={reason}>{REASONS[reason] ?? reason}</li>)}</ul>
-      : <p className="text-neutral-600">계정과 구성원, 자원 권한의 기본 조건을 충족합니다. 실제 접속 조건은 자원 상세에서 확인해 주세요.</p>}
-    {resource.standingRights && <p className="text-neutral-600">워크스페이스 소유자의 상시권은 접근 권한 목록과 삭제에 관한 권한이며 자원 이용 등급과 별개입니다.</p>}
-    {resource.personalGrantRole && <p className="text-neutral-500">{resource.canRevoke ? '사용자 지정 권한은 현재 계정 상태와 구성원 여부에 관계없이 회수할 수 있습니다.' : resource.revokeReason == null ? '회수 조건 제공되지 않음' : REVOKE_REASONS[resource.revokeReason] ?? '현재 조건에서는 사용자 지정 권한을 회수할 수 없습니다.'}</p>}
+      : <p className="text-neutral-600">계정과 구성원, 리소스 접근 권한의 기본 조건을 충족해요. 실제 접속 조건은 리소스 상세에서 확인해 주세요.</p>}
+    {resource.standingRights && <p className="text-neutral-600">워크스페이스 소유자의 접근 권한 관리와 삭제 권한은 리소스 이용 등급과 별개예요.</p>}
+    {resource.personalGrantRole && <p className="text-neutral-500">{resource.canRevoke ? '대상 사용자의 계정 상태나 워크스페이스 가입 여부와 관계없이 사용자 지정 권한을 회수할 수 있어요.' : resource.revokeReason == null ? '회수 조건 제공되지 않음' : REVOKE_REASONS[resource.revokeReason] ?? '현재 조건에서는 사용자 지정 권한을 회수할 수 없어요.'}</p>}
     <RevokeUserGrant resource={resource} userId={userId} onResult={onRevokeResult} />
   </div>
 }
@@ -289,10 +289,10 @@ function RevokeUserGrant({ resource, userId, onResult }: { resource: UserResourc
         <p className="break-all">대상 사용자: {user.data?.name ?? userId} / {userId}</p>
         <p className="break-all">대상 자원: {result ? result.items.find((item) => item.targetId === resource.id)?.name ?? resource.id : preview?.items[0]?.name ?? resource.id} / {resourceName(resource.type)} / {resource.id}</p>
         <p>{resource.orgName} / {resource.workspaceName}</p>
-        <p>이 사용자에게 직접 부여된 권한을 회수합니다. 워크스페이스 전체 권한은 유지됩니다.</p>
+        <p>이 사용자에게 직접 부여한 권한을 회수해요. 워크스페이스 전체 권한은 유지돼요.</p>
         {read.isPending && <Spinner label="현재 권한과 회수 조건 확인 중" />}
         {read.isError && <Alert variant="danger">{read.error.message}</Alert>}
-        {preview && <p>{preview.items[0]?.applicable ? `회수할 등급: ${previousRoleLabel}` : preview.items[0]?.reason ? labelForBulkReason(preview.items[0].reason) : '이 대상의 회수 결과를 확인하지 못했습니다.'}</p>}
+        {preview && <p>{preview.items[0]?.applicable ? `회수할 등급: ${previousRoleLabel}` : preview.items[0]?.reason ? labelForBulkReason(preview.items[0].reason) : '이 대상의 회수 결과를 확인하지 못했어요.'}</p>}
         {apply.isError && <Alert variant="danger">{apply.error.message}</Alert>}
         {apply.variables && identity.current && <Link className="block break-all text-primary-700 underline" to={adminPaths.bulkReceipt(identity.current.operationId, resource.orgId)}>같은 적용 ID의 저장 결과 조회</Link>}
         {result && <section aria-label="권한 회수 결과" className="space-y-2">

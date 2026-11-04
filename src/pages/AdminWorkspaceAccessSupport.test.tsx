@@ -304,7 +304,7 @@ test('a queued self-profile resource owner is shown as a future effect and needs
   expect(patches).toHaveLength(0)
   expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   await user.type(section.getByLabelText('권한을 얻는 목적'), '내 실습 자원 수령')
-  await user.click(section.getByRole('checkbox', { name: '목적과 정확한 대상, 얻는 권한을 확인했습니다' }))
+  await user.click(section.getByRole('checkbox', { name: '목적과 정확한 대상, 얻는 권한을 확인했어요' }))
   await user.click(screen.getByRole('button', { name: '저장' }))
   await waitFor(() => expect(patches).toHaveLength(1))
   expect(patches[0].confirmation).toEqual({ purpose: '내 실습 자원 수령', fingerprint: 'queued-future-owner', confirmed: true })

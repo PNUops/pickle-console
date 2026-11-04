@@ -183,7 +183,7 @@ export function AdminUsersPage() {
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">사용자 관리</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          이 목록은 관리 범위와 무관하게 모든 기관에서 찾습니다.
+          사용자는 관리 범위와 관계없이 모든 기관에서 찾아요.
         </p>
       </div>
 
@@ -247,8 +247,8 @@ export function AdminUsersPage() {
       {users.isSuccess && users.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
           {status || role || filterOrgId || q
-            ? '조건에 맞는 사용자가 없습니다.'
-            : '표시할 사용자가 없습니다.'}
+            ? '조건에 맞는 사용자가 없어요.'
+            : '표시할 사용자가 없어요.'}
         </Card>
       )}
       {users.isSuccess && users.data.content.length > 0 && (
@@ -374,8 +374,8 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
 
       {!children && <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">워크스페이스 멤버십</h3>
-        {user.memberships == null ? <p className="text-sm text-neutral-500">워크스페이스 관계는 현재 업무로 제공되지 않습니다.</p> : user.memberships.length === 0 ? (
-          <p className="text-sm text-neutral-500">소속된 워크스페이스가 없습니다.</p>
+        {user.memberships == null ? <p className="text-sm text-neutral-500">현재 업무에서는 워크스페이스 관계가 제공되지 않아요.</p> : user.memberships.length === 0 ? (
+          <p className="text-sm text-neutral-500">소속된 워크스페이스가 없어요.</p>
         ) : (
           <ul className="space-y-1 text-sm text-neutral-700">
             {user.memberships.map((m) => (
@@ -405,8 +405,8 @@ export function UserDetailBody({ userId, canManage, supportPath, children }: { u
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">상태 변경 이력</h3>
-        {user.statusChanges == null ? <p className="text-sm text-neutral-500">상태 이력은 현재 업무로 제공되지 않습니다.</p> : user.statusChanges.length === 0 ? (
-          <p className="text-sm text-neutral-500">변경 이력이 없습니다.</p>
+        {user.statusChanges == null ? <p className="text-sm text-neutral-500">현재 업무에서는 상태 이력이 제공되지 않아요.</p> : user.statusChanges.length === 0 ? (
+          <p className="text-sm text-neutral-500">변경 이력이 없어요.</p>
         ) : (
           <ul className="space-y-1 text-sm text-neutral-600">
             {user.statusChanges.map((change, i) => (
@@ -464,7 +464,7 @@ function UserProfileSection({
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">프로필</h3>
         <p className="text-sm text-neutral-500">
-          프로필을 조회할 지원 권한이 없습니다.
+          프로필을 조회할 지원 권한이 없어요.
         </p>
       </section>
     )
@@ -498,7 +498,7 @@ function UserProfileSection({
             if (active.current) onChanged(updated, impact)
             await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
             if (!active.current) return
-            toast.success(`${updated.name}님의 프로필을 정정했습니다. 관계와 신청 결과를 갱신했습니다.`)
+            toast.success(`${updated.name}님의 프로필을 정정했어요.`)
             setOpen(false)
           }}
         />
@@ -577,7 +577,7 @@ function UserProfileCorrectionModal({
   const actorImpact = impactReady ? impact.data.actorAccessImpact : undefined
   const needsAccessConfirmation = !!actorImpact && (actorImpact.increases.length > 0 || actorImpact.pendingResourceOwners.length > 0)
   const accessConfirmed = !needsAccessConfirmation || (!!accessPurpose.trim() && confirmedAccess === actorImpact?.fingerprint)
-  const impactFields = impact.isError ? fieldErrorsOf(toApiError(impact.error, '프로필 변경 영향을 확인하지 못했습니다.').problem) : {}
+  const impactFields = impact.isError ? fieldErrorsOf(toApiError(impact.error, '프로필 변경 영향을 확인하지 못했어요.').problem) : {}
 
   const save = useMutation({
     mutationFn: (submitted: { profile: AdminProfileUpdate; impact: ProfileImpact }) => updateUserProfile(user.id, { ...submitted.profile, ...(needsAccessConfirmation && submitted.impact.actorAccessImpact ? { confirmation: { purpose: accessPurpose.trim(), fingerprint: submitted.impact.actorAccessImpact.fingerprint, confirmed: true } } : {}) }),
@@ -587,7 +587,7 @@ function UserProfileCorrectionModal({
       await onSaved(updated, submitted.impact)
     },
     onError: (err) => {
-      const apiError = toApiError(err, '프로필을 정정하지 못했습니다.')
+      const apiError = toApiError(err, '프로필을 정정하지 못했어요.')
       const mapped = fieldErrorsOf(apiError.problem)
       setFieldErrors(mapped)
       if (mapped.confirmation) { setConfirmedAccess(null); void impact.refetch() }
@@ -613,7 +613,7 @@ function UserProfileCorrectionModal({
         <fieldset disabled={save.isPending} className="space-y-4">
         {error && <Alert variant="danger">{error}</Alert>}
         <p className="text-sm text-neutral-600">
-          문의로 접수된 내용을 확인한 뒤 정정해 주세요. 변경 사실은 본인에게 알림으로 갑니다.
+          접수된 문의 내용을 확인한 뒤 정정해 주세요. 변경 사실은 본인에게 알려요.
         </p>
         <FormField label="직책" error={fieldErrors.position ?? impactFields.position}>
           <Select value={position} onChange={(event) => setPosition(event.target.value)}>
@@ -655,8 +655,7 @@ function UserProfileCorrectionModal({
           />
           {departmentIncomplete && (
             <p className="mt-1 text-xs text-danger-700">
-              소속 학과 코드를 「기타」로 두려면 실제 소속을 직접 입력해 주세요. 코드만으로는
-              소속이 「기타」라는 값으로 굳습니다.
+              소속 학과 코드를 「기타」로 두려면 실제 소속을 직접 입력해 주세요.
             </p>
           )}
         </FormField>
@@ -673,17 +672,17 @@ function UserProfileCorrectionModal({
             onChange={(event) => setReason(event.target.value)}
           />
           <p className="mt-1 text-xs text-neutral-500">
-            감사 기록에 남습니다. 학번이나 그 밖의 값 자체는 적지 마세요.
+            감사 기록에 남아요. 학번 등 정정한 값 자체는 적지 마세요.
           </p>
         </FormField>
         {!unchanged && impact.isFetching && <Spinner label="프로필 변경 영향 확인 중" />}
         {!unchanged && impact.isError && Object.keys(impactFields).length === 0 && <Alert variant="danger">{impact.error.message}<Button variant="secondary" size="sm" onClick={() => void impact.refetch()}>변경 영향 다시 조회</Button></Alert>}
         {!unchanged && impactReady && <ProfileImpactView impact={impact.data} />}
         {needsAccessConfirmation && actorImpact && <section aria-label="회원님의 권한 증가 확인" className="space-y-3">
-          <Alert variant="warning">이 정정으로 회원님의 권한이 늘어납니다. 정확한 대상과 얻는 권한을 확인해 주세요.</Alert>
+          <Alert variant="warning">이 정정으로 회원님의 권한이 늘어날 수 있어요. 정확한 대상과 얻는 권한을 확인해 주세요.</Alert>
           <AccessIncreaseDetails impact={actorImpact} />
           <FormField label="권한을 얻는 목적" required error={fieldErrors.confirmation}><Input value={accessPurpose} onChange={(event) => { setAccessPurpose(event.target.value); setConfirmedAccess(null) }} maxLength={200} /></FormField>
-          <Checkbox label="목적과 정확한 대상, 얻는 권한을 확인했습니다" checked={confirmedAccess === actorImpact.fingerprint} onChange={(event) => setConfirmedAccess(event.target.checked ? actorImpact.fingerprint : null)} />
+          <Checkbox label="목적과 정확한 대상, 얻는 권한을 확인했어요" checked={confirmedAccess === actorImpact.fingerprint} onChange={(event) => setConfirmedAccess(event.target.checked ? actorImpact.fingerprint : null)} />
         </section>}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -728,9 +727,9 @@ function UserOrgRolesSection({ user }: { user: UserAdminDetail }) {
   const viewer = useAuth().user
   const scope = useAdminScope()
   const editable = viewer?.role === 'SYS_ADMIN' ? scope.options : workSources(viewer, 'institution.delegate').map((source) => ({ id: source.institutionId, name: source.institutionName }))
-  if (user.managedOrgs == null) return <p className="text-sm text-neutral-500">기관 담당 정보는 현재 업무로 제공되지 않습니다.</p>
+  if (user.managedOrgs == null) return <p className="text-sm text-neutral-500">현재 업무에서는 기관 담당 정보가 제공되지 않아요.</p>
   return <div className="space-y-3"><h4 className="text-sm font-semibold">기관 담당 정보</h4>
-    {user.managedOrgs.length === 0 ? <p className="text-sm text-neutral-500">배정된 기관 업무가 없습니다.</p>
+    {user.managedOrgs.length === 0 ? <p className="text-sm text-neutral-500">배정된 기관 업무가 없어요.</p>
       : <ul className="space-y-2">{user.managedOrgs.map((org) => <li key={org.orgId} className="rounded-md bg-neutral-50 p-3 text-sm">
         {org.orgName} · {USER_ROLE_LABELS[org.role]}{' '}
         {['institution.staff.read', 'institution.delegate', 'institution.request-mail.read', 'institution.request-mail.configure'].some((work) => hasWork(viewer, work, { orgId: org.orgId }, SYS_READERS))
@@ -759,12 +758,12 @@ function UserGlobalRoleSection({ user }: { user: UserAdminDetail }) {
       setError(null)
       setFieldErrors({})
       toast.success(
-        `${updated.name}(${updated.email})님의 역할을 ${USER_ROLE_LABELS[updated.role]}(으)로 변경했습니다.`,
+        `${updated.name}(${updated.email})님의 역할을 ${USER_ROLE_LABELS[updated.role]}로 변경했어요.`,
       )
       await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
     },
     onError: (err) => {
-      const apiError = toApiError(err, '사용자 역할을 변경하지 못했습니다.')
+      const apiError = toApiError(err, '사용자 역할을 변경하지 못했어요.')
       const mapped = fieldErrorsOf(apiError.problem)
       setFieldErrors(mapped)
       setError(Object.keys(mapped).length > 0 ? null : apiError.message)
@@ -778,14 +777,13 @@ function UserGlobalRoleSection({ user }: { user: UserAdminDetail }) {
     update.mutate()
   }
 
-  if (user.managedOrgs == null) return <Alert>기관 업무를 확인할 수 없어 전역 역할을 변경할 수 없습니다.</Alert>
+  if (user.managedOrgs == null) return <Alert>기관 업무를 확인할 수 없어 전역 역할을 바꿀 수 없어요.</Alert>
   if (user.managedOrgs.length > 0) {
     return (
       <div className="space-y-2">
         <h4 className="text-sm font-semibold text-neutral-800">전역 역할</h4>
         <Alert variant="info">
-          전역 역할을 변경하려면 위 기관별 역할을 하나씩 모두 회수해 주세요. 마지막 기관을
-          회수하면 일반 사용자로 전환되고 전역 역할 변경 폼이 열립니다.
+          전역 역할을 바꾸려면 기관별 역할을 먼저 모두 회수해 주세요. 마지막 기관 역할을 회수하면 일반 사용자로 바뀌고 전역 역할을 변경할 수 있어요.
         </Alert>
       </div>
     )
@@ -795,8 +793,7 @@ function UserGlobalRoleSection({ user }: { user: UserAdminDetail }) {
     <div className="space-y-3">
       <h4 className="text-sm font-semibold text-neutral-800">전역 역할</h4>
       <p className="text-sm text-neutral-500">
-        일반 사용자와 시스템 계층 역할만 관리합니다. 역할이 바뀌면 기존 로그인 세션은
-        무효화됩니다.
+        일반 사용자와 시스템 계층 역할을 관리해요. 역할이 바뀌면 기존 로그인 세션은 무효화돼요.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <form onSubmit={submit} className="flex flex-wrap items-start gap-4" noValidate>
@@ -881,7 +878,7 @@ function UserStatusActions({
     },
     onError: (err) => {
       setMfaResetOpen(false)
-      setError(toApiError(err, '2단계 인증을 초기화하지 못했습니다.').message)
+      setError(toApiError(err, '2단계 인증을 초기화하지 못했어요.').message)
     },
   })
 
@@ -896,7 +893,7 @@ function UserStatusActions({
       setFieldErrors({})
     },
     onError: (err) => {
-      const apiError = toApiError(err, '사용자를 비활성화하지 못했습니다.')
+      const apiError = toApiError(err, '사용자를 비활성화하지 못했어요.')
       const fields = fieldErrorsOf(apiError.problem)
       setFieldErrors(fields)
       setError(Object.keys(fields).length > 0 ? null : apiError.message)
@@ -905,13 +902,13 @@ function UserStatusActions({
 
   const enable = useMutation({
     mutationFn: (_impact: ProfileImpact) => enableUser(userId),
-    onSuccess: async (updated, submittedImpact) => { if (active.current) onEnabled(updated, submittedImpact); await invalidate(); if (active.current) { setEnableOpen(false); toast.success('재활성화 결과와 연결된 신청 상태를 갱신했습니다.') } },
-    onError: (err) => setError(toApiError(err, '사용자를 활성화하지 못했습니다.').message),
+    onSuccess: async (updated, submittedImpact) => { if (active.current) onEnabled(updated, submittedImpact); await invalidate(); if (active.current) { setEnableOpen(false); toast.success('비활성화를 해제했어요.') } },
+    onError: (err) => setError(toApiError(err, '비활성화를 해제하지 못했어요.').message),
   })
 
   if (status === 'WITHDRAWN') {
     return (
-      <p className="text-sm text-neutral-500">탈퇴한 계정은 상태를 변경할 수 없습니다.</p>
+      <p className="text-sm text-neutral-500">탈퇴한 계정은 상태를 바꿀 수 없어요.</p>
     )
   }
 
@@ -922,8 +919,7 @@ function UserStatusActions({
       {status === 'DISABLED' ? (
         <>
           <p className="text-sm text-neutral-500">
-            비활성화 직전 상태로 복원합니다. 미인증 상태였던 계정은 다시 인증 대기로 돌아갑니다.
-            별도로 회수한 기관 역할과 자원 권한은 재활성화해도 복원되지 않습니다.
+            비활성화 직전 상태로 복원해요. 미인증 계정은 다시 인증 대기로 돌아가요. 별도로 회수한 기관 역할과 리소스 접근 권한은 복원되지 않아요.
           </p>
           <Button
             variant="secondary"
@@ -937,8 +933,7 @@ function UserStatusActions({
       ) : (
         <>
           <p className="text-sm text-neutral-500">
-            워크스페이스와 자원, 구성원과 기관 역할, 자원에 부여된 권한은 유지됩니다.
-            필요한 권한 회수는 별도로 처리합니다.
+            워크스페이스와 리소스, 구성원과 기관 역할, 리소스에 부여한 권한은 유지돼요. 필요한 권한 회수는 별도로 처리해 주세요.
           </p>
           <Button variant="danger" onClick={() => setOpen(true)}>
             계정 비활성화
@@ -976,8 +971,7 @@ function UserStatusActions({
       >
         <div className="space-y-3">
           <Alert variant="warning">
-            비활성화 즉시 대상 계정의 모든 세션이 종료되고 로그인·SSH 접속이 차단됩니다. 사유는
-            대상 사용자와 시스템 관리자에게 통지됩니다.
+            기존 로그인 세션을 무효화하고 새 로그인과 개인 키 SSH 접속을 차단해요. 진행 중인 API 요청과 기존 SSH 연결은 바로 종료하지 않아요. 웹 터미널은 권한 재검사에서 비활성을 확인하면 닫혀요. VM에서 비밀번호 SSH를 허용했다면 이 조치만으로 차단되지 않아요. 대상 사용자와 시스템 관리자에게 사유 안내를 요청해요.
           </Alert>
           <label className="block space-y-1">
             <span className="text-sm font-medium text-neutral-700">비활성화 사유</span>
@@ -985,7 +979,7 @@ function UserStatusActions({
               rows={3}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="비활성화 사유를 입력하세요 (이력·감사에 기록됩니다)."
+              placeholder="비활성화 사유를 입력해 주세요. 이력과 감사 기록에 남아요."
             />
             {fieldErrors.reason && (
               <span className="text-sm text-danger-600" role="alert">
@@ -1024,8 +1018,7 @@ function UserStatusActions({
         }
       >
         <Alert variant="warning">
-          초기화하면 대상 사용자의 2단계 인증 등록과 복구 코드가 삭제됩니다. 이후 비밀번호만으로
-          로그인할 수 있으며, 감사 기록과 사용자 통지가 남습니다.
+          대상 사용자의 2단계 인증 등록과 복구 코드를 삭제해요. 다시 사용하려면 새로 등록해야 해요. 초기화만으로 로그인 세션을 종료하지는 않아요. 감사 기록과 사용자 통지는 남아요.
         </Alert>
       </Modal>
     </section>

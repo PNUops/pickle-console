@@ -47,8 +47,8 @@ test('student lookup alone never requests the relationship graph or invents unav
   let supportReads = 0
   server.use(http.get('*/api/v1/admin/users/:userId/support', () => { supportReads++; return new HttpResponse(null, { status: 403 }) }))
   renderApp(`/admin/users/${uuid(42)}`)
-  await screen.findByText('관계를 조회할 권한이 없습니다.')
-  expect(screen.getByText('상태 이력은 현재 업무로 제공되지 않습니다.')).toBeInTheDocument()
+  await screen.findByText('관계를 조회할 권한이 없어요.')
+  expect(screen.getByText('현재 업무에서는 상태 이력이 제공되지 않아요.')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '정정' })).not.toBeInTheDocument()
   expect(screen.queryByText('연구팀')).not.toBeInTheDocument()
   expect(supportReads).toBe(0)
@@ -57,7 +57,7 @@ test('student lookup alone never requests the relationship graph or invents unav
 test('student support alone shows unavailable graph sections instead of empty relationships', async () => {
   selected(['student.support.read'])
   renderApp(`/admin/users/${uuid(42)}`)
-  await screen.findByText('워크스페이스 관계를 제공할 수 없습니다.')
+  await screen.findByText('워크스페이스 관계가 제공되지 않았어요.')
   await waitFor(() => expect(screen.queryByText('연구팀')).not.toBeInTheDocument())
   expect(screen.queryByText('활성 VM 0')).not.toBeInTheDocument()
 })
