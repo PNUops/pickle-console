@@ -20,7 +20,7 @@ test('editing the confirmed profile access purpose requires a new acknowledgemen
   await user.type(screen.getByLabelText('사유'), '본인 확인')
   const review = within(await screen.findByRole('region', { name: '회원님의 권한 증가 확인' }))
   const purpose = review.getByLabelText('권한을 얻는 목적')
-  const acknowledge = review.getByRole('checkbox', { name: '목적과 정확한 대상, 얻는 권한을 확인했습니다' })
+  const acknowledge = review.getByRole('checkbox', { name: '목적과 정확한 대상, 얻는 권한을 확인했어요' })
   await user.type(purpose, '목적 A')
   await user.click(acknowledge)
   expect(screen.getByRole('button', { name: '저장' })).toBeEnabled()

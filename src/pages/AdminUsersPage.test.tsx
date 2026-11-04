@@ -264,7 +264,7 @@ describe('관리자 사용자 목록', () => {
     expect(within(roleSelect).queryByRole('option', { name: '기관 관리자' })).not.toBeInTheDocument()
     await user.selectOptions(roleSelect, 'SYS_MANAGER')
     await user.click(drawer.getByRole('button', { name: '역할 변경' }))
-    expect(await screen.findByText(/홍길동.*시스템 운영자.*변경했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/홍길동.*시스템 운영자.*변경했어요/)).toBeInTheDocument()
     expect(userPatchBodies).toEqual([{ userId: uuid(42), body: { role: 'SYS_MANAGER' } }])
   })
 
@@ -275,7 +275,7 @@ describe('관리자 사용자 목록', () => {
     await openDetail(user, '김관리')
     const drawer = within(await screen.findByRole('dialog', { name: '사용자 상세' }))
     const permissions = (await drawer.findByText('권한 관리')).closest('section')!
-    expect(within(permissions).getByText(/기관별 역할을 하나씩 모두 회수/)).toBeInTheDocument()
+    expect(within(permissions).getByText(/기관별 역할을 먼저 모두 회수/)).toBeInTheDocument()
     expect(within(permissions).queryByRole('button', { name: '역할 변경' })).not.toBeInTheDocument()
   })
 
@@ -343,7 +343,7 @@ describe('관리자 사용자 목록', () => {
     await user.type(await screen.findByLabelText('사용자 검색'), 'nobody')
     await openDetail(user, '박무소속')
     const drawer = within(screen.getByRole('dialog', { name: '사용자 상세' }))
-    expect(await drawer.findByText('배정된 기관 업무가 없습니다.')).toBeInTheDocument()
+    expect(await drawer.findByText('배정된 기관 업무가 없어요.')).toBeInTheDocument()
     expect(drawer.getByRole('link', { name: /실습지원센터 업무 편집/ })).toHaveAttribute('href', `/admin/org-operations?org=${uuid(1)}`)
   })
 
@@ -449,7 +449,7 @@ describe('관리자 사용자 목록', () => {
 
     await user.selectOptions(screen.getByLabelText('소속 학과 코드'), 'OTHER')
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
-    expect(screen.getByText(/소속이 「기타」라는 값으로 굳습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/소속 학과 코드를 「기타」로 두려면 실제 소속을 직접 입력해 주세요/)).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('소속 직접 입력'), '융합학부')
     await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
