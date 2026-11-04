@@ -32,7 +32,7 @@ test('renders reported global history and keeps measured zero distinct from unsu
   await user.selectOptions(figure.getByRole('combobox', { name: '장비 관측: GPU 활성도 정확값' }), String(Date.parse(from) / 1000))
   expect(figure.getByText('관측 평균 0%')).toBeInTheDocument()
   await user.selectOptions(screen.getByRole('combobox', { name: '장비 관측 지표' }), 'gpu_memory_total_bytes')
-  expect(await screen.findByText('지원하지 않는 지표입니다.')).toBeInTheDocument()
+  expect(await screen.findByText('지원하지 않는 지표예요.')).toBeInTheDocument()
   expect(screen.queryByText(/기관·공간·키·원인별 수요 필터로 나눈 장비 점유율이 아닙니다/)).not.toBeInTheDocument()
 })
 
@@ -55,9 +55,9 @@ test('separates an expired historical window from configured but unreported tele
   value.telemetry.device!.series = []
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/조회 기간이 보존 범위 밖입니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/조회 기간이 보존 범위 밖이에요/)).toBeInTheDocument()
   expect(screen.queryByRole('img', { name: '장비 관측: GPU 활성도' })).not.toBeInTheDocument()
-  expect(screen.queryByText(/장비 수집이 구성되지 않았습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/장비 수집이 설정되지 않았어요/)).not.toBeInTheDocument()
 })
 
 test('labels present reporter staleness without discarding historical observations', async () => {
@@ -65,7 +65,7 @@ test('labels present reporter staleness without discarding historical observatio
   value.telemetry.device!.evidence.freshness = 'STALE'
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/장비 보고가 지연되고 있습니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/마지막 장비 보고가 오래됐어요/)).toBeInTheDocument()
   expect(screen.getByRole('img', { name: '장비 관측: GPU 활성도' })).toBeInTheDocument()
 })
 
@@ -106,14 +106,14 @@ test('refuses device charts whose response window differs from the demand respon
   value.telemetry.device!.from = '2026-10-19T00:00:00Z'
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/장비 이력의 응답 기간이 다릅니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/장비 이력의 응답 기간이 조회 기간과 달라요/)).toBeInTheDocument()
   expect(screen.queryByRole('img', { name: '장비 관측: GPU 활성도' })).not.toBeInTheDocument()
 })
 
 test('refuses a response for a different explicitly selected observation source', async () => {
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(reported())))
   renderApp(`${route}&telemetrySourceId=${uuid(402)}`)
-  expect(await screen.findByText(/선택한 관측 원천과 다릅니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/선택한 관측 원천과 다른 자료예요/)).toBeInTheDocument()
   expect(screen.queryByRole('img', { name: '장비 관측: GPU 활성도' })).not.toBeInTheDocument()
 })
 
@@ -155,8 +155,8 @@ test('keeps old device history visibly tied to its response window after a new-w
   renderApp(route)
   await screen.findByRole('img', { name: '장비 관측: GPU 활성도' })
   await user.click(screen.getByRole('button', { name: '1시간' }))
-  await screen.findByText(/갱신하지 못했습니다/)
-  expect(screen.getByText(/이전 조회 기간의 장비 이력입니다/)).toBeInTheDocument()
+  await screen.findByText(/갱신하지 못했어요/)
+  expect(screen.getByText(/이전 조회 기간의 장비 이력이에요/)).toBeInTheDocument()
   expect(screen.getByRole('img', { name: '장비 관측: GPU 활성도' })).toBeInTheDocument()
   expect(screen.queryByRole('table', { name: '같은 조건의 소비처' })).not.toBeInTheDocument()
 })
@@ -189,9 +189,9 @@ test('keeps configured but unreported history separate from missing installation
   value.telemetry = inferenceTelemetryFixture({ from, to }, 'not-reported', fixtureNow)
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText('조회 기간의 이력이 없습니다.')).toBeInTheDocument()
-  expect(screen.getByText(/장비 보고 시각이 없습니다/)).toBeInTheDocument()
-  expect(screen.queryByText(/장비 수집이 구성되지 않았습니다/)).not.toBeInTheDocument()
+  expect(await screen.findByText('조회 기간의 장비 지표가 없어요.')).toBeInTheDocument()
+  expect(screen.getByText(/장비 보고 시각이 없어요/)).toBeInTheDocument()
+  expect(screen.queryByText(/장비 수집이 설정되지 않았어요/)).not.toBeInTheDocument()
   expect(screen.queryByRole('img', { name: '장비 관측: GPU 활성도' })).not.toBeInTheDocument()
 })
 
@@ -206,7 +206,7 @@ test('preserves a partial retention boundary instead of rendering a supplied zer
   device.series[0].failedSamples = null
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/조회 기간 일부의 이력이 없습니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/조회 기간 일부의 이력이 없어요/)).toBeInTheDocument()
   const chart = screen.getByRole('img', { name: '장비 관측: GPU 활성도' })
   const figure = within(chart.closest('figure')!)
   await user.selectOptions(figure.getByRole('combobox'), String(Date.parse(from) / 1000))
@@ -233,7 +233,7 @@ test('rejects an oversized bucket count and recovers through the existing explic
   const user = userEvent.setup()
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
   renderApp(`/admin/llm/status?tab=metrics&view=capacity&from=${from}&to=2026-10-20T00:25:00.125Z&bucketSeconds=1`)
-  expect(await screen.findByText(/갱신하지 못했습니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/갱신하지 못했어요/)).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '같은 시간창의 수요' })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '조회 필터 초기화' }))
   expect(await screen.findByRole('heading', { name: '같은 시간창의 수요' })).toBeInTheDocument()
@@ -286,7 +286,7 @@ test('labels partially comparable engine intervals while keeping their valid met
   value.telemetry.device!.series[1].engines[0].intervalState = 'PARTIAL'
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser), http.get('*/api/v1/admin/llm/capacity', () => HttpResponse.json(value)))
   renderApp(route)
-  expect(await screen.findByText(/일부 지표만 확인할 수 있습니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/일부 지표만 확인할 수 있어요/)).toBeInTheDocument()
   await user.selectOptions(screen.getByRole('combobox', { name: '엔진 관측 지표' }), JSON.stringify(['rates', 'vllm:generation_tokens_total']))
   const figure = within(screen.getByRole('img', { name: '엔진 관측: 출력 토큰 /초' }).closest('figure')!)
   await user.selectOptions(figure.getByRole('combobox'), String((Date.parse(from) + 60_000) / 1000))
@@ -324,7 +324,7 @@ test.each([1, 59, 86401])('recovers an initial rejected bucket %s through the ex
   const user = userEvent.setup()
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
   renderApp(`${route}&bucketSeconds=${bucket}`)
-  expect(await screen.findByText(/갱신하지 못했습니다/)).toBeInTheDocument()
+  expect(await screen.findByText(/갱신하지 못했어요/)).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '같은 시간창의 수요' })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '조회 필터 초기화' }))
   expect(await screen.findByRole('heading', { name: '같은 시간창의 수요' })).toBeInTheDocument()
@@ -366,7 +366,7 @@ test('consumes the sample-ingestion response with observed mean, rate, zero and 
   figure = within(screen.getByRole('img', { name: '장비 관측: GPU 메모리 보고값' }).closest('figure')!)
   await user.selectOptions(figure.getByRole('combobox'), first)
   expect(figure.getByText('관측 평균 —')).toBeInTheDocument()
-  expect(screen.getByText('지원하지 않는 지표입니다.')).toBeInTheDocument()
+  expect(screen.getByText('지원하지 않는 지표예요.')).toBeInTheDocument()
   const engine = screen.getByRole('combobox', { name: '엔진 관측 지표' })
   await user.selectOptions(engine, JSON.stringify(['rates', 'vllm:prompt_tokens_total']))
   chart = screen.getByRole('img', { name: '엔진 관측: 입력 토큰 /초' })

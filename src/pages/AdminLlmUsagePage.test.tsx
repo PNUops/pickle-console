@@ -123,7 +123,7 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     // 요청 수를 갖고도 같은 응답 시간을 말하게 된다.
     expect(within(known).getByText('1,300ms')).toBeInTheDocument()
     expect(within(unknown).getByText('1,750ms')).toBeInTheDocument()
-    expect(screen.getByText('일부 토큰은 추정값입니다')).toBeInTheDocument()
+    expect(screen.getByText('일부 토큰은 추정값이에요')).toBeInTheDocument()
     expect(adminLlmUsageQueries.some((query) => query.includes('days=7') && query.includes('top=20'))).toBe(true)
 
     const thirty = screen.getByRole('button', { name: '30일' })
@@ -397,9 +397,9 @@ describe('관리자 LLM 사용량 신뢰도와 상태 처리', () => {
       }),
     )
     const empty = renderApp('/admin/llm/usage')
-    expect(await screen.findByRole('heading', { name: '선택 기간에 LLM 요청이 없습니다' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '표시할 소비처가 없습니다' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '검토할 한도가 없습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '선택 기간에 기록된 LLM 요청이 없어요' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '표시할 소비처가 없어요' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '표시할 한도 검토 항목이 없어요' })).toBeInTheDocument()
     empty.unmount()
 
     server.use(
