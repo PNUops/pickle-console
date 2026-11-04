@@ -84,7 +84,7 @@ describe('institution resource authority projections', () => {
     let requests = 0
     server.use(http.get('*/api/v1/admin/domains', () => { requests++; return HttpResponse.json(page([])) }))
     renderPage({ ...orgAdminProfile, institutionAuthority: undefined }, '/admin/domains')
-    expect(await screen.findByText('공개 서비스를 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('공개 서비스를 조회할 권한이 없어요.')).toBeInTheDocument()
     expect(requests).toBe(0)
   })
 
@@ -115,7 +115,7 @@ describe('institution resource authority projections', () => {
     const drawer = await screen.findByRole('dialog', { name: '도메인 상세' })
     await within(drawer).findByRole('button', { name: '기한 조정' })
     expect(within(drawer).queryByRole('button', { name: '강제 해제' })).not.toBeInTheDocument()
-    expect(within(drawer).getByText('레코드 원문을 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(within(drawer).getByText('레코드 원문을 조회할 권한이 없어요.')).toBeInTheDocument()
     await userEvent.click(within(drawer).getByRole('button', { name: '기한 조정' }))
     await waitFor(() => expect(sent).toHaveLength(1))
     expect(sent[0]).toEqual({ renewDueAt: '2027-03-11T14:59:59.000Z' })
@@ -161,7 +161,7 @@ describe('institution resource authority projections', () => {
     const drawer = await screen.findByRole('dialog', { name: '도메인 상세' })
     expect(await within(drawer).findByRole('button', { name: '재검증' })).toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: '강제 해제' })).not.toBeInTheDocument()
-    expect(within(drawer).getByText('라우트를 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(within(drawer).getByText('라우트를 조회할 권한이 없어요.')).toBeInTheDocument()
   })
 
   test('route resolution uses actual domain authority without assuming its institution is the VM filter', async () => {
@@ -181,7 +181,7 @@ describe('institution resource authority projections', () => {
     expect(requested).toHaveLength(2)
     expect(requested.every((url) => !url.searchParams.has('orgId'))).toBe(true)
     expect(within(drawer).queryByText('미적용')).not.toBeInTheDocument()
-    expect(within(drawer).queryByText('연결 정책 원문을 조회할 권한이 없습니다.')).not.toBeInTheDocument()
+    expect(within(drawer).queryByText('연결 정책 원문을 조회할 권한이 없어요.')).not.toBeInTheDocument()
   })
 
   test('publication operation obtains its exact current policy reference and saves without a metadata grant', async () => {
@@ -223,7 +223,7 @@ describe('institution resource authority projections', () => {
       http.get('*/api/v1/admin/routes/:routeId/source-policy', () => { rawReads++; return HttpResponse.json({ allowedCidrs: ['192.0.2.0/24'], revision: 8, explicit: true, applyState: 'APPLIED' }) }))
     renderPage(selected(['vm.metadata.support.read']), `/admin/domains?domainId=${row.id}`)
     const drawer = await screen.findByRole('dialog', { name: '도메인 상세' })
-    expect(await within(drawer).findByText('연결 정책 원문을 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(await within(drawer).findByText('연결 정책 원문을 조회할 권한이 없어요.')).toBeInTheDocument()
     expect(rawReads).toBe(0)
   })
 
@@ -259,7 +259,7 @@ describe('institution resource authority projections', () => {
     await user.keyboard('{End}')
     await waitFor(() => expect(screen.getByRole('tab', { name: '루트 도메인' })).toHaveFocus())
     expect(screen.queryByRole('tab', { name: '도메인' })).not.toBeInTheDocument()
-    expect(await screen.findByText('등록된 루트 도메인이 없습니다. 루트는 등록 절차가 넣습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('등록된 루트 도메인이 없어요.')).toBeInTheDocument()
   })
 
   test('period-only GPU commands remain usable when connection metadata is hidden', async () => {
@@ -415,7 +415,7 @@ describe('domain renewal asynchronous focus', () => {
     await user.keyboard('{Enter}')
     await waitFor(() => expect(sent).toHaveLength(1))
     expect(action).toBeDisabled()
-    const reason = within(drawer).getByLabelText('사유 (감사 기록에 남습니다)')
+    const reason = within(drawer).getByLabelText('사유 (감사 기록에 남아요)')
     if (focus === 'body') {
       // Model the browser blur that JSDOM does not apply to disabled buttons.
       const previous = document.body.getAttribute('tabindex')
@@ -429,7 +429,7 @@ describe('domain renewal asynchronous focus', () => {
       expect(reason).toHaveFocus()
     }
     complete()
-    await within(drawer).findByText(status === 200 ? /사용 기한을 옮겼습니다/ : '기한 조정을 완료하지 못했습니다.')
+    await within(drawer).findByText(status === 200 ? /사용 기한을 변경했어요/ : '기한 조정을 완료하지 못했습니다.')
     await waitFor(() => expect(action).toBeEnabled())
     expect(focus === 'body' ? action : reason).toHaveFocus()
     expect(sent).toEqual([{ renewDueAt: '2027-03-11T14:59:59.000Z' }])
@@ -482,7 +482,7 @@ describe('pending upper confirmation keeps renewal focus ownership', () => {
     expect(document.body).toHaveFocus()
     try {
       finishRenewal()
-      await within(drawer).findByText(status === 200 ? /사용 기한을 옮겼습니다/ : '기한 조정을 완료하지 못했습니다.')
+      await within(drawer).findByText(status === 200 ? /사용 기한을 변경했어요/ : '기한 조정을 완료하지 못했습니다.')
       await waitFor(() => expect(renewal).toBeEnabled())
       expect(document.body).toHaveFocus()
       expect(release).toBeDisabled()

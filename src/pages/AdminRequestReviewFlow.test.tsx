@@ -481,7 +481,7 @@ test('a foreign domain reference preserves actual row permissions while a malfor
   const view = renderApp(`/admin/domains?org=${uuid(1)}&domainId=${target.id}`)
   const drawer = within(await screen.findByRole('dialog', { name: '도메인 상세' }))
   await drawer.findByRole('heading', { name: target.fqdn })
-  expect(drawer.getByText('레코드 원문을 조회할 권한이 없습니다.')).toBeInTheDocument()
+  expect(drawer.getByText('레코드 원문을 조회할 권한이 없어요.')).toBeInTheDocument()
   expect(drawer.queryByRole('button', { name: '강제 해제' })).not.toBeInTheDocument()
   view.unmount()
   renderApp(`/admin/domains?org=${uuid(1)}&domainId=bad`)
