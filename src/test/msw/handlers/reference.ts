@@ -51,7 +51,7 @@ export const ubuntuOsImage: Schemas['OsImageResponse'] = {
   version: 2,
   minDiskGb: 10,
   status: 'ACTIVE',
-  notes: '대부분의 수업·동아리 프로젝트에 적합합니다.',
+  notes: '수업이나 동아리 프로젝트에 쓰기 좋아요.',
 }
 
 /**
@@ -109,7 +109,7 @@ function initialFlavors(): Schemas['VmFlavorResponse'][] {
       memoryMb: 1024,
       diskGb: 32,
       status: 'ACTIVE',
-      notes: '연산을 많이 쓰는 작업에 맞습니다.',
+      notes: '연산을 많이 쓰는 작업에 맞아요.',
       displayOrder: 1,
     },
     {
@@ -120,7 +120,7 @@ function initialFlavors(): Schemas['VmFlavorResponse'][] {
       memoryMb: 2048,
       diskGb: 32,
       status: 'ACTIVE',
-      notes: '메모리를 많이 쓰는 작업에 맞습니다.',
+      notes: '메모리를 많이 쓰는 작업에 맞아요.',
       displayOrder: 2,
     },
     {

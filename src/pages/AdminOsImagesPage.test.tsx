@@ -221,7 +221,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
     renderApp('/admin/os-images?tab=flavors')
 
     const before = await findFlavorRow('메모리 최적화')
-    expect(within(before).getByText('메모리를 많이 쓰는 작업에 맞습니다.')).toBeInTheDocument()
+    expect(within(before).getByText('메모리를 많이 쓰는 작업에 맞아요.')).toBeInTheDocument()
     await user.click(within(before).getByRole('button', { name: '수정' }))
 
     const dialog = await screen.findByRole('dialog', { name: '사양 수정' })
@@ -232,7 +232,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
     // 빈 값은 null이 아니라 빈 문자열로 보내야 서버가 "변경 없음"으로 보지 않는다.
     const after = flavorRow('메모리 최적화')
     expect(
-      within(after).queryByText('메모리를 많이 쓰는 작업에 맞습니다.'),
+      within(after).queryByText('메모리를 많이 쓰는 작업에 맞아요.'),
     ).not.toBeInTheDocument()
     expect(within(after).getByText('—')).toBeInTheDocument()
   })
