@@ -667,7 +667,7 @@ function approvalAccountField({
         >
           OpenRouter 사업 계정 관리
         </Link>
-        에서 관리용 키를 먼저 등록하세요. 자체 서빙 모델만 주는 승인은 계속할 수 있어요.
+        에서 관리용 키를 먼저 등록해 주세요. 자체 서빙 모델만 주는 승인은 계속할 수 있어요.
         {error && <p className="mt-1 font-medium text-warning-900">{error}</p>}
       </MessageBar>
     )

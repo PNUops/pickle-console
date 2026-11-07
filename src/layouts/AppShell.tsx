@@ -413,7 +413,7 @@ export function AppShell({
         role="status"
         className="border-b border-warning-200 bg-warning-50 px-4 py-2 text-center text-sm font-medium text-warning-800 sm:px-6"
       >
-        점검 모드가 켜져 있습니다. 비관리자 사용자는 콘솔을 이용할 수 없습니다.
+        점검 모드가 켜져 있어요. 관리자가 아닌 사용자는 콘솔을 이용할 수 없어요.
       </div>
     ) : showBanner ? (
       <div

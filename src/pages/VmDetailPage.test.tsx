@@ -191,7 +191,7 @@ describe('VM 상세 — 삭제 흐름', () => {
       ),
     ).toBeInTheDocument()
     expect(
-      within(dialog).getByText(/복구가 필요하면 관리자에게 문의하세요/),
+      within(dialog).getByText(/복구가 필요하면 관리자에게 문의해 주세요/),
     ).toBeInTheDocument()
 
     const confirm = within(dialog).getByRole('button', { name: '삭제 접수' })
@@ -219,7 +219,7 @@ describe('VM 상세 — 삭제 흐름', () => {
     expect(screen.getByText('VM 삭제 접수')).toBeInTheDocument()
     expect(screen.getByText(/영구 파기될 예정이에요/)).toBeInTheDocument()
     expect(
-      screen.getByText(/복구가 필요하면 관리자에게 문의하세요/),
+      screen.getByText(/복구가 필요하면 관리자에게 문의해 주세요/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /취소/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'VM 삭제' })).not.toBeInTheDocument()

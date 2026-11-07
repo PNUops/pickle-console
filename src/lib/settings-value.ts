@@ -41,7 +41,7 @@ export function parseSettingValue(
       try {
         return { ok: true, value: JSON.parse(String(draft)) }
       } catch {
-        return { ok: false, message: '올바른 JSON 형식이 아닙니다.' }
+        return { ok: false, message: '올바른 JSON 형식이 아니에요.' }
       }
   }
 }

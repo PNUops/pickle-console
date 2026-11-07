@@ -252,7 +252,7 @@ test('administrator maintenance access remains available in the personal console
   setSystemStatus({ maintenance: true })
   server.use(refreshSuccessHandler('access-sys-admin', sysAdminProfile))
   renderApp('/console')
-  await screen.findByText(/점검 모드가 켜져 있습니다/)
+  await screen.findByText(/점검 모드가 켜져 있어요/)
   expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '서비스 점검 중' })).not.toBeInTheDocument()
 })

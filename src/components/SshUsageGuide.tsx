@@ -90,7 +90,7 @@ export function SshUsageGuide({ hostname, sshHost, keyFile, className }: SshUsag
           <Code>{`ssh -i ${keyPath} -o IdentitiesOnly=yes ${host}@${gateway}`}</Code>
         </Step>
 
-        <Step title="자주 접속한다면 ~/.ssh/config에 등록하세요">
+        <Step title="자주 접속한다면 ~/.ssh/config에 등록해 주세요">
           <Code>{`Host ${host}\n  HostName ${gateway}\n  User ${host}\n  IdentityFile ${keyPath}\n  IdentitiesOnly yes`}</Code>
           <p className="text-xs text-neutral-500">
             등록 후에는 <span className="font-mono">ssh {host}</span> 만으로 접속할 수 있어요.
