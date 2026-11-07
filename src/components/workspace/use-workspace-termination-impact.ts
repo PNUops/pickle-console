@@ -40,7 +40,7 @@ export function useWorkspaceTerminationImpact({ workspaceId, invitationId, admin
         setImpact(null)
         setTargets([])
         setResources([])
-        setError('요청한 대상이나 페이지와 조회 결과가 일치하지 않습니다. 전체 영향을 다시 조회해 주세요.')
+        setError('요청한 대상이나 페이지와 조회 결과가 맞지 않아요. 전체 영향을 다시 조회해 주세요.')
         return
       }
       if (expectedFingerprint && next.fingerprint !== expectedFingerprint) {
@@ -58,7 +58,7 @@ export function useWorkspaceTerminationImpact({ workspaceId, invitationId, admin
       setPage(nextPage)
       setResourcePage(nextResourcePage)
     } catch (failure) {
-      if (active.current && generation.current === issued) { setConfirmedFingerprint(null); setError(failure instanceof Error ? failure.message : '종료 영향을 불러오지 못했습니다.') }
+      if (active.current && generation.current === issued) { setConfirmedFingerprint(null); setError(failure instanceof Error ? failure.message : '종료 영향을 불러오지 못했어요.') }
     } finally {
       if (active.current && generation.current === issued) { loadingRef.current = false; setLoading(false) }
     }
