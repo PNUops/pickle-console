@@ -25,7 +25,7 @@ export function AccessIncreaseDetails({ impact }: { impact: ActorAccessImpact })
         <p>워크스페이스: <code className="break-all">{item.workspaceId}</code></p>
         <p>생성 대기 · 생성되면 {roleLabel(item.role)}</p>
       </li>)}</ul>
-      <p className="mt-2 text-foreground-muted">아직 자원이 생성되거나 현재 접근 권한을 얻은 결과는 아닙니다.</p>
+      <p className="mt-2 text-foreground-muted">아직 리소스가 생성되거나 현재 접근 권한을 얻은 결과는 아니에요.</p>
     </div>}
   </div>
 }
@@ -42,7 +42,7 @@ export function AccessIncreaseReviewModal({ review, purpose, setPurpose, finish 
   </>}>
     {review && <div className="space-y-4">
       <p className="break-all text-sm font-medium">변경 대상: {review.target}</p>
-      <Alert variant="warning">이 변경으로 회원님의 권한이 늘어납니다. 대상과 얻는 권한을 확인하고 목적을 기록해 주세요.</Alert>
+      <Alert variant="warning">이 변경으로 회원님의 권한이 늘어날 수 있어요. 대상과 얻게 될 권한을 확인하고 목적을 기록해 주세요.</Alert>
       <AccessIncreaseDetails impact={review.impact} />
       <FormField label="권한을 얻는 목적" required><Textarea value={purpose} onChange={(event) => setPurpose(event.target.value)} maxLength={200} /></FormField>
     </div>}

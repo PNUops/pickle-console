@@ -300,7 +300,7 @@ test('a queued self-profile resource owner is shown as a future effect and needs
   await user.type(screen.getByLabelText('사유'), '본인 확인')
   const section = within(await screen.findByRole('region', { name: '회원님의 권한 증가 확인' }))
   expect(section.getByText('생성 대기 중인 자원의 예상 권한')).toBeInTheDocument()
-  expect(section.getByText(/아직 자원이 생성되거나 현재 접근 권한을 얻은 결과는 아닙니다/)).toBeInTheDocument()
+  expect(section.getByText(/아직 리소스가 생성되거나 현재 접근 권한을 얻은 결과는 아니에요/)).toBeInTheDocument()
   expect(patches).toHaveLength(0)
   expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
   await user.type(section.getByLabelText('권한을 얻는 목적'), '내 실습 자원 수령')
