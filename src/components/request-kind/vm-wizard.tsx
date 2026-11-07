@@ -377,33 +377,27 @@ function useVmWizard(
           />
         )}
 
-        {flavors.data?.length === 0 ? (
-          <Alert variant="warning">
-            신청할 수 있는 사양이 아직 없어요. 관리자가 사양을 등록하면 신청할 수 있어요.
-          </Alert>
-        ) : (
-          <CardRadioGroup
-            legend="사양"
-            required
-            error={errors['vm.flavorId']}
-            value={spec.flavorChoice}
-            onChange={selectSpec}
-            columns={3}
-            options={[
-              ...(flavors.data ?? []).map((flavor) => ({
-                value: flavor.id,
-                title: flavor.displayName,
-                description: flavor.notes ?? undefined,
-                meta: formatSpec(flavor.vcpu, flavor.memoryMb, flavor.diskGb),
-              })),
-              {
-                value: CUSTOM_SPEC,
-                title: '직접 입력',
-                description: '준비된 사양으로 모자랄 때. 사유를 적으면 관리자가 검토해요.',
-              },
-            ]}
-          />
-        )}
+        <CardRadioGroup
+          legend="사양"
+          required
+          error={errors['vm.flavorId']}
+          value={spec.flavorChoice}
+          onChange={selectSpec}
+          columns={3}
+          options={[
+            ...(flavors.data ?? []).map((flavor) => ({
+              value: flavor.id,
+              title: flavor.displayName,
+              description: flavor.notes ?? undefined,
+              meta: formatSpec(flavor.vcpu, flavor.memoryMb, flavor.diskGb),
+            })),
+            {
+              value: CUSTOM_SPEC,
+              title: '직접 입력',
+              description: '원하는 사양을 직접 입력해요.',
+            },
+          ]}
+        />
 
         {selectedFlavor && (
           <p className="text-sm text-foreground-secondary">

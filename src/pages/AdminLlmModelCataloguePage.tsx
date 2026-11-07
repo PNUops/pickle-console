@@ -18,7 +18,7 @@ export function AdminLlmModelCataloguePage() {
   const search = params.get('q') ?? ''
   const catalogue = state.canRead ? state.query.data : undefined
   const rows = catalogue?.models.filter((model) => `${model.id} ${model.name}`.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
-  return <div className="space-y-5"><PageHeader title="LLM 모델 목록과 가격" description="현재 저장된 공급자 모델 목록을 참고합니다. 개별 키 사용액이나 사업 계정 재무를 조회하지 않습니다." />
+  return <div className="space-y-5"><PageHeader title="LLM 모델 목록과 가격" description="현재 저장된 공급자 모델 목록을 참고해요." />
     {canQueryWork(user, ['llm.observe'], { orgId: activeOrgId }, SYS_READERS) && <Link className="text-sm underline" to={adminPath('/admin/llm/status', activeOrgId)}>자체 서빙 모델의 주·대체 공급원 연결 확인</Link>}
     <ModelCatalogueStatus state={state} />
     <FormField label="모델 검색"><Input value={search} onChange={(event) => change({ q: event.target.value || undefined }, false, true)} /></FormField>
@@ -29,8 +29,7 @@ export function AdminLlmModelCataloguePage() {
         <TD><p className="text-xs">백만 토큰당 입력 {model.promptPricePerMillion == null ? '미상' : `$${model.promptPricePerMillion}`} · 출력 {model.completionPricePerMillion == null ? '미상' : `$${model.completionPricePerMillion}`}</p>
           {model.pricing != null && <ModelPriceDetail modelId={model.id} pricing={model.pricing} />}</TD>
       </TR>)}</TBody></Table></Card>
-      {rows?.length === 0 && <p className="text-sm text-foreground-muted">{catalogue.models.length === 0 ? '현재 응답에 모델이 없습니다. 위의 공급자 갱신 상태를 확인해 주세요.' : '검색 조건에 맞는 모델이 없습니다.'}</p>}
-      <p className="text-xs text-foreground-muted">이 목록과 모델 패턴은 후보를 찾는 자료입니다. 실제 호출은 키의 기능 권한, 예산과 연결 상태, 공급자 지원 등 추가 조건에 따릅니다.</p>
+      {rows?.length === 0 && <p className="text-sm text-foreground-muted">{catalogue.models.length === 0 ? '현재 응답에는 모델이 없어요. 위의 공급자 갱신 상태를 확인해 주세요.' : '검색 조건에 맞는 모델이 없어요.'}</p>}
     </>}
   </div>
 }

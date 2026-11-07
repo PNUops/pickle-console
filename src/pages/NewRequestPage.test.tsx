@@ -147,6 +147,32 @@ describe('VM 신청 위저드 — OS는 계열을 고른 뒤 버전을 고른다
 })
 
 describe('VM 신청 위저드 — 사양', () => {
+  test('custom specifications remain selectable without active presets', async () => {
+    server.use(http.get('*/api/v1/vm-flavors', () => HttpResponse.json([])))
+    const user = userEvent.setup()
+    renderWizard()
+    await user.type(await screen.findByLabelText('이름'), '작은 서버')
+    await user.click(screen.getByRole('radio', { name: 'Ubuntu' }))
+
+    const customOption = await screen.findByRole('radio', { name: /직접 입력/ })
+    expect(customOption).not.toBeChecked()
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByText('사양을 선택해 주세요.')).toBeInTheDocument()
+    await user.click(customOption)
+    expect(screen.getByLabelText('vCPU (개)')).toHaveValue(1)
+    expect(screen.getByLabelText('메모리 (GiB)')).toHaveValue(1)
+    expect(screen.getByLabelText('디스크 (GiB)')).toHaveValue(32)
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await fillRequestStep(user)
+    await user.click(screen.getByRole('button', { name: '신청 제출' }))
+    await screen.findByRole('heading', { name: '신청이 접수됐어요' })
+
+    expect(createdRequestBodies).toHaveLength(1)
+    expect(createdRequestBodies[0].vm).toMatchObject({
+      flavorId: null, specReason: null, reqVcpu: 1, reqMemoryMb: 1024, reqDiskGb: 32,
+    })
+  })
+
   test('준비된 사양을 고르면 숫자 칸이 나오지 않고 결과만 글로 보인다', async () => {
     const user = userEvent.setup()
     renderWizard()
