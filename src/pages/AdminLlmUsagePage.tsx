@@ -170,9 +170,9 @@ function DemandSection({
           <DescriptionList
             columns={2}
             items={[
-              { term: '자체 서빙 모델 요청', description: axisShare(selected.tokenAxisRequests, selected.requests) },
-              { term: '유료 모델 요청', description: axisShare(selected.creditAxisRequests, selected.requests) },
-              { term: '종류 미상 요청', description: axisShare(selected.unknownAxisRequests, selected.requests) },
+              { term: 'TOKEN 축 요청', description: axisShare(selected.tokenAxisRequests, selected.requests) },
+              { term: 'CREDIT 축 요청', description: axisShare(selected.creditAxisRequests, selected.requests) },
+              { term: '축 미상 요청', description: axisShare(selected.unknownAxisRequests, selected.requests) },
               { term: '예산 축 기록 범위', description: ratio(selected.axisCoverage) },
             ]}
           />
@@ -233,40 +233,15 @@ function WindowSummary({ window, selected }: { window: LlmUsageWindow; selected:
   )
 }
 
-/**
- * 금액 칸.
- *
- * **값이 없는 것과 0은 다르고, 값이 없는 이유도 둘이다.** 자체 서빙 모델에는 금액이라는
- * 것이 아예 없고, 축이 생기기 전(2026-09-06)의 요청은 기록되지 않았다. 둘 다 `$0.00`으로
- * 적으면 「공짜로 썼다」는, 서버가 한 적 없는 주장이 된다.
- *
- * **일부만 가격이 붙은 행은 그 사실을 그 자리에서 말한다.** 전체 개수만 따로 세면 그 몇
- * 건이 어느 모델에서, 어느 경로에서 빠진 것인지 알 수 없다. 여기 붙이면 빠진 자리가
- * 곧 그 행이다.
- *
- * **이 건수는 하한이다.** 축이 기록되기 전의 요청이나 축이 null 로 내려간 요청에 금액이
- * 붙어 있으면 가격 붙은 수가 유료 축 수보다 커져 차가 음수가 되고, 그때는 아무것도 적지
- * 않는다. 실제보다 적게 말할 수는 있어도 없는 것을 말하지는 않는 쪽으로 기운다.
- *
- * **빠진 건수는 전체 요청이 아니라 유료 모델 요청에서 뺀다.** 전체 요청에서 빼면 자체
- * 서빙 요청이 전부 「금액을 모르는 요청」이 되는데, 자체 서빙에는 금액이라는 것이 아예
- * 없으므로 모르는 것이 아니다. 카드 위의 총계 문장을 뺀 이유가 정확히 그것이었고, 행마다
- * 같은 계산을 하면 같은 거짓을 행 수만큼 말하게 된다.
- *
- * **소비처 표는 2026-09-07부터 이 함수를 쓰지 않는다.** 그 표는 공급자가 키마다 보고한
- * 사용액을 쓰므로 값을 매기지 못한 건수라는 것이 없다. 여기 남은 두 표는 모델과 경로로
- * 나누므로 그럴 수 없다 — 공급자는 키 단위로만 알려 주고, 그 금액을 모델이나 경로로
- * 쪼개는 방법은 요청별 금액밖에 없다.
- */
+/** Reported costs and axis counts describe independent request populations. */
 function amountCell(
   amount: number | null | undefined,
   creditAxisRequests: number | null | undefined,
   priced: number | null | undefined,
 ): string {
   if (creditAxisRequests == null || priced == null) return '제공되지 않음'
-  const missing = creditAxisRequests - priced
-  if (amount == null) return missing > 0 ? `— (${count(missing)}건 미상)` : '—'
-  return missing > 0 ? `${formatUsd(amount)} (${count(missing)}건 미상)` : formatUsd(amount)
+  if (amount == null) return priced === 0 ? '금액 표본 없음' : '미확인'
+  return formatUsd(amount)
 }
 
 /**
@@ -662,7 +637,7 @@ function EndpointBreakdownTable({
           <TH>호출 종류</TH>
           <TH>요청</TH>
           <TH>토큰</TH>
-          <TH>금액</TH>
+          <TH>요청별 보고 금액</TH>
           {anyImages && <TH>이미지</TH>}
         </TR>
       </THead>
