@@ -53,7 +53,7 @@ export function SourcePolicyForm({
   return (
     <form onSubmit={submit} className="space-y-4" noValidate aria-label="공개 접속 정책">
       {error && <Alert variant="danger">{error}</Alert>}
-      <FormField label="허용할 출발지" description="IP 또는 CIDR을 한 줄에 하나씩 입력하세요." error={validation}>
+      <FormField label="허용할 출발지" description="IP 또는 CIDR을 한 줄에 하나씩 입력해 주세요." error={validation}>
         <Textarea
           value={value.cidrsText}
           onChange={(event) => onChange({ ...value, cidrsText: event.target.value })}

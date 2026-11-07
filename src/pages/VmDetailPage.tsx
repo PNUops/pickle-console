@@ -1297,7 +1297,7 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
         ) : (
           <p>
             {scheduled}에 영구 파기될 예정이에요. 파기 전에 복구가 필요하면 관리자에게
-            문의하세요.
+            문의해 주세요.
           </p>
         )}
         {deletion.reason && <p>사유: {deletion.reason}</p>}
@@ -1371,7 +1371,7 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
               {!isErrorVm && (
                 <p className="text-sm text-neutral-600">
                   삭제 접수 후에는 취소할 수 없어요. 유예 기간 중 복구가 필요하면
-                  관리자에게 문의하세요.
+                  관리자에게 문의해 주세요.
                 </p>
               )}
             </ConfirmNameModal>

@@ -205,7 +205,7 @@ export default function LlmCapacityView() {
       <Card>
         <CardHeader><CardTitle>기록의 보존과 전달</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {data.quality.rawHistoryState === 'FULLY_SWEPT' ? <MessageBar variant="warning">조회 기간의 원문 수요 기록이 보존되지 않았어요. 미확인 값은 0으로 표시하지 않아요.</MessageBar>
+          {data.quality.rawHistoryState === 'FULLY_SWEPT' ? <MessageBar variant="warning">조회 기간의 원문 수요 기록이 보존되지 않았어요.</MessageBar>
             : data.quality.rawHistoryState === 'PARTIALLY_SWEPT' ? <MessageBar variant="warning">조회 기간 일부가 삭제돼 보존된 구간만 집계했어요.</MessageBar> : null}
           <DescriptionList columns={3} items={[
             { term: '원문 기록의 보존 경계', description: data.quality.rawRetainedFrom ? at(data.quality.rawRetainedFrom) : '삭제 경계 보고 없음' },

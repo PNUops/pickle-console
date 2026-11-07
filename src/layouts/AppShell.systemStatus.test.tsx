@@ -31,7 +31,7 @@ describe('점검 모드·공지 배너·문의처 (AppShell)', () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin')
 
-    expect(await screen.findByText(/점검 모드가 켜져 있습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/점검 모드가 켜져 있어요/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '사용자' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '서비스 점검 중' })).not.toBeInTheDocument()
   })

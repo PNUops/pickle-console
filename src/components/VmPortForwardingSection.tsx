@@ -305,7 +305,7 @@ function ForwardingList({
         ))}
       </ul>
       <p className="text-xs text-neutral-500">
-        정지된 포트는 관리자에게 문의하세요.
+        정지된 포트는 관리자에게 문의해 주세요.
       </p>
     </div>
   )

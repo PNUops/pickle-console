@@ -1129,7 +1129,7 @@ function WithdrawSection({
             탈퇴 후에는 계정을 복구하거나 같은 이메일로 재가입할 수 없어요.
           </Alert>
           {error && <Alert variant="danger">{error}</Alert>}
-          <FormField label={`계속하려면 이메일(${email})을 정확히 입력하세요`} required>
+          <FormField label={`계속하려면 이메일(${email})을 정확히 입력해 주세요`} required>
             <Input
               value={typedEmail}
               onChange={(event) => setTypedEmail(event.target.value)}

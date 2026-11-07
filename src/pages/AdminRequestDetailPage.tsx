@@ -213,7 +213,7 @@ function RequestMailSelectionCard({ requestId }: { requestId: string }) {
     {selection.isPending && <Spinner label="신청 알림 선정 기록 불러오는 중" />}
     {selection.isError && <Alert variant="danger">{selection.error.message}<Button variant="secondary" onClick={() => void selection.refetch()}>선정 기록 다시 조회</Button></Alert>}
     {selection.data?.selection && <RequestMailSelectionSnapshot selection={selection.data.selection} />}
-    {selection.isSuccess && !selection.data.selection && <p className="text-sm text-neutral-500">이 신청에는 접수 당시 기관 알림 선정 기록이 없어요. 현재 명단으로 과거 수신자를 추정하지 않아요.</p>}
+    {selection.isSuccess && !selection.data.selection && <p className="text-sm text-neutral-500">이 신청에는 접수 당시 기관 알림 선정 기록이 없어요.</p>}
   </Card>
 }
 

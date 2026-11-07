@@ -45,7 +45,7 @@ async function startMockApiIfRequested(): Promise<void> {
 }
 
 if (import.meta.env.PROD && !canMountConsole(window.location.hostname)) {
-  document.getElementById('root')!.textContent = '배포 대상 주소가 일치하지 않아 화면을 시작할 수 없습니다.'
+  document.getElementById('root')!.textContent = '배포 대상 주소가 맞지 않아 화면을 시작할 수 없어요.'
 } else {
   await startMockApiIfRequested()
 
