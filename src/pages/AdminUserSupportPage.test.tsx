@@ -270,6 +270,23 @@ test('missing or system-tier accounts stay inaccessible to the organization read
   expect(screen.queryByRole('heading', { name: '워크스페이스 관계' })).not.toBeInTheDocument()
 })
 
+test('shows separate lifetime for domain requests without changing VM periods', async () => {
+  const data = supportFixture(uuid(42), uuid(1))
+  const base = { ...data.requests[0], status: 'APPROVED' as const, recipientId: null, recipientStatus: null, resourceId: null, reason: null, applicant: true }
+  data.requests = [
+    { ...base, id: uuid(201), type: 'DOMAIN', grantedEndDate: null },
+    { ...base, id: uuid(202), type: 'VM', grantedEndDate: null },
+    { ...base, id: uuid(203), type: 'VM', grantedEndDate: '2026-12-31' },
+  ]
+  server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser), http.get('*/api/v1/admin/users/:userId/support', () => HttpResponse.json(data)))
+  renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}`)
+  const table = await screen.findByRole('table', { name: '사용자 관련 신청 결과' })
+  const rows = within(table).getAllByRole('row')
+  expect(within(rows[1]).getByText('별도 기한')).toBeInTheDocument()
+  expect(within(rows[2]).getByText('무기한')).toBeInTheDocument()
+  expect(within(rows[3]).getByText('2026-12-31')).toBeInTheDocument()
+})
+
 test('partial recipient failure names the actual request and does not make an applicant-only relation a recipient', async () => {
   const data = supportFixture(uuid(42), uuid(1))
   data.requests = [

@@ -165,7 +165,6 @@ function AnnouncementDetail({ announcementId }: { announcementId: string }) {
       {saved.workspaceId && <div><dt className="text-neutral-500">대상 워크스페이스</dt><dd>{!workspace.isError && workspace.data?.name ? workspace.data.name : workspace.isPending ? '이름 조회 중' : '이름 확인 불가'}</dd></div>}
     </dl>
     <p className="whitespace-pre-line text-sm leading-relaxed">{saved.body}</p>
-    <p className="text-xs text-neutral-600">접수 당시 확정한 대상과 인원이에요. 현재 명단으로 다시 계산하지 않아요. SMTP 인계 결과는 별도 이력이에요.</p>
     <nav aria-label="발송건 관련 업무" className="flex flex-wrap gap-3 text-sm text-primary-700">
       {sys && <Link to={adminPaths.mailDeliveries({ announcementId: saved.id })}>수신자별 발송 결과</Link>}
       {mayReadOrg && <Link to={adminPaths.orgOperations(saved.orgId!)}>대상 기관 운영</Link>}

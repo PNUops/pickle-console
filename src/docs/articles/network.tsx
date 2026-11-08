@@ -1,7 +1,7 @@
 import { GuideFigure } from '../GuideFigure'
-import vmPublishImage from '../../assets/docs/vm-publish.png'
-import dnsRecordsImage from '../../assets/docs/dns-records.png'
-import campusIpImage from '../../assets/docs/campus-ip.png'
+import vmPublishImage from '../../assets/docs/vm-publish.jpg'
+import dnsRecordsImage from '../../assets/docs/dns-records.jpg'
+import campusIpImage from '../../assets/docs/campus-ip.jpg'
 import { CodeBlock } from '../../components/CodeBlock'
 import { GuideAction, GuideLink } from '../links'
 import type { GuideArticle } from '../types'
@@ -39,8 +39,8 @@ export const networkArticles: GuideArticle[] = [
               src={vmPublishImage}
               alt="가상머신 도메인·포트 탭의 도메인 연결과 포트포워딩 카드"
               caption="웹 서비스의 도메인 연결과 TCP/UDP 포트포워딩"
-              width={992}
-              height={757}
+              width={1104}
+              height={697}
             />
           </>
         ),
@@ -241,7 +241,7 @@ export const networkArticles: GuideArticle[] = [
               alt="외부 도메인 상세의 레코드 탭에 있는 DNS 편집 표와 저장 버튼"
               caption="도메인의 DNS 레코드 편집"
               width={1104}
-              height={228}
+              height={318}
             />
           </>
         ),

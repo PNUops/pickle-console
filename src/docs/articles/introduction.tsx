@@ -1,5 +1,5 @@
 import { GuideFigure } from '../GuideFigure'
-import userDashboardImage from '../../assets/docs/user-dashboard.png'
+import userDashboardImage from '../../assets/docs/user-dashboard.jpg'
 import { GuideAction, GuideLink } from '../links'
 import type { GuideArticle } from '../types'
 
@@ -79,8 +79,8 @@ export const introductionArticles: GuideArticle[] = [
               src={userDashboardImage}
               alt="사용자 대시보드의 리소스, 신청, 알림 요약과 리소스 신청 버튼"
               caption="대시보드의 리소스와 신청 상태"
-              width={1152}
-              height={216}
+              width={1104}
+              height={184}
             />
           </>
         ),

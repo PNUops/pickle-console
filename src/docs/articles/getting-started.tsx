@@ -597,7 +597,7 @@ export const gettingStartedArticles: GuideArticle[] = [
               alt="본인의 실효 권한이 늘어나는 변경의 정확한 대상과 얻는 등급, 목적 확인"
               caption="본인의 권한이 늘어나는 변경의 확인"
               width={448}
-              height={555}
+              height={556}
             /></div>
           </>
         ),

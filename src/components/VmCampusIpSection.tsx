@@ -87,8 +87,8 @@ export function VmCampusIpSection({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">
-          승인되면 VM이 캠퍼스 네트워크의 교내 IP(10.x)로 연결돼요. 부여된
-          주소는 기본 차단 상태이며 신청한 포트만 개방돼요. 공인 IP(NAT)는
+          VM의 교내 IP(10.x)와 필요한 포트 개방을 신청해요. 실제 연결은 별도
+          작업이며 개방 범위는 승인된 포트로 제한해요. 공인 IP(NAT)는
           정보전산원 포털에서 따로 신청해요.
         </p>
 
