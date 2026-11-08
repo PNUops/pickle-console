@@ -21,6 +21,12 @@ interface Capability {
   description: string
   /** Granting this needs one of these. Indented under the first on screen. */
   parents?: readonly PassthroughEndpoint[]
+  /**
+   * Granting this needs one of these too, without being a part of them: a
+   * batch targets chat or embeddings and needs that grant as well, but it is
+   * a feature of its own and is not drawn under either.
+   */
+  requires?: readonly PassthroughEndpoint[]
 }
 
 /**
@@ -75,12 +81,13 @@ const CAPABILITIES: Record<PassthroughEndpoint, Capability> = {
   },
   batches: {
     label: '배치',
-    description: '여러 요청을 한 번에 제출하고 결과를 나중에 받아요',
+    description: '여러 요청을 한 번에 제출하고 결과를 나중에 받아요. 배치로 보낼 기능도 함께 부여해야 해요',
+    requires: ['chat', 'embeddings'],
   },
   files: {
     label: '파일 업로드',
-    description: '배치나 코드 실행에 쓸 파일을 업로드해요',
-    parents: ['batches', 'containers'],
+    description: '코드 실행에 쓸 파일을 업로드해요',
+    parents: ['containers'],
   },
 }
 
@@ -101,11 +108,13 @@ const GRANTABLE: ReadonlySet<PassthroughEndpoint> = new Set([
   'rerank',
   'speech',
   'transcriptions',
+  'batches',
 ])
 
 /**
- * Granted alongside a parent, never chosen. `files` follows `batches` and
- * `containers`: present while either is, gone when both are.
+ * Granted alongside a parent, never chosen. `files` follows `containers`:
+ * present while it is, gone when it is not. A batch carries its requests
+ * inline, so `batches` brings no file upload with it.
  */
 const IMPLIED: ReadonlySet<PassthroughEndpoint> = new Set(['files'])
 
@@ -160,8 +169,8 @@ export function parentGranted(
   endpoints: readonly string[],
   value: PassthroughEndpoint,
 ): boolean {
-  const parents = CAPABILITIES[value].parents
-  return parents == null || parents.some((parent) => endpoints.includes(parent))
+  const needed = CAPABILITIES[value].parents ?? CAPABILITIES[value].requires
+  return needed == null || needed.some((parent) => endpoints.includes(parent))
 }
 
 /**

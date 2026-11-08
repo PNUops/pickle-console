@@ -20,6 +20,7 @@ describe('feature grants', () => {
       'rerank',
       'speech',
       'transcriptions',
+      'batches',
     ])
   })
 
@@ -39,6 +40,15 @@ describe('feature grants', () => {
       'containers',
     ])
     expect(grantPayload(['chat', 'batches', 'files'])).toEqual(['chat', 'batches'])
+  })
+
+  test('drops batches with the last endpoint it can target', () => {
+    expect(togglePassthrough(['chat', 'batches'], 'chat', false)).toEqual([])
+    expect(togglePassthrough(['chat', 'embeddings', 'batches'], 'chat', false)).toEqual([
+      'embeddings',
+      'batches',
+    ])
+    expect(holdsChatChildren(['embeddings', 'batches'])).toBe(false)
   })
 
   test('a flat toggle lists names without the hierarchy', () => {

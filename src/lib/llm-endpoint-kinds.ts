@@ -22,6 +22,9 @@ const LABELS: Record<string, string> = {
   rerank: '리랭크',
   audio_speech: 'TTS',
   audio_transcriptions: 'STT',
+  batches: '배치',
+  batches_read: '배치 조회',
+  batches_cost: '배치 금액',
 }
 
 /**
