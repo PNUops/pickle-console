@@ -31,7 +31,7 @@ export interface paths {
         put?: never;
         /**
          * 알림 발송 대상 미리보기
-         * @description 현재 활성 대상자의 예상 인원과 최대 20명 예시를 조회합니다. 발송은 생성 요청 시 다시 대상을 선정하며 이 응답은 발송 예약이 아닙니다.
+         * @description 현재 활성 대상자의 예상 인원과 최대 20명 예시를 조회해요. 실제 발송 대상은 생성 요청 때 다시 선정하며 이 응답으로 발송을 예약하지 않아요.
          */
         post: operations["previewAnnouncement"];
         delete?: never;
@@ -49,7 +49,7 @@ export interface paths {
         };
         /**
          * 알림 발송건 상세 조회
-         * @description 저장된 내용과 대상, 발송 당시 선정 인원을 조회합니다. 기관 계층은 허용된 기관 업무와 작성자의 현재 기관 행 및 전체 발송건을 기준으로 조회합니다.
+         * @description 저장된 내용과 대상, 접수 당시 선정 인원을 조회해요. 기관 계층은 허용된 기관 업무와 작성자의 현재 기관 행 및 전체 발송건을 기준으로 조회해요.
          */
         get: operations["getAnnouncement"];
         put?: never;
@@ -87,7 +87,7 @@ export interface paths {
         put?: never;
         /**
          * 관리자 일괄 변경 적용
-         * @description 저장된 미리보기와 같은 변경·대상·fingerprint에 previewId와 클라이언트가 한 번 생성한 operationId를 더해 적용합니다. operationId는 결과의 batchId와 같습니다. 새 적용은 미리보기 저장 후 24시간까지만 허용합니다. 같은 수행자가 같은 식별자·본문으로 재시도하면 현재 접근 범위로 가린 저장 결과만 반환하며 변경이나 후속 작업을 다시 실행하지 않습니다. 이 재시도는 미리보기 만료 뒤에도 가능합니다. 같은 수행자의 식별자에 다른 본문을 결합하면 409, 타인의 기록은 404로 거절합니다. 새 적용은 대상마다 다시 판정하고 바뀐 확인값은 STALE, 업무상 거절은 SKIPPED로 저장합니다. 예기치 않은 트랜잭션 오류는 전체 변경과 결과를 롤백합니다. 커밋 후 callback 오류는 이미 커밋된 결과를 되돌리지 않으며 effects에서 관측합니다. APPLIED는 DB 커밋을 뜻하고 외부 완료를 보장하지 않습니다. 대상별 감사 기록은 단일 변경과 같은 이름으로 남고 같은 batchId를 담습니다.
+         * @description 저장된 미리보기와 같은 변경과 대상, fingerprint에 previewId와 클라이언트가 한 번 생성한 operationId를 더해 적용해요. operationId는 결과의 batchId와 같아요. 새 적용은 미리보기 저장 후 24시간까지만 허용해요. 같은 수행자가 같은 식별자와 본문으로 다시 요청하면 현재 접근 범위로 가린 저장 결과만 반환하며 변경이나 후속 작업을 다시 실행하지 않아요. 이 재요청은 미리보기 만료 뒤에도 가능해요. 같은 수행자의 식별자에 다른 본문을 결합하면 409, 타인의 기록은 404로 거절해요. 새 적용은 대상마다 다시 판정하고 바뀐 확인값은 STALE, 업무상 거절은 SKIPPED로 저장해요. 예기치 않은 트랜잭션 오류는 전체 변경과 결과를 롤백해요. 커밋 후 callback 오류는 이미 커밋된 결과를 되돌리지 않으며 effects에서 확인해요. APPLIED는 DB 커밋을 뜻하고 외부 완료를 보장하지 않아요. 대상별 감사 기록은 단일 변경과 같은 이름으로 남고 같은 batchId를 담아요.
          */
         post: operations["applyAdminBulkChange"];
         delete?: never;
@@ -105,7 +105,7 @@ export interface paths {
         };
         /**
          * 본인의 최근 일괄 변경 결과 조회
-         * @description 본인의 최근 커밋 결과 최대 20개를 현재 접근 범위로 가려서 조회합니다. 대상과 후속 작업을 변경하지 않습니다.
+         * @description 본인의 최근 커밋 결과 최대 20개를 현재 접근 범위로 가려서 조회해요. 대상과 후속 작업은 바꾸지 않아요.
          */
         get: operations["listAdminBulkChangeOperations"];
         put?: never;
@@ -125,7 +125,7 @@ export interface paths {
         };
         /**
          * 저장된 일괄 변경 결과 조회
-         * @description 본인의 커밋된 적용 결과와 callback 접수 관측을 조회합니다. 재실행하지 않으며 DB 커밋, queue 접수와 외부 완료는 별개입니다.
+         * @description 본인의 커밋된 적용 결과와 callback 접수 관측을 조회해요. 재실행하지 않으며 DB 커밋과 queue 접수, 외부 완료는 별개예요.
          */
         get: operations["getAdminBulkChangeOperation"];
         put?: never;
@@ -147,7 +147,7 @@ export interface paths {
         put?: never;
         /**
          * 관리자 일괄 변경 미리보기
-         * @description 여러 대상에 한 가지 변경을 적용하면 어떻게 되는지 대상마다 답합니다. 미리보기 기록만 저장하며 대상은 변경하지 않습니다. 범위 밖이거나 역할이 허용하지 않는 대상, 현재 상태에서 할 수 없는 대상은 이유와 함께 applicable=false로, 이미 그 값인 대상은 바뀔 필드 없이 applicable=true로 답합니다. 대상마다 fingerprint를 주며 적용 요청에 그대로 돌려보냅니다. 대상은 최대 200개입니다.
+         * @description 여러 대상에 한 가지 변경을 적용하면 어떻게 되는지 대상마다 응답해요. 미리보기 기록만 저장하며 대상은 바꾸지 않아요. 범위 밖이거나 역할이 허용하지 않는 대상, 현재 상태에서 할 수 없는 대상은 이유와 함께 applicable=false로, 이미 그 값인 대상은 바뀔 필드 없이 applicable=true로 응답해요. 대상마다 fingerprint를 주며 적용 요청에 그대로 보내요. 대상은 최대 200개예요.
          */
         post: operations["previewAdminBulkChange"];
         delete?: never;
@@ -165,7 +165,7 @@ export interface paths {
         };
         /**
          * 저장된 일괄 변경 미리보기 조회
-         * @description 본인의 미리보기를 현재 대상별 변경 권한으로 다시 조회합니다. 접근할 수 없는 대상의 이름, 값, 확인값과 변경 내용은 가립니다.
+         * @description 본인의 미리보기를 현재 대상별 변경 권한으로 다시 조회해요. 접근할 수 없는 대상의 이름과 값, 확인값, 변경 내용은 가려요.
          */
         get: operations["getAdminBulkChangePreview"];
         put?: never;
@@ -249,7 +249,7 @@ export interface paths {
         };
         /**
          * 루트 도메인 목록
-         * @description 이름을 발급할 수 있는 루트와 그 승인 정책. 기관으로 좁히지 않습니다 — 이름 공간은 기관끼리 공유하므로, 자기 루트의 정책을 정하는 사람도 다른 루트가 있다는 것은 볼 수 있어야 합니다.
+         * @description 허용된 루트 도메인과 승인 정책을 조회해요. 전체 카탈로그 조회 권한이 있으면 모든 루트를 볼 수 있어요. 기관별 정책 조회나 변경 업무만 있으면 해당 기관 범위의 루트만 보여요.
          */
         get: operations["listDomainRoots"];
         put?: never;
@@ -275,7 +275,7 @@ export interface paths {
         head?: never;
         /**
          * 루트 도메인 승인 정책 변경
-         * @description 이 루트 아래 이름 신청을 자동으로 승인할지, 승인 큐에 세울지 정합니다. 앞으로 들어오는 신청에만 적용되며 이미 발급된 이름과 이미 기다리는 신청은 건드리지 않습니다.
+         * @description 이 루트 아래 이름 신청을 자동 승인할지 승인 큐에 넣을지 정해요. 앞으로 들어오는 신청에만 적용되며 이미 발급된 이름과 이미 기다리는 신청은 바꾸지 않아요.
          */
         patch: operations["updateDomainRoot"];
         trace?: never;
@@ -305,7 +305,7 @@ export interface paths {
         };
         /**
          * 도메인 단건 열람
-         * @description 학생 지원 권한으로 정확한 도메인 ID의 현재 저장 metadata를 전역 조회합니다. 목록과 같은 기간·해제·DNS 상태를 반환하며 외부 조회나 변경을 실행하지 않습니다. 삭제된 도메인과 기관·워크스페이스의 필수 식별 정보를 확인할 수 없는 도메인은 404입니다.
+         * @description 학생 지원 권한으로 정확한 도메인 ID의 현재 저장 metadata를 전역 조회해요. 목록과 같은 기간과 해제, DNS 상태를 반환하며 외부 조회나 변경은 실행하지 않아요. 삭제된 도메인과 기관 및 워크스페이스의 필수 식별 정보를 확인할 수 없는 도메인은 404로 응답해요.
          */
         get: operations["getAdminDomain"];
         put?: never;
@@ -341,7 +341,7 @@ export interface paths {
         };
         /**
          * 도메인 레코드 열람
-         * @description 이 이름이 지금 무엇을 가리키는지 봅니다. 읽기 전용입니다.
+         * @description 이 이름이 현재 무엇을 가리키는지 조회해요. 읽기 전용이에요.
          */
         get: operations["listAdminDomainRecords"];
         put?: never;
@@ -367,7 +367,7 @@ export interface paths {
         head?: never;
         /**
          * 도메인 사용 기한 조정
-         * @description 외부 도메인의 사용 기한을 옮깁니다. 미루면 그만큼 더 쓰고, 당기면 그 시점에 연장하지 않는 한 이름이 해제됩니다.
+         * @description 외부 도메인의 사용 기한을 바꿔요. 미루면 그만큼 더 쓰고 당기면 새 기한이 지난 뒤 연장하지 않은 이름은 해제 대상이 돼요.
          */
         patch: operations["updateDomainRenewal"];
         trace?: never;
@@ -516,7 +516,7 @@ export interface paths {
         put?: never;
         /**
          * GPU 연결 상태 재확인
-         * @description 전원과 장치 설정을 변경하지 않고 실제 상태가 확인된 작업의 잠금만 정리합니다. GPU 점유와 회수 의도는 유지합니다.
+         * @description 전원과 장치 설정을 바꾸지 않고 실제 상태가 확인된 작업의 잠금만 정리해요. GPU 점유와 회수 의도는 유지해요.
          */
         post: operations["reconcileGpu"];
         delete?: never;
@@ -618,13 +618,13 @@ export interface paths {
         };
         /**
          * OpenRouter 사업 계정 목록
-         * @description 관리 범위의 사업별 OpenRouter account와 credential 상태를 조회합니다. 인증 정보와 vendor 내부 식별자는 반환하지 않습니다.
+         * @description 관리 범위의 OpenRouter 사업 계정과 관리용 키 상태를 조회해요. 인증 정보와 vendor 내부 식별자는 반환하지 않아요.
          */
         get: operations["listAdminLlmAccounts"];
         put?: never;
         /**
          * OpenRouter 사업 계정 등록
-         * @description 기관에 사업별 account metadata를 등록합니다. 이름 확인이 필요하며 management credential은 별도 stage 작업으로 검증합니다.
+         * @description 이름을 확인해 기관의 사업 계정 정보를 등록해요. 관리용 키는 별도 등록 경로에서 검증하며 교체는 대기 등록으로 진행해요.
          */
         post: operations["createAdminLlmAccount"];
         delete?: never;
@@ -642,7 +642,7 @@ export interface paths {
         };
         /**
          * OpenRouter 사업 계정 상세
-         * @description 관리 범위의 사업 계정 정보, 유료 모델 연결 가능 여부, 연결된 키 수와 관리용 키 상태를 조회합니다. 키 값은 반환하지 않습니다.
+         * @description 관리 범위의 사업 계정 정보와 유료 모델 연결 가능 여부, 연결된 키 수, 관리용 키 상태를 조회해요. 키 값은 반환하지 않아요.
          */
         get: operations["getAdminLlmAccount"];
         put?: never;
@@ -652,7 +652,7 @@ export interface paths {
         head?: never;
         /**
          * OpenRouter 사업 계정 정보 수정
-         * @description 이름·사업·담당자·상태 중 보낸 항목만 변경합니다. 활성 또는 미만료 key가 연결된 account는 보관할 수 없습니다.
+         * @description 이름과 사업, 담당자, 상태, 기본 유료 모델 허용 목록과 차단 목록 중 보낸 항목만 바꿔요. 만료 시각이 없거나 현재보다 뒤인 연결 키 중 PENDING, ACTIVE, SUSPENDED 상태가 있으면 계정을 보관할 수 없어요. 기본 목록 변경은 새 승인이나 발급 때 참고하며 기존 키에는 자동 적용하지 않아요.
          */
         patch: operations["updateAdminLlmAccount"];
         trace?: never;
@@ -668,7 +668,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter 관리 credential 최초 등록
-         * @description credential이 하나도 없는 account에 관리용 키를 등록합니다. account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고, 같은 요청에서 billing identity marker를 만들어 ACTIVE 상태로 저장합니다. 이미 credential이 있으면 거절하며 교체는 대기 등록을 거칩니다.
+         * @description credential이 없는 ACTIVE 사업 계정에 관리용 키를 등록해요. 계정 이름을 확인한 뒤 credits와 키 목록 조회, 실제 검증용 키 생성과 비활성화 및 삭제로 management 전용 권한과 vendor workspace를 검증해요. billing identity marker가 없으면 만들고 같은 요청에서 ACTIVE 상태로 저장해요. 이미 credential이 있으면 거절하며 교체는 대기 등록으로 진행해요.
          */
         post: operations["registerAdminLlmAccountCredential"];
         delete?: never;
@@ -688,7 +688,7 @@ export interface paths {
         put?: never;
         /**
          * 사용하지 않는 OpenRouter credential 삭제
-         * @description 연결된 key와 rotation이 없고 운영자가 vendor console 폐기를 확인한 경우에만 ACTIVE 암호문을 삭제합니다. API는 vendor management key 자체를 폐기하지 않습니다.
+         * @description 연결된 키와 진행 중인 교체가 없어야 해요. 이름과 운영자의 OpenRouter 관리용 키 폐기 확인을 받고, 해당 키의 원격 credits 조회가 인증 또는 권한 오류로 거절되는지 확인한 뒤 ACTIVE 암호문을 삭제해요. API가 관리용 키 자체를 폐기하지는 않아요.
          */
         post: operations["deleteActiveAdminLlmAccountCredential"];
         delete?: never;
@@ -708,7 +708,7 @@ export interface paths {
         put?: never;
         /**
          * 이전 OpenRouter credential 정리
-         * @description 새 ACTIVE credential로 key reconciliation이 성공하고 운영자가 vendor console에서 이전 management key를 폐기했음을 확인한 뒤 RETIRING 암호문을 삭제합니다.
+         * @description 새 ACTIVE credential의 활성화 이후 key reconciliation이 성공하고 운영자가 이전 관리용 키의 폐기를 확인해야 해요. 이전 키의 원격 credits 조회가 인증 또는 권한 오류로 거절되는지 확인한 뒤 RETIRING 암호문을 삭제해요.
          */
         post: operations["finalizeAdminLlmAccountCredential"];
         delete?: never;
@@ -728,7 +728,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter credential 교체 되돌리기
-         * @description 이름 확인 뒤 현재 ACTIVE를 STAGED로, 이전 RETIRING을 ACTIVE로 원자적으로 되돌립니다. Vendor credential은 API가 폐기하지 않습니다.
+         * @description 이름을 확인하고 이전 RETIRING credential을 재검증한 뒤 현재 ACTIVE를 STAGED로, 이전 RETIRING을 ACTIVE로 원자적으로 되돌려요. vendor credential 자체는 API가 폐기하지 않아요.
          */
         post: operations["rollbackAdminLlmAccountCredential"];
         delete?: never;
@@ -748,7 +748,7 @@ export interface paths {
         put?: never;
         /**
          * OpenRouter 관리 credential 교체 대기 등록
-         * @description 쓰고 있는 ACTIVE credential을 교체할 후보를 등록합니다. account 이름 확인 뒤 management 전용 권한과 vendor workspace를 disposable key로 검증하고 STAGED 상태로 저장합니다. ACTIVE credential이 없으면 거절하며 최초 등록은 별도 경로를 씁니다. 평문과 credential 조각은 응답하지 않습니다.
+         * @description 쓰고 있는 ACTIVE credential을 교체할 후보를 등록해요. 계정 이름을 확인한 뒤 credits와 키 목록 조회, 실제 검증용 키 생성과 비활성화 및 삭제로 management 전용 권한과 vendor workspace를 검증하고 STAGED 상태로 저장해요. ACTIVE credential이 없으면 거절하며 최초 등록은 별도 경로를 써요. 평문과 credential 조각은 응답하지 않아요.
          */
         post: operations["stageAdminLlmAccountCredential"];
         delete?: never;
@@ -768,7 +768,7 @@ export interface paths {
         put?: never;
         /**
          * 대기 중 OpenRouter credential 활성화
-         * @description 이름 확인 뒤 STAGED credential을 다시 검증합니다. 교체 시 기존 ACTIVE가 만든 disposable key를 새 credential로 조회·수정·삭제한 뒤 두 상태를 원자적으로 ACTIVE와 RETIRING으로 전환합니다.
+         * @description 이름을 확인한 뒤 STAGED credential을 다시 검증해요. 교체할 때는 기존 ACTIVE가 만든 검증용 키를 새 credential로 조회하고 수정한 뒤 삭제해요. 이후 두 상태를 원자적으로 ACTIVE와 RETIRING으로 바꿔요.
          */
         post: operations["activateAdminLlmAccountCredential"];
         delete?: never;
@@ -788,7 +788,7 @@ export interface paths {
         put?: never;
         /**
          * 대기 중 OpenRouter credential 취소
-         * @description 이름 확인 뒤 아직 활성화하지 않은 STAGED credential 암호문을 삭제합니다. ACTIVE credential에는 영향을 주지 않습니다.
+         * @description 이름을 확인한 뒤 아직 활성화하지 않은 STAGED credential 암호문을 삭제해요. ACTIVE credential에는 영향을 주지 않아요.
          */
         post: operations["cancelAdminLlmAccountCredential"];
         delete?: never;
@@ -806,7 +806,7 @@ export interface paths {
         };
         /**
          * OpenRouter 사업 계정 사용량
-         * @description 이 계정의 키들이 무엇에 얼마를 썼는지 귀속해 보여 줍니다. **공급자가 말하는 지출액이나 잔액이 아닙니다** — 그쪽은 계정 상세의 credits가 답하고 기간도 다릅니다. 키가 확인되지 않은 요청은 어느 계정에도 속하지 않고, 공급자가 금액을 알려 주지 않은 요청은 금액이 0인 것이 아니라 모르는 것이라 합계에서 빠집니다. 그래서 금액마다 가격이 붙은 요청 수가 함께 옵니다.
+         * @description 현재 이 계정에 연결된 키를 기준으로 플랫폼에 기록된 사용량과 금액을 집계해요. **공급자의 지출액이나 잔액과는 다른 값이에요.** 공급자 값은 계정 상세의 credits에서 확인하며 집계 기간도 달라요. 키를 확인하지 못한 요청은 어느 계정에도 귀속하지 않아요. 공급자가 금액을 알려 주지 않은 요청은 0으로 보지 않고 금액 미확인으로 합계에서 제외해요. 금액마다 가격이 확인된 요청 수도 함께 반환해요.
          */
         get: operations["getAdminLlmAccountUsage"];
         put?: never;
@@ -826,7 +826,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM 수요와 한도 판단 자료
-         * @description 같은 절대 기간의 보존된 raw event에서 수요·거절 사유·소비처를 조회합니다. 기관·워크스페이스와 관측 업무 범위를 수요 집계 전에 적용합니다. 기존 SYS 전역 읽기에서는 설정된 고정 원천의 같은 기간 장비 표본과 품질을 독립 제공합니다. 설치 완료·완전 수집·개인별 장비 귀속을 보장하지 않으며 외부 호출이나 변경을 실행하지 않습니다.
+         * @description 같은 절대 기간의 보존된 raw event에서 수요와 거절 사유, 소비처를 조회해요. 기관과 워크스페이스, 관측 업무 범위를 수요 집계 전에 적용해요. 기존 SYS 전역 읽기에서는 설정된 고정 원천의 같은 기간 장비 표본과 품질을 독립적으로 제공해요. 설치 완료와 완전 수집, 개인별 장비 귀속을 보장하지 않으며 외부 호출이나 변경을 실행하지 않아요.
          */
         get: operations["getAdminLlmCapacity"];
         put?: never;
@@ -846,7 +846,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 목록
-         * @description 각 업무가 허가한 키의 metadata·관측·금융·명령 참조를 조회하며 기관과 워크스페이스, 발급 신청, 상태, 검색어는 필터입니다. 키 평문과 해시, 평문 앞부분은 반환하지 않습니다.
+         * @description 각 업무가 허가한 키의 metadata와 관측, 금융, 명령 참조를 조회해요. 기관과 워크스페이스, 발급 신청, 상태, 검색어는 필터예요. 키 평문과 해시, 평문 앞부분은 반환하지 않아요.
          */
         get: operations["listAdminLlmKeys"];
         put?: never;
@@ -866,7 +866,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 상세
-         * @description 실제 키에 대한 업무별로 운영 상태와 현재 허용값을 투영하며, 금융 필드는 별도로 판정합니다. 인증 비밀이나 기록된 본문은 반환하지 않습니다.
+         * @description 실제 키에 대한 업무별로 운영 상태와 현재 허용값을 보여 주고 금융 필드는 별도로 판정해요. 인증 비밀이나 기록된 본문은 반환하지 않아요.
          */
         get: operations["getAdminLlmKey"];
         put?: never;
@@ -892,7 +892,7 @@ export interface paths {
         head?: never;
         /**
          * 관리자 LLM API 키 만료일 변경
-         * @description 키가 만료되는 날을 바꿉니다. 종료일은 KST 기준 그날까지 포함이고 승인 때와 같은 계산입니다. 이미 만료된 키에 앞날의 종료일을 주면 다시 활성화됩니다. 폐기된 키는 바꿀 수 없고, OpenRouter 키가 발급된 키는 만료일을 앞당기는 것만 할 수 있습니다.
+         * @description 키의 종료일을 바꿔요. 종료일은 KST 기준 그날을 포함하며 승인할 때와 같이 계산해요. 미래 종료일로 만료 조건을 해소할 수 있어요. 정지 상태와 최초 발급 조건은 그대로 적용돼요. 폐기된 키는 바꿀 수 없고, OpenRouter 키가 발급돼 있고 현재 만료일이 정해져 있으면 그보다 뒤로 미룰 수 없어요.
          */
         patch: operations["updateAdminLlmKeyExpiry"];
         trace?: never;
@@ -907,7 +907,7 @@ export interface paths {
         get?: never;
         /**
          * 관리자 LLM API 키 한도 교체
-         * @description 보낸 한도만 현재 업무 권한으로 변경하며 생략한 값은 유지합니다. 시스템 운영자는 금액과 리셋 창, 유료 모델 및 유료 기능 정책을 바꿀 수 없습니다.
+         * @description 보낸 한도만 현재 업무 권한으로 바꾸고 생략한 값은 유지해요. 시스템 운영자는 금액과 리셋 창, 유료 모델 및 유료 기능 정책을 바꿀 수 없어요.
          */
         put: operations["replaceAdminLlmKeyLimits"];
         post?: never;
@@ -926,7 +926,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키로 호출할 수 있는 모델
-         * @description 실제 키를 위한 모델 후보입니다. 유료 정책 참조는 금융 읽기나 해당 키의 예산 명령 권한이 있을 때만 반환합니다. 허용 목록을 정할 때 그 목록이 실제로 무엇을 남기는지 확인하는 자리입니다. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다는 보장은 아닙니다.
+         * @description 실제 키를 위한 모델 후보예요. 유료 정책 참조는 금융 읽기나 해당 키의 예산 명령 권한이 있을 때만 반환해요. 허용 목록을 정할 때 실제로 어떤 모델이 남는지 확인해요. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다고 보장하지 않아요.
          */
         get: operations["listAdminLlmKeyModels"];
         put?: never;
@@ -948,7 +948,7 @@ export interface paths {
         put?: never;
         /**
          * 관리자 LLM API 키 재개
-         * @description 정지된 키를 다시 활성화합니다.
+         * @description 정지된 키를 다시 활성화해요.
          */
         post: operations["resumeAdminLlmKey"];
         delete?: never;
@@ -968,7 +968,7 @@ export interface paths {
         put?: never;
         /**
          * 관리자 LLM API 키 정지
-         * @description 활성 키를 정지합니다. 사유는 감사 기록에 남고 평문 요청 본문은 기록하지 않습니다.
+         * @description 활성 키를 정지해요. 사유는 감사 기록에 남고 평문 요청 본문은 감사 기록에 남기지 않아요.
          */
         post: operations["suspendAdminLlmKey"];
         delete?: never;
@@ -986,7 +986,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM API 키 사용량
-         * @description 실제 키의 관측 읽기와 금융 읽기를 각각 판정하는 사용량 응답입니다. 미허용 투영은 null이며 0이나 빈 목록과 구분합니다. 일별 사용량은 소유자가 보는 것과 같은 값이고 같은 계산을 씁니다. 분해 셋은 일별 금액, 경로별 사용, 공급자가 요청과 다른 모델로 응답한 사례입니다. 하루는 한국 시간 기준이고 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
+         * @description 실제 키의 관측 읽기와 금융 읽기 권한을 각각 판정하는 사용량 응답이에요. 허용하지 않은 조회 항목은 null로 반환하며 0이나 빈 목록과 구분해요. 권한으로 볼 수 있는 일별 사용량은 소유자 조회와 같은 값과 계산을 써요. 일별 금액과 경로별 사용량, 공급자가 요청과 다른 모델로 응답한 사례를 나눠 보여 줘요. 하루는 한국 시간 기준이며 호출이 없던 날도 0으로 채워요. 오늘 값은 게이트웨이의 배치 보고에 따라 달라질 수 있어요.
          */
         get: operations["getAdminLlmKeyUsage"];
         put?: never;
@@ -1006,7 +1006,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM upstream 지표
-         * @description raw usage event에서 마지막 처리 upstream별 최종 결과와 지연, token, attempt coverage를 집계합니다. 중간 retry 경로나 uptime을 뜻하지 않습니다.
+         * @description raw usage event에서 마지막 처리 upstream별 최종 결과와 지연, token, attempt coverage를 집계해요. 중간 retry 경로나 uptime을 뜻하지 않아요.
          */
         get: operations["getAdminLlmMetrics"];
         put?: never;
@@ -1026,7 +1026,7 @@ export interface paths {
         };
         /**
          * 유료 모델 카탈로그
-         * @description 승인 화면에서 고를 수 있는 유료 모델 후보와 그 가격을 조회합니다. 캐시만 읽으므로 이 호출이 벤더를 부르지 않으며, 목록이 비어 있거나 오래됐어도 모델 이름을 직접 입력해 승인할 수 있습니다. 목록이 빈 이유는 신선도 하나로 갈리지 않습니다. 한 번도 못 가져온 것과 계속 실패하는 것이 둘 다 UNKNOWN이므로, lastError와 consecutiveFailures를 함께 읽어야 구분됩니다.
+         * @description 승인 화면에서 고를 수 있는 유료 모델 후보와 가격을 조회해요. 캐시만 읽으므로 이 호출이 벤더를 부르지 않으며, 목록이 비어 있거나 오래됐어도 모델 이름을 직접 입력해 승인할 수 있어요. 성공 기록이 없으면 시도하지 않았든 실패했든 UNKNOWN으로 표시돼요. lastError와 consecutiveFailures를 함께 확인해 주세요.
          */
         get: operations["listAdminOpenRouterModels"];
         put?: never;
@@ -1046,7 +1046,7 @@ export interface paths {
         };
         /**
          * 새 LLM 명단 발급의 사업 계정 선택 참조
-         * @description 실제 기관과 살아 있는 워크스페이스에 대한 명단 발급과 키 예산 업무를 같은 권한 원천에서 확인합니다. 기존 신청이나 리소스, 개인 구성원 자격은 필요하지 않습니다. 계정 ID·이름·선택 가능 상태와 적용 가능한 기본 정책만 반환합니다.
+         * @description 실제 기관과 살아 있는 워크스페이스에 대한 명단 발급과 키 예산 업무를 같은 권한 원천에서 확인해요. 기존 신청이나 리소스, 개인 구성원 자격은 필요하지 않아요. 계정 ID와 이름, 선택 가능 상태, 적용 가능한 기본 정책만 반환해요.
          */
         get: operations["listAdminLlmRosterAccountReferences"];
         put?: never;
@@ -1066,7 +1066,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM 서비스 상태
-         * @description 게이트웨이 자기보고와 upstream별 passive·active·catalog 현재 상태를 조회합니다. 현재 범위에서 읽을 수 있는 공급원에 연결된 공개 TOKEN 모델의 주·대체 구성 관계도 제공하며 전체 모델 목록이나 실제 처리 경로를 뜻하지 않습니다. 조회 과정에서 gateway나 upstream을 직접 호출하지 않으며 변경 작업도 제공하지 않습니다.
+         * @description 게이트웨이의 자기보고와 upstream별 passive, active, catalog 현재 상태를 조회해요. 현재 범위에서 읽을 수 있는 공급원에 연결된 공개 TOKEN 모델의 주 경로와 대체 경로 구성 관계도 제공해요. 전체 모델 목록이나 실제 처리 경로를 보여 주는 것은 아니에요. 조회 과정에서 gateway나 upstream을 직접 호출하지 않으며 변경 작업도 제공하지 않아요.
          */
         get: operations["getAdminLlmStatus"];
         put?: never;
@@ -1086,7 +1086,7 @@ export interface paths {
         };
         /**
          * 관리자 LLM 사용량 통계
-         * @description DB에 저장된 rollup과 usage event, vendor meter cache, gateway 자기보고를 읽어 수요·소비처·한도 검토·데이터 신뢰도를 제공합니다. 조회 과정에서 gateway나 vendor를 직접 호출하지 않습니다.
+         * @description DB에 저장된 rollup과 usage event, vendor meter cache, gateway 자기보고를 읽어 수요와 소비처, 한도 검토, 데이터 신뢰도를 제공해요. 조회 과정에서 gateway나 vendor를 직접 호출하지 않아요.
          */
         get: operations["getAdminLlmUsage"];
         put?: never;
@@ -1675,7 +1675,7 @@ export interface paths {
         put?: never;
         /**
          * 지원 대상자 생성 대기 취소
-         * @description 정확한 현재 영향 확인과 사유로 한 대상자만 취소합니다. 승인, 다른 대상자, 구성원과 초대는 유지하며 등록된 자원은 회수하지 않습니다. 같은 수행자와 확인 지문 및 사유의 재요청은 현재 재인가 후 기존 결과를 반환합니다.
+         * @description 정확한 현재 영향 확인과 사유로 대상자 한 명만 취소해요. 승인과 다른 대상자, 구성원, 초대는 유지하며 등록된 자원은 회수하지 않아요. 같은 수행자가 같은 확인 지문과 사유로 다시 요청하면 현재 권한을 재확인한 뒤 기존 결과를 반환해요.
          */
         post: operations["cancelAdminRequestRecipient"];
         delete?: never;
@@ -1693,7 +1693,7 @@ export interface paths {
         };
         /**
          * 지원 대상자 생성 대기 취소 영향 조회
-         * @description 현재 지원 쓰기 권한으로 승인된 VM 또는 LLM 명단의 한 대상자를 확인합니다. 조회는 상태를 변경하지 않습니다.
+         * @description 현재 지원 쓰기 권한으로 승인된 VM 또는 LLM 명단의 대상자 한 명을 확인해요. 조회는 상태를 바꾸지 않아요.
          */
         get: operations["getAdminRequestRecipientCancellationImpact"];
         put?: never;
@@ -1715,7 +1715,7 @@ export interface paths {
         put?: never;
         /**
          * 대상자 생성 다시 시도
-         * @description 여러 사람에게 리소스를 만드는 신청에서 생성에 실패한 대상자를 다시 생성 대기로 돌립니다. 실패한 대상자만 다시 시도할 수 있습니다.
+         * @description 여러 사람에게 리소스를 만드는 신청에서 생성에 실패한 대상자를 다시 생성 대기로 돌려요. 실패한 대상자만 다시 시도할 수 있어요.
          */
         post: operations["retryRequestRecipient"];
         delete?: never;
@@ -1797,7 +1797,7 @@ export interface paths {
         };
         /**
          * 관리자 통합 자원 기한 목록
-         * @description 전역 지원 메타데이터를 자원당 주 기한 하나로 조회합니다. 기관·워크스페이스는 선택 필터이며 없는 식별자는 빈 목록입니다. VM은 사용 종료일, LLM 키는 만료 시각, 외부 도메인은 갱신 또는 해제 뒤 예약 종료, GPU는 대기 중 승인 종료일 또는 할당·반납 중 실제 임대 종료입니다. 종료 상태와 주 기한 없는 자원은 제외합니다. expiringInDays는 1~365의 KST 달력 창으로 오늘부터 오늘+N일까지입니다. VM·대기 GPU는 종료일 양끝을 포함합니다. LLM 키는 관측 시각보다 미래이면서 오늘+N 다음 날 0시(KST)까지 포함하여 그날까지 사용 가능한 키를 담습니다. 도메인·GPU 임대의 정확한 시각은 관측 시각보다 미래이며 같은 다음 날 0시 미만입니다. expired=true는 날짜 종료가 오늘보다 이전이거나 정확한 기한이 관측 시각 이하인 자원입니다. 두 창을 함께 지정하면 교집합이므로 빈 목록입니다. 관측 시각과 count·페이지는 같은 DB snapshot이며 기한 경과를 외부 완료로 해석하지 않습니다. 실제 변경 권한은 기존 단건 경로의 기관 범위를 따릅니다.
+         * @description 전역 지원 메타데이터에서 자원마다 주 기한 하나를 조회해요. 기관과 워크스페이스는 선택 필터이며 없는 식별자는 빈 목록을 반환해요. VM은 사용 종료일, LLM 키는 만료 시각, 외부 도메인은 갱신 기한 또는 해제 뒤 예약 종료 시각, GPU는 대기 중 승인 종료일 또는 할당이나 반납 중 실제 임대 종료 시각이에요. 종료 상태와 주 기한이 없는 자원은 제외해요. expiringInDays는 1~365의 KST 달력 창이며 오늘부터 오늘+N일까지예요. VM과 대기 GPU는 종료일 양끝을 포함해요. LLM 키는 관측 시각보다 미래이면서 오늘+N 다음 날 0시(KST) 이하인 만료 시각을 포함해요. 도메인과 GPU 임대의 정확한 기한은 관측 시각보다 미래이면서 같은 다음 날 0시 미만이에요. expired=true는 종료일이 오늘보다 이르거나 정확한 기한이 관측 시각 이하인 자원을 뜻해요. expired=true와 expiringInDays를 함께 지정하면 교집합이므로 빈 목록이에요. 관측 시각과 count, 페이지는 같은 DB snapshot을 기준으로 하며 기한 경과를 외부 완료로 해석하지 않아요. 실제 변경 권한은 기존 단건 경로의 기관 범위를 따라요.
          */
         get: operations["listAdminResourceDeadlines"];
         put?: never;
@@ -1931,7 +1931,7 @@ export interface paths {
         };
         /**
          * 학생 지원 조회의 기관 필터 목록
-         * @description 비활성 기관을 포함한 기관 ID·이름·상태만 조회합니다. 기관 설정이나 자격증명, 배정·운영 권한을 제공하지 않습니다.
+         * @description 비활성 기관을 포함해 기관 ID와 이름, 상태만 조회해요. 기관 설정이나 자격증명, 배정 및 운영 권한은 제공하지 않아요.
          */
         get: operations["listAdminSupportOrgs"];
         put?: never;
@@ -2149,7 +2149,7 @@ export interface paths {
         head?: never;
         /**
          * 사용자 프로필 정정
-         * @description 프로필 정정 업무를 가진 기관 계정은 시스템 계층을 제외한 사용자를 전역 정정하며 시스템 관리자는 모든 계정을 정정합니다. 기존 프로필 변경 로직으로 초대 연결과 알림, 감사를 처리합니다. 계정 상태와 MFA, 기관 역할은 변경하지 않습니다.
+         * @description 프로필 정정 업무를 가진 기관 계정은 시스템 계층을 제외한 사용자를 전역 정정하며 시스템 관리자는 모든 계정을 정정해요. 기존 프로필 변경 로직으로 초대 연결과 알림, 감사를 처리해요. 계정 상태와 2단계 인증, 기관 역할은 바꾸지 않아요.
          */
         patch: operations["updateUserProfile"];
         trace?: never;
@@ -2165,7 +2165,7 @@ export interface paths {
         put?: never;
         /**
          * 프로필 정정과 계정 활성화의 초대 영향 미리보기
-         * @description 제안된 프로필 또는 복원할 계정 상태에서 수락 가능한 초대와 가입 대기 신청의 다음 상태를 조회합니다. 프로필 정정 업무를 가진 기관 계정과 시스템 관리자가 정정을 미리보며 계정 활성화 미리보기는 시스템 관리자만 수행합니다. 값을 저장하거나 초대를 수락하지 않습니다. 미리보기는 예약이 아니며 생성 대기는 실제 생성 완료가 아닙니다.
+         * @description 제안된 프로필 또는 복원할 계정 상태에서 수락 가능한 초대와 가입 대기 신청의 다음 상태를 조회해요. 프로필 정정 업무를 가진 기관 계정과 시스템 관리자가 정정을 미리 보며 계정 활성화 미리보기는 시스템 관리자만 수행해요. 값을 저장하거나 초대를 수락하지 않아요. 미리보기는 예약이 아니며 생성 대기는 실제 생성 완료가 아니에요.
          */
         post: operations["previewAdminUserProfileImpact"];
         delete?: never;
@@ -2183,7 +2183,7 @@ export interface paths {
         };
         /**
          * 사용자의 관계와 실제 신청 결과 조회
-         * @description 학생 지원과 관계별 조회 업무·대상 범위로 구성원·초대·신청·리소스 관계를 조회합니다. 기관은 선택 필터입니다. 저장된 학번과 대기 초대의 연결, 생성 대기와 실제 리소스 상태를 구분합니다.
+         * @description 학생 지원과 관계별 조회 업무 및 대상 범위에 따라 구성원과 초대, 신청, 리소스 관계를 조회해요. 기관은 선택 필터예요. 저장된 학번과 대기 초대의 연결, 생성 대기와 실제 리소스 상태를 구분해요.
          */
         get: operations["getAdminUserSupport"];
         put?: never;
@@ -2203,7 +2203,7 @@ export interface paths {
         };
         /**
          * 사용자와 리소스의 공통 접근 조건 조회
-         * @description 접근 목록 읽기 업무와 대상 범위로 지정 리소스의 구성원·부여·공통 상태를 설명합니다. 학생 지원과 독립적인 진단은 연결된 계정의 최소 상태를 제공하며 실제 사용자 인가와 연결 상태는 변경하지 않습니다.
+         * @description 접근 목록 읽기 업무와 대상 범위에 따라 지정 리소스의 구성원과 부여, 공통 상태를 설명해요. 학생 지원과 독립적인 진단은 연결된 계정의 최소 상태를 제공하며 실제 사용자 인가와 연결 상태는 바꾸지 않아요.
          */
         get: operations["getAdminUserResourceAccess"];
         put?: never;
@@ -2257,7 +2257,7 @@ export interface paths {
         put?: never;
         /**
          * 제안 VM 사양의 현재 한 VM 배치 조건 조회
-         * @description 신청 저장 전과 승인 검토에서 같은 이미지 revision과 한 VM 사양을 조회합니다. 호환 ACTIVE replica와 ACTIVE 노드, 실제 배치 용량 계산을 재사용합니다. 용량을 예약하거나 승인 규칙을 바꾸지 않으며 다인 전체 생성이나 외부 적용 완료를 보장하지 않습니다.
+         * @description 신청 저장 전과 승인 검토에서 같은 이미지 revision과 VM 한 대의 사양을 조회해요. 호환 ACTIVE replica와 ACTIVE 노드, 실제 배치 용량 계산을 재사용해요. 용량을 예약하거나 승인 규칙을 바꾸지 않으며 여러 사람의 전체 생성이나 외부 적용 완료를 보장하지 않아요.
          */
         post: operations["previewAdminVmPlacement"];
         delete?: never;
@@ -2517,7 +2517,7 @@ export interface paths {
         };
         /**
          * 워크스페이스의 대기 중인 초대 목록
-         * @description 학생 지원 권한으로 아직 가입하지 않은 대상의 초대 정보를 조회합니다. 대기 중인 초대만 오래된 순서로 돌려줍니다.
+         * @description 현재 워크스페이스의 지원 조회 또는 초대 관리 권한으로 대기 중인 초대를 오래된 순서로 조회해요.
          */
         get: operations["listAdminWorkspaceInvitations"];
         put?: never;
@@ -2569,7 +2569,7 @@ export interface paths {
         };
         /**
          * 지원 초대 취소 영향 조회
-         * @description 기존 지원 쓰기 권한으로 정확한 초대에 연결된 신청 대상자의 종료 영향을 조회합니다. 복수 기관의 신청을 포함하며 FAILED는 자동 종료되지 않는 이력으로 구분합니다.
+         * @description 기존 지원 쓰기 권한으로 정확한 초대에 연결된 신청 대상자의 종료 영향을 조회해요. 여러 기관의 신청을 포함하며 FAILED는 자동 종료되지 않는 이력으로 구분해요.
          */
         get: operations["getAdminWorkspaceInvitationTerminationImpact"];
         put?: never;
@@ -2621,7 +2621,7 @@ export interface paths {
         };
         /**
          * 지원 워크스페이스 삭제 영향 조회
-         * @description 기존 지원 쓰기 권한으로 전체 워크스페이스의 신청 취소, 대상자 자동 종료와 남은 자원 차단 조건을 조회합니다. 기관 선택은 전체 영향 집합을 좁히지 않습니다. 조회는 가입, 생성 또는 취소를 실행하지 않습니다.
+         * @description 기존 지원 쓰기 권한으로 전체 워크스페이스의 신청 취소와 대상자 자동 종료, 남은 자원의 차단 조건을 조회해요. 기관 선택으로 전체 영향 집합을 좁히지 않아요. 조회는 가입이나 생성, 취소를 실행하지 않아요.
          */
         get: operations["getAdminWorkspaceTerminationImpact"];
         put?: never;
@@ -2833,7 +2833,7 @@ export interface paths {
         };
         /**
          * 도메인 목록
-         * @description `workspaceId`를 지정하지 않으면 내가 접근 권한을 가진 도메인만 옵니다. 지정하면 그 워크스페이스의 도메인 전부이고, 접근 권한이 없는 도메인도 이름과 상태, 소유자까지는 보입니다.
+         * @description `workspaceId`를 지정하지 않으면 내가 접근 권한을 가진 도메인만 조회해요. 지정하면 해당 워크스페이스의 도메인 목록을 조회하며 접근 권한이 없는 도메인도 이름과 상태, 소유자는 보여요.
          */
         get: operations["listDnsDomains"];
         put?: never;
@@ -2857,7 +2857,7 @@ export interface paths {
         post?: never;
         /**
          * 도메인 해제
-         * @description 레코드를 지우고 이름을 해제합니다. 이름은 예약 기간 동안 이 워크스페이스에 남아 있다가 회수됩니다.
+         * @description 레코드를 삭제하고 이름을 해제해요. 이름은 예약 기간 동안 이 워크스페이스에 남아 있다가 회수돼요.
          */
         delete: operations["deleteDnsDomain"];
         options?: never;
@@ -2874,13 +2874,13 @@ export interface paths {
         };
         /**
          * 접근 권한 목록
-         * @description 이 도메인의 접근 권한 전체입니다. 도메인 소유자와 워크스페이스 소유자만 볼 수 있습니다.
+         * @description 이 도메인의 접근 권한 전체예요. 도메인 소유자와 워크스페이스 소유자만 볼 수 있어요.
          */
         get: operations["listDnsDomainAccessGrants"];
         put?: never;
         /**
          * 접근 권한 부여
-         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 도메인의 접근 권한을 부여합니다.
+         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 도메인의 접근 권한을 부여해요.
          */
         post: operations["addDnsDomainAccessGrant"];
         delete?: never;
@@ -2917,7 +2917,7 @@ export interface paths {
         post?: never;
         /**
          * 접근 권한 회수
-         * @description 회수해도 이미 존에 들어간 레코드는 그대로 남습니다. 필요하면 레코드를 먼저 정리해 주세요.
+         * @description 접근 권한을 회수해도 이미 존에 들어간 레코드는 그대로 남아요. 필요하면 레코드를 먼저 정리해 주세요.
          */
         delete: operations["removeDnsDomainAccessGrant"];
         options?: never;
@@ -2937,7 +2937,7 @@ export interface paths {
         get: operations["listDnsRecordSets"];
         /**
          * 레코드 세트 저장
-         * @description 이 이름이 가져야 할 레코드 세트 전체를 보냅니다. 서버가 차이를 계산하므로 같은 내용을 다시 보내면 아무것도 바뀌지 않습니다. 목록에서 빠진 세트는 존에서 지워집니다.
+         * @description 이 이름에 적용할 레코드 세트 전체를 보내요. 서버가 차이를 계산하므로 같은 내용을 다시 보내면 바뀌지 않아요. 목록에서 빠진 세트는 존에서 삭제해요.
          */
         put: operations["replaceDnsRecordSets"];
         post?: never;
@@ -2958,7 +2958,7 @@ export interface paths {
         put?: never;
         /**
          * 사용 연장
-         * @description 사용 기한을 지금부터 다시 전체 기간만큼으로 옮깁니다. 남은 기간에 더하는 것이 아니라 언제 눌러도 같은 기간을 받습니다.
+         * @description 사용 기한을 지금부터 다시 전체 기간만큼으로 바꿔요. 남은 기간에 더하지 않으므로 언제 갱신해도 같은 기간을 받아요.
          */
         post: operations["renewDnsDomain"];
         delete?: never;
@@ -2978,7 +2978,7 @@ export interface paths {
         put?: never;
         /**
          * 해제한 도메인 되살리기
-         * @description 예약 기간 동안 이 워크스페이스가 붙잡고 있는 이름을 되찾습니다. 새로 받는 것이 아니라 이미 가진 것을 되살리는 것이므로 승인을 거치지 않습니다. 레코드는 돌아오지 않으며 다시 넣어야 합니다.
+         * @description 예약 기간 동안 이 워크스페이스가 보유한 이름을 되살려요. 새로 받는 것이 아니라 이미 가진 것을 되살리는 것이므로 승인을 거치지 않아요. 레코드는 복구되지 않으므로 다시 입력해야 해요.
          */
         post: operations["reviveDnsDomain"];
         delete?: never;
@@ -3096,13 +3096,13 @@ export interface paths {
         };
         /**
          * 접근 권한 목록
-         * @description 이 GPU의 접근 권한 전체와, 그 목록이 어느 GPU의 것인지 알려 주는 최소 정보입니다. GPU 소유자와 워크스페이스 소유자만 볼 수 있습니다.
+         * @description 이 GPU의 접근 권한 전체와 대상 GPU를 구분하는 최소 정보예요. GPU 소유자와 워크스페이스 소유자만 볼 수 있어요.
          */
         get: operations["listGpuAllocationAccessGrants"];
         put?: never;
         /**
          * 접근 권한 부여
-         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 GPU의 접근 권한을 부여합니다. 사용자는 이 GPU를 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자·열람자까지만 부여할 수 있습니다.
+         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 GPU의 접근 권한을 부여해요. 사용자는 이 GPU를 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자나 열람자 권한까지만 부여할 수 있어요.
          */
         post: operations["addGpuAllocationAccessGrant"];
         delete?: never;
@@ -3139,7 +3139,7 @@ export interface paths {
         post?: never;
         /**
          * 접근 권한 회수
-         * @description 접근 권한만 회수하며 연결된 가상머신은 재시작하지 않습니다.
+         * @description 접근 권한만 회수하며 연결된 가상머신은 재시작하지 않아요.
          */
         delete: operations["removeGpuAllocationAccessGrant"];
         options?: never;
@@ -3159,7 +3159,7 @@ export interface paths {
         put?: never;
         /**
          * 가상머신에 GPU 연결
-         * @description 가상머신 중단에 동의한 뒤 연결합니다. 임대는 이미 시작되어 있으며 연결 실패로 초기화되지 않습니다.
+         * @description 가상머신 중단에 동의한 뒤 연결해요. 임대는 이미 시작됐으며 연결 실패로 초기화되지 않아요.
          */
         post: operations["attachGpu"];
         delete?: never;
@@ -3196,7 +3196,7 @@ export interface paths {
         put?: never;
         /**
          * GPU 연결 해제
-         * @description 연결만 해제하며 GPU 점유와 임대 기간은 유지합니다.
+         * @description 연결만 해제하며 GPU 점유와 임대 기간은 유지해요.
          */
         post: operations["detachGpu"];
         delete?: never;
@@ -3265,7 +3265,7 @@ export interface paths {
         };
         /**
          * LLM API 키 목록
-         * @description `workspaceId`를 지정하지 않으면 내가 접근 권한을 가진 키만 옵니다. 지정하면 그 워크스페이스의 키 전부이고, 접근 권한이 없는 키는 이름·상태·소유자만 담긴 제한된 행으로 표시됩니다.
+         * @description `workspaceId`를 지정하지 않으면 내가 접근 권한을 가진 키만 조회해요. 지정하면 해당 워크스페이스의 키 목록을 조회하며 접근 권한이 없는 키는 이름과 상태, 소유자만 담긴 제한된 행으로 표시해요.
          */
         get: operations["listLlmKeys"];
         put?: never;
@@ -3285,7 +3285,7 @@ export interface paths {
         };
         /**
          * LLM API 키 상세
-         * @description 접근 권한이 있는 키의 상세입니다. 키 평문과 그 해시는 어떤 응답에도 담기지 않습니다.
+         * @description 접근 권한이 있는 키의 상세를 조회해요. 상세 응답에는 키 평문과 해시를 담지 않아요.
          */
         get: operations["getLlmKey"];
         put?: never;
@@ -3295,7 +3295,7 @@ export interface paths {
         head?: never;
         /**
          * LLM API 키 수정
-         * @description 키 이름과 사용 목적, 본문 기록 여부를 바꿉니다. 생략한 항목은 그대로 둡니다.
+         * @description 키 이름과 사용 목적, 본문 기록 여부를 바꿔요. 생략한 항목은 그대로 둬요.
          */
         patch: operations["updateLlmKey"];
         trace?: never;
@@ -3309,13 +3309,13 @@ export interface paths {
         };
         /**
          * 접근 권한 목록
-         * @description 이 키의 접근 권한 전체와, 그 목록이 어느 키의 것인지 알려 주는 최소 정보입니다. 키 소유자와 워크스페이스 소유자만 볼 수 있습니다.
+         * @description 이 키의 접근 권한 전체와 대상 키를 구분하는 최소 정보예요. 키 소유자와 워크스페이스 소유자만 볼 수 있어요.
          */
         get: operations["listLlmKeyAccessGrants"];
         put?: never;
         /**
          * 접근 권한 부여
-         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 키의 접근 권한을 부여합니다. 사용자는 이 키를 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자·열람자까지만 부여할 수 있습니다.
+         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 키의 접근 권한을 부여해요. 사용자는 이 키를 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자나 열람자 권한까지만 부여할 수 있어요.
          */
         post: operations["addLlmKeyAccessGrant"];
         delete?: never;
@@ -3352,7 +3352,7 @@ export interface paths {
         post?: never;
         /**
          * 접근 권한 회수
-         * @description 회수해도 발급 시 이미 확인한 키 평문은 회수되지 않습니다. 필요하면 키를 재발급해 주세요.
+         * @description 접근 권한을 회수해도 발급할 때 이미 확인한 키 평문은 회수되지 않아요. 필요하면 키를 재발급해 주세요.
          */
         delete: operations["removeLlmKeyAccessGrant"];
         options?: never;
@@ -3370,7 +3370,7 @@ export interface paths {
         };
         /**
          * 기록된 본문 목록
-         * @description 본문 기록을 켠 동안 이 키로 오간 프롬프트와 응답의 목록입니다. 각 줄에는 앞부분만 담기고, 전문은 개별 조회로 봅니다. **이 키에 접근 권한이 있는 사람은 모두 읽을 수 있습니다** — 게이트웨이는 키를 인증할 뿐 보낸 사람이 누구인지 알지 못하므로 열람 단위가 사람이 아니라 키입니다. 기록은 30일 동안 보관하고 지난 것부터 지웁니다. 본문 기록을 끈 뒤에도 이미 기록된 것은 보관 기간까지 그대로 보입니다.
+         * @description 본문 기록을 켠 동안 이 키로 오간 프롬프트와 응답의 목록이에요. 각 행에는 앞부분만 담기며 전문은 개별 조회로 확인해요. **이 키에 접근 권한이 있으면 누구나 읽을 수 있어요.** Gateway는 키만 인증해 보낸 사람을 구분하지 못하므로 키 단위로 열람해요. 기록은 30일 동안 보관하고 지난 것부터 지워요. 본문 기록을 꺼도 이미 기록된 내용은 보관 기간까지 조회할 수 있어요.
          */
         get: operations["listLlmKeyBodies"];
         put?: never;
@@ -3390,7 +3390,7 @@ export interface paths {
         };
         /**
          * 기록된 본문 상세
-         * @description 기록 한 건의 전문입니다. `request`는 보통 보낸 messages 배열 그대로이고, 길이 제한에 걸린 경우에는 앞부분을 담은 문자열입니다.
+         * @description 기록 한 건의 전문이에요. `request`는 보통 보낸 messages 배열 그대로이며 길이 제한에 걸리면 앞부분을 담은 문자열이에요.
          */
         get: operations["getLlmKeyBody"];
         put?: never;
@@ -3410,7 +3410,7 @@ export interface paths {
         };
         /**
          * LLM API 키로 호출할 수 있는 모델
-         * @description 이 키로 부를 수 있는 모델입니다. 자체 서빙 모델은 플랫폼 카탈로그에서, 유료 모델은 공급자 목록의 캐시에서 옵니다. 키에 모델 허용 목록이 있으면 그 목록에 맞는 것만 담기고, 금액 한도가 아직 없어도 무엇을 신청할지 볼 수 있도록 목록은 채워집니다. 최종 판정은 호출 시점에 이뤄지므로 여기 있는 모델이 항상 응답한다는 보장은 아닙니다.
+         * @description 이 키에서 선택할 모델 후보예요. 자체 서빙 모델은 플랫폼 카탈로그에서, 유료 모델은 공급자 목록의 캐시에서 가져와요. 키에 모델 허용 목록이 있으면 그 목록에 맞는 것만 담기고, 금액 한도가 아직 없어도 무엇을 신청할지 볼 수 있도록 목록을 제공해요. 최종 판정은 호출 시점에 이루어지므로 여기 있는 모델이 항상 응답한다는 보장은 아니에요.
          */
         get: operations["listLlmKeyModels"];
         put?: never;
@@ -3432,7 +3432,7 @@ export interface paths {
         put?: never;
         /**
          * LLM API 키 폐기
-         * @description 이 키를 폐기합니다. 게이트웨이에는 폴링 주기 안에 반영되고, 이후 이 키로 보낸 요청은 '폐기된 키'로 거부됩니다. 사용 기록은 남습니다.
+         * @description 이 키를 폐기해요. 변경이 Gateway에 반영되면 이 키로 새로 인증하는 요청은 '폐기된 키'로 거절돼요. 사용 기록은 남아요.
          */
         post: operations["revokeLlmKey"];
         delete?: never;
@@ -3452,7 +3452,7 @@ export interface paths {
         put?: never;
         /**
          * LLM API 키 발급
-         * @description 이 키의 평문을 만들어 **한 번만** 돌려줍니다. 서버에는 해시만 남으므로 다시 조회할 수 없고, 분실하면 이 호출을 다시 해서 재발급해야 합니다. 재발급하면 이전 값은 곧바로 쓸 수 없게 됩니다.
+         * @description 키 평문을 만들어 **한 번만** 반환해요. 서버에는 평문을 저장하지 않으므로 다시 조회할 수 없어요. 잃어버렸다면 이 경로로 재발급해 주세요. 재발급한 값이 Gateway에 반영되면 이전 값으로 새 요청을 인증할 수 없어요.
          */
         post: operations["issueLlmKeyToken"];
         delete?: never;
@@ -3470,7 +3470,7 @@ export interface paths {
         };
         /**
          * LLM API 키 사용량
-         * @description 이 키의 일별 사용량입니다. 하루는 한국 시간 기준이고, 호출이 없던 날도 0으로 채워집니다. 게이트웨이가 배치로 보고하므로 오늘 자 값은 아직 채워지는 중입니다.
+         * @description 이 키의 일별 사용량을 조회해요. 하루는 한국 시간 기준이며 호출이 없던 날도 0으로 채워요. Gateway가 배치로 보고하므로 오늘 값은 아직 집계 중이에요.
          */
         get: operations["getLlmKeyUsage"];
         put?: never;
@@ -3554,7 +3554,7 @@ export interface paths {
         };
         /**
          * 현재 계정의 기관 업무와 부여 출처 조회
-         * @description 표시 역할과 실제 기관 업무를 구분합니다. 권한 상태를 확인할 수 없으면 INVALID로 표시하며 개인 접근권한과 시스템 역할을 바꾸지 않습니다.
+         * @description 표시 역할과 실제 기관 업무를 구분해요. 권한 상태를 확인할 수 없으면 INVALID로 표시하며 개인 접근권한과 시스템 역할은 바꾸지 않아요.
          */
         get: operations["getMyInstitutionAuthority"];
         put?: never;
@@ -3638,12 +3638,12 @@ export interface paths {
         };
         /**
          * 본인 알림 수신 설정 조회
-         * @description 새 키 사용량 임계 알림 메일의 개인 수신 설정을 조회합니다. 콘솔 알림과 다른 업무·보안 알림에는 영향을 주지 않습니다.
+         * @description 새 키 사용량 임계 알림 메일의 개인 수신 설정을 조회해요. 콘솔 알림과 다른 업무 및 보안 알림에는 영향을 주지 않아요.
          */
         get: operations["getMyNotificationPreferences"];
         /**
          * 본인 알림 수신 설정 변경
-         * @description 새 키 사용량 임계 알림 메일만 변경합니다. 기본값은 수신이며 콘솔 알림과 기존 업무·보안 메일은 유지합니다.
+         * @description 새 키 사용량 임계 알림 메일만 변경해요. 기본값은 수신이며 콘솔 알림과 기존 업무 및 보안 메일은 유지해요.
          */
         put: operations["updateMyNotificationPreferences"];
         post?: never;
@@ -3934,7 +3934,7 @@ export interface paths {
         };
         /**
          * 신청 가능한 사용 기간 목록
-         * @description 관리자가 등록한 기간 중 오늘 기준으로 아직 끝나지 않은 것만 돌려줍니다. 모든 항목이 종료일을 가집니다. 끝나지 않는 기간은 신청 본문의 reqIndefinite로 요청합니다.
+         * @description 관리자가 등록한 기간 중 오늘 기준으로 끝나지 않은 항목만 반환해요. 모든 항목에는 종료일이 있어요. 무기한은 신청 본문의 reqIndefinite로 요청해요.
          */
         get: operations["listRequestPeriods"];
         put?: never;
@@ -4004,7 +4004,7 @@ export interface paths {
         put?: never;
         /**
          * 대상자 생성 대기 취소
-         * @description 정확한 현재 영향 확인과 사유로 한 대상자만 취소합니다. 승인, 다른 대상자, 구성원과 초대는 유지하며 등록된 자원은 회수하지 않습니다. 같은 수행자와 확인 지문 및 사유의 재요청은 현재 재인가 후 기존 결과를 반환합니다.
+         * @description 정확한 현재 영향 확인과 사유로 대상자 한 명만 취소해요. 승인과 다른 대상자, 구성원, 초대는 유지하며 등록된 자원은 회수하지 않아요. 같은 수행자가 같은 확인 지문과 사유로 다시 요청하면 현재 권한을 재확인한 뒤 기존 결과를 반환해요.
          */
         post: operations["cancelRequestRecipient"];
         delete?: never;
@@ -4022,7 +4022,7 @@ export interface paths {
         };
         /**
          * 대상자 생성 대기 취소 영향 조회
-         * @description 현재 실제 OWNER으로 승인된 VM 또는 LLM 명단의 한 대상자를 확인합니다. 조회는 상태를 변경하지 않습니다.
+         * @description 현재 워크스페이스 OWNER가 승인된 VM 또는 LLM 명단의 대상자 한 명을 확인해요. 조회는 상태를 바꾸지 않아요.
          */
         get: operations["getRequestRecipientCancellationImpact"];
         put?: never;
@@ -4123,13 +4123,13 @@ export interface paths {
         };
         /**
          * 접근 권한 목록
-         * @description 이 VM의 접근 권한 전체와, 그 목록이 어느 VM의 것인지 알려 주는 최소 정보입니다. VM 소유자와 워크스페이스 소유자만 볼 수 있습니다.
+         * @description 이 VM의 접근 권한 전체와 대상 VM을 구분하는 최소 정보예요. VM 소유자와 워크스페이스 소유자만 볼 수 있어요.
          */
         get: operations["listVmAccessGrants"];
         put?: never;
         /**
          * 접근 권한 부여
-         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 VM의 접근 권한을 부여합니다. 사용자는 이 VM을 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자·열람자까지만 부여할 수 있습니다.
+         * @description 지정한 사용자 또는 소유 워크스페이스 전체에 이 VM의 접근 권한을 부여해요. 사용자는 이 VM을 소유한 워크스페이스의 구성원이어야 하고, 워크스페이스 전체에는 참여자나 열람자 권한까지만 부여할 수 있어요.
          */
         post: operations["addVmAccessGrant"];
         delete?: never;
@@ -4166,7 +4166,7 @@ export interface paths {
         post?: never;
         /**
          * 접근 권한 회수
-         * @description 회수해도 이미 열람한 초기 비밀번호와 이미 열려 있는 SSH 세션은 회수되지 않습니다. 필요하면 비밀번호를 재생성해 주세요.
+         * @description 회수해도 이미 열람한 초기 비밀번호와 이미 열려 있는 SSH 세션은 회수되지 않아요. 필요하면 비밀번호를 재생성해 주세요.
          */
         delete: operations["removeVmAccessGrant"];
         options?: never;
@@ -4540,13 +4540,13 @@ export interface paths {
         };
         /**
          * 대기 중인 초대 목록
-         * @description 아직 받지 않은 초대만 오래된 순서로 돌려줍니다. 소유자(OWNER)만 볼 수 있습니다.
+         * @description 아직 받지 않은 초대만 오래된 순서로 반환해요. 소유자(OWNER)만 볼 수 있어요.
          */
         get: operations["listWorkspaceInvitations"];
         put?: never;
         /**
          * 구성원 초대
-         * @description 이메일이나 학번으로 한 번에 1명에서 200명까지 초대합니다. 활성 계정이 있으면 바로 구성원(MEMBER)이 되고, 없으면 초대가 대기하다가 그 사람이 가입하거나 학번을 등록하면 자동으로 구성원이 됩니다. 초대는 만료되지 않으며 소유자가 취소할 수 있습니다. 결과는 항목마다 요청과 같은 순서로 옵니다. 소유자(OWNER)만 호출할 수 있고 개인 워크스페이스에는 초대할 수 없습니다.
+         * @description 이메일이나 학번으로 한 번에 1명에서 200명까지 초대해요. 활성 계정이 있으면 바로 구성원(MEMBER)이 되고, 없으면 초대가 대기하다가 그 사람이 가입하거나 학번을 등록하면 자동으로 구성원이 돼요. 초대는 만료되지 않으며 소유자가 취소할 수 있어요. 결과는 항목마다 요청과 같은 순서로 반환해요. 소유자(OWNER)만 호출할 수 있고 개인 워크스페이스에는 초대할 수 없어요.
          */
         post: operations["inviteWorkspaceMembers"];
         delete?: never;
@@ -4567,7 +4567,7 @@ export interface paths {
         post?: never;
         /**
          * 초대 취소
-         * @description 대기 중인 초대를 취소합니다. 이미 받았거나 취소한 초대는 찾을 수 없음(404)으로 답합니다. 소유자(OWNER)만 호출할 수 있습니다.
+         * @description 대기 중인 초대를 취소해요. 이미 받았거나 취소한 초대는 찾을 수 없음(404)으로 응답해요. 소유자(OWNER)만 호출할 수 있어요.
          */
         delete: operations["cancelWorkspaceInvitation"];
         options?: never;
@@ -4584,7 +4584,7 @@ export interface paths {
         };
         /**
          * 초대 취소 영향 조회
-         * @description 현재 OWNER가 정확한 초대에 연결된 신청 대상자의 자동 종료 영향을 조회합니다. 신청 자체와 다른 초대는 취소하지 않으며, FAILED는 자동 종료되지 않는 이력으로 구분합니다.
+         * @description 현재 OWNER가 정확한 초대에 연결된 신청 대상자의 자동 종료 영향을 조회해요. 신청 자체와 다른 초대는 취소하지 않으며 FAILED는 자동 종료되지 않는 이력으로 구분해요.
          */
         get: operations["getWorkspaceInvitationTerminationImpact"];
         put?: never;
@@ -4622,7 +4622,7 @@ export interface paths {
         put?: never;
         /**
          * 학번 명단 확인
-         * @description 신청 대상자로 지정할 학번 명단을 제출하기 전에 확인합니다. 학번마다 이미 구성원인지, 활성 계정이 있지만 구성원이 아닌지, 대기 중인 초대가 있는지, 계정도 초대도 없는지를 요청과 같은 순서로 돌려줍니다. 아무것도 기록하지 않으며, 구성원 추가와 초대는 학번 대상자로 신청을 제출할 때 일어납니다. 워크스페이스 소유자나, orgId로 지정한 기관의 신청을 승인할 수 있는 관리자만 호출할 수 있고 개인 워크스페이스에는 쓸 수 없습니다. 한 번에 500건까지, 1분에 10번까지, 한 시간에 2000건까지입니다.
+         * @description 신청 대상자로 지정할 학번 명단을 제출하기 전에 확인해요. 학번마다 이미 구성원인지, 활성 계정이 있지만 구성원이 아닌지, 대기 중인 초대가 있는지, 계정도 초대도 없는지를 요청과 같은 순서로 반환해요. 구성원 추가나 초대는 실행하지 않으며 학번 대상자로 신청을 제출할 때 처리해요. 워크스페이스 소유자나 orgId로 지정한 기관에서 해당 명단 발급 업무가 있는 담당자만 호출할 수 있고 개인 워크스페이스에는 쓸 수 없어요. 한 번에 500건까지, 1분에 10번까지, 한 시간에 2000건까지예요.
          */
         post: operations["resolveWorkspaceRoster"];
         delete?: never;
@@ -4640,7 +4640,7 @@ export interface paths {
         };
         /**
          * 워크스페이스 삭제 영향 조회
-         * @description 현재 OWNER가 전체 워크스페이스의 신청 취소, 대상자 자동 종료와 남은 자원 차단 조건을 조회합니다. 조회는 상태를 바꾸지 않으며, 결과는 페이지와 무관한 전체 집합을 기준으로 계산합니다.
+         * @description 현재 OWNER가 전체 워크스페이스의 신청 취소와 대상자 자동 종료, 남은 자원의 차단 조건을 조회해요. 조회는 상태를 바꾸지 않으며 결과는 페이지와 무관한 전체 집합을 기준으로 계산해요.
          */
         get: operations["getWorkspaceTerminationImpact"];
         put?: never;
@@ -4658,9 +4658,9 @@ export interface components {
         AccessConfirmation: {
             /** @description 미리보기의 권한 증가를 명시적으로 확인했을 때만 true */
             confirmed?: boolean;
-            /** @description 미리보기에서 받은 정확한 대상·변경·현재 권한의 지문 */
+            /** @description 미리보기에서 받은 대상과 변경, 현재 권한의 정확한 지문 */
             fingerprint?: string;
-            /** @description 권한을 얻는 목적. 증가한 권한과 함께 감사에 기록됩니다. */
+            /** @description 권한을 얻는 목적이며 권한 증가 내용과 함께 감사 로그에 기록해요. */
             purpose?: string;
         };
         /** @enum {string} */
@@ -4686,7 +4686,7 @@ export interface components {
             detail?: unknown;
             /**
              * Format: uuid
-             * @description 활동 행의 공개 식별자. 목록 렌더링용 키이며 어떤 조회 파라미터도 아닙니다.
+             * @description 활동 행의 공개 ID이며, 조회 파라미터로 쓰지 않아요.
              */
             id: string;
             ip?: string | null;
@@ -4700,13 +4700,13 @@ export interface components {
         };
         AddResourceAccessGrantRequest: {
             confirmation?: components["schemas"]["AccessConfirmation"] | null;
-            /** @description USER는 지정된 사용자 한 명, WORKSPACE은 소유 워크스페이스 전체 */
+            /** @description USER는 지정한 사용자 한 명, WORKSPACE는 소유 워크스페이스 전체예요. */
             granteeType: components["schemas"]["AccessGranteeType"];
-            /** @description 부여할 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
+            /** @description 부여할 등급이에요. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있어요. */
             role: components["schemas"]["ResourceRole"];
             /**
              * Format: uuid
-             * @description 대상 사용자 id. granteeType이 USER일 때만 보내며, 소유 워크스페이스의 구성원이어야 합니다.
+             * @description 대상 사용자 ID예요. granteeType이 USER일 때만 보내며, 소유 워크스페이스의 활성 구성원이어야 해요.
              */
             userId?: string | null;
         };
@@ -4714,7 +4714,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             name: string;
-            /** @description 동일 revision의 호환 ACTIVE replica가 ACTIVE 노드에 있는지. 이 값은 개별 VM 용량이나 실제 생성 완료를 보장하지 않습니다. */
+            /** @description 동일 revision의 호환 ACTIVE replica가 ACTIVE 노드에 있는지 나타내요. 개별 VM 용량이나 실제 생성 완료를 보장하지 않아요. */
             selectableNow: boolean;
             /** Format: int32 */
             version: number;
@@ -4722,9 +4722,9 @@ export interface components {
         /** @enum {string} */
         AdminBulkAccessAction: "GRANT" | "CHANGE" | "REVOKE";
         AdminBulkAccessChange: {
-            /** @description GRANT는 없는 권한을 만들고, CHANGE는 있는 권한의 등급을 바꿉니다. 둘은 활성 구성원에게만 허용됩니다. REVOKE는 기존 개인 권한을 지우며 비활성 계정과 구성원 해제 후에도 가능합니다. 회수할 개인 권한이 없으면 NO_GRANT로 거부합니다. 워크스페이스 전체 부여는 그대로 둡니다. */
+            /** @description GRANT는 없는 권한을 만들고 CHANGE는 기존 권한의 등급을 바꿔요. 둘은 활성 구성원에게만 허용해요. REVOKE는 기존 개인 권한을 삭제하며 계정이 비활성화됐거나 구성원에서 제외된 뒤에도 할 수 있어요. 회수할 개인 권한이 없으면 NO_GRANT로 거절해요. 워크스페이스 전체 부여는 유지해요. */
             action: components["schemas"]["AdminBulkAccessAction"];
-            /** @description 부여하거나 바꿀 등급. GRANT와 CHANGE에서 필수입니다. */
+            /** @description 부여하거나 바꿀 등급이며 GRANT와 CHANGE에서 필수예요. */
             role?: components["schemas"]["ResourceRole"] | null;
             /**
              * Format: uuid
@@ -4735,7 +4735,7 @@ export interface components {
         AdminBulkChangeApplyItem: {
             /** @description APPLIED면 바뀐 필드, 아니면 빈 배열 */
             fields: components["schemas"]["AdminBulkChangeFieldDiff"][];
-            /** @description 대상 이름. 범위 밖이면 없습니다. */
+            /** @description 대상 이름이며 범위 밖이면 제공하지 않아요. */
             name?: string | null;
             /** @description SKIPPED인 이유 */
             reason?: components["schemas"]["AdminBulkChangeReason"] | null;
@@ -4746,7 +4746,7 @@ export interface components {
         AdminBulkChangeApplyResponse: {
             /**
              * Format: uuid
-             * @description 이 적용의 식별자. 대상별 감사 기록과 요약 기록이 같은 값을 담습니다.
+             * @description 이 적용의 ID이며 대상별 감사 기록과 요약 기록에 같은 값을 담아요.
              */
             batchId: string;
             items: components["schemas"]["AdminBulkChangeApplyItem"][];
@@ -4757,7 +4757,7 @@ export interface components {
             refusal?: components["schemas"]["AdminBulkChangeReason"] | null;
             /** Format: uuid */
             targetId: string;
-            /** @description 현재 DB가 알고 있는 대상 값입니다. 요청과 값이 같아도 이 적용의 외부 완료를 증명하지 않습니다. */
+            /** @description 현재 DB에 기록된 대상 값이에요. 요청과 값이 같아도 이 적용의 외부 완료를 증명하지 않아요. */
             values: {
                 [key: string]: unknown;
             };
@@ -4772,7 +4772,7 @@ export interface components {
             outcome: string;
             /** Format: date-time */
             queueObservedAt?: string | null;
-            /** @description 현재 JobRunr 상태 관측. SUCCEEDED도 외부 자원의 물리적 완료를 뜻하지 않습니다. */
+            /** @description 현재 JobRunr 상태를 관측한 값이에요. SUCCEEDED도 외부 리소스의 물리적 완료를 뜻하지 않아요. */
             queueState?: string | null;
             /** Format: date-time */
             registeredAt: string;
@@ -4782,9 +4782,9 @@ export interface components {
         AdminBulkChangeFieldDiff: {
             /** @description 필드 이름 */
             field: string;
-            /** @description 바뀔 값. 문자열이나 숫자, 배열, null입니다. */
+            /** @description 바뀔 값이며 문자열이나 숫자, boolean, 배열, null이에요. */
             newValue: unknown;
-            /** @description 현재 값. 문자열이나 숫자, 배열, null입니다. */
+            /** @description 현재 값이며 문자열이나 숫자, boolean, 배열, null이에요. */
             oldValue: unknown;
         };
         /** @enum {string} */
@@ -4800,19 +4800,19 @@ export interface components {
             /** Format: uuid */
             previewId: string;
             result: components["schemas"]["AdminBulkChangeApplyResponse"];
-            /** @description COMMITTED는 DB 변경과 결과의 커밋입니다. 큐 접수나 외부 완료를 뜻하지 않습니다. */
+            /** @description COMMITTED는 DB 변경과 결과를 커밋했다는 뜻이에요. 큐 접수나 외부 완료를 뜻하지 않아요. */
             status: string;
             targetType: components["schemas"]["AdminBulkChangeTargetType"];
         };
         AdminBulkChangePreviewItem: {
             actorAccessImpact?: components["schemas"]["ActorAccessImpact"] | null;
-            /** @description true면 적용할 수 있습니다. fields가 비어 있으면 이미 그 값이라 바뀌지 않습니다. */
+            /** @description true면 현재 조건에서 적용할 수 있어요. 이때 fields가 비어 있으면 이미 같은 값이므로 바뀌지 않아요. */
             applicable: boolean;
             /** @description 바뀔 필드만 */
             fields: components["schemas"]["AdminBulkChangeFieldDiff"][];
-            /** @description 이 대상의 현재 값을 요약한 값. 적용 요청에 그대로 돌려보냅니다. */
+            /** @description 이 대상의 현재 값을 요약한 지문이며 적용 요청에 그대로 보내요. */
             fingerprint: string;
-            /** @description 대상 이름. 범위 밖이면 없습니다. */
+            /** @description 대상 이름이며 범위 밖이면 제공하지 않아요. */
             name?: string | null;
             /** @description applicable이 false인 이유 */
             reason?: components["schemas"]["AdminBulkChangeReason"] | null;
@@ -4824,7 +4824,7 @@ export interface components {
             change?: components["schemas"]["AdminBulkChangeSpec"] | null;
             /**
              * Format: uuid
-             * @description 이 미리보기로 이미 커밋된 본인 적용의 ID. 새 적용을 만들지 않고 기존 결과를 여는 데 씁니다.
+             * @description 이 미리보기로 이미 커밋된 본인 적용의 ID예요. 새 적용을 만들지 않고 기존 결과를 여는 데 사용해요.
              */
             consumedOperationId?: string | null;
             /** Format: date-time */
@@ -4837,7 +4837,7 @@ export interface components {
             targetType: components["schemas"]["AdminBulkChangeTargetType"];
         };
         /**
-         * @description 대상 하나가 변경되지 않은 이유. NOT_FOUND: 대상이 없거나 이 계정의 범위 밖입니다. FORBIDDEN: 이 역할은 이 변경을 할 수 없습니다. INVALID_STATE: 현재 상태에서는 할 수 없는 변경입니다. EXPIRED: 사용 기간이 만료되어 먼저 기간을 연장해야 합니다. PROTECTED: 삭제 보호가 켜져 있습니다. INELIGIBLE: 대상이나 지정한 사용자가 이 변경의 대상이 될 수 없습니다. NOT_MEMBER: 지정한 사용자가 소유 워크스페이스의 구성원이 아닙니다. NO_GRANT: 지정한 사용자에게 바꾸거나 회수할 접근 권한이 없습니다. ALREADY_GRANTED: 지정한 사용자가 이미 다른 등급의 접근 권한을 갖고 있습니다. VALIDATION: 합쳐진 결과가 한도 규칙에 어긋납니다.
+         * @description 대상 하나가 변경되지 않은 이유. NOT_FOUND: 대상이 없거나 이 계정의 범위 밖이에요. FORBIDDEN: 현재 권한으로 이 변경을 할 수 없어요. INVALID_STATE: 현재 상태에서는 할 수 없는 변경이에요. EXPIRED: 사용 기간이 만료돼 먼저 기간을 연장해야 해요. PROTECTED: 삭제 보호가 켜져 있어요. INELIGIBLE: 대상이나 지정한 사용자는 이 변경의 대상이 될 수 없어요. NOT_MEMBER: 지정한 사용자가 소유 워크스페이스의 구성원이 아니에요. NO_GRANT: 지정한 사용자에게 바꾸거나 회수할 접근 권한이 없어요. ALREADY_GRANTED: 지정한 사용자가 이미 다른 등급의 접근 권한을 갖고 있어요. VALIDATION: 합친 결과가 한도 규칙에 맞지 않아요.
          * @enum {string}
          */
         AdminBulkChangeReason: "NOT_FOUND" | "FORBIDDEN" | "INVALID_STATE" | "EXPIRED" | "PROTECTED" | "INELIGIBLE" | "NOT_MEMBER" | "NO_GRANT" | "ALREADY_GRANTED" | "VALIDATION";
@@ -4846,13 +4846,13 @@ export interface components {
                 [key: string]: components["schemas"]["AccessConfirmation"];
             } | null;
             change: components["schemas"]["AdminBulkChangeSpec"];
-            /** @description 적용에서만 씁니다. 미리보기가 준 대상별 fingerprint를 전부 담습니다. 서버는 적용 시점의 값을 다시 계산해 다른 대상은 STALE로 답하고 쓰지 않습니다. */
+            /** @description 적용 요청에서만 보내요. 미리보기에서 받은 대상별 fingerprint를 모두 담아요. 서버는 적용 시점의 값을 다시 계산해 지문이 다른 대상은 STALE로 응답하고 변경하지 않아요. */
             fingerprints?: {
                 [key: string]: string;
             } | null;
             /**
              * Format: uuid
-             * @description 적용에서 필수. 응답 유실 재시도에도 유지하는 클라이언트 생성 ID. batchId와 같습니다.
+             * @description 적용할 때 필수이며 응답이 없어 다시 요청할 때도 유지하는 클라이언트 생성 ID예요. batchId와 같아요.
              */
             operationId?: string | null;
             /**
@@ -4862,7 +4862,7 @@ export interface components {
             previewId?: string | null;
             /** @description 대상의 공개 ID. 1개 이상 200개 이하, 중복 없이. */
             targetIds: string[];
-            /** @description 대상의 종류. 변경 종류와 맞아야 합니다. */
+            /** @description 대상 종류이며 변경 종류와 맞아야 해요. */
             targetType: components["schemas"]["AdminBulkChangeTargetType"];
         };
         /**
@@ -4879,7 +4879,7 @@ export interface components {
             domainRenewal?: components["schemas"]["AdminBulkDomainRenewalChange"] | null;
             /** @description kind가 DOMAIN_VERIFY일 때 */
             domainVerify?: components["schemas"]["AdminBulkDomainVerifyChange"] | null;
-            /** @description 변경 종류. 같은 이름의 멤버 하나만 채웁니다. */
+            /** @description 변경 종류이며 해당 종류에 맞는 항목 하나만 채워요. */
             kind: components["schemas"]["AdminBulkChangeKind"];
             /** @description kind가 LLM_KEY_EXPIRY일 때 */
             llmKeyExpiry?: components["schemas"]["AdminBulkLlmKeyExpiryChange"] | null;
@@ -4896,23 +4896,23 @@ export interface components {
         };
         /** @enum {string} */
         AdminBulkChangeTargetType: "LLM_KEY" | "VM" | "DOMAIN" | "GPU_ALLOCATION";
-        /** @description 빈 객체. 강제 해제는 되돌릴 수 없고 이름을 즉시 회수합니다. */
+        /** @description 빈 객체예요. 강제 해제는 되돌릴 수 없고 이름을 즉시 회수해요. */
         AdminBulkDomainForceReleaseChange: Record<string, never>;
         AdminBulkDomainRenewalChange: {
-            /** @description 기한을 바꾼 이유. 대상마다 감사 기록에 남습니다. */
+            /** @description 기한을 바꾼 이유이며 대상마다 감사 기록에 남겨요. */
             reason?: string | null;
             /**
              * Format: date-time
-             * @description 새 사용 기한. 미래 시각이어야 하며, 이 시각까지 연장하지 않으면 레코드가 내려가고 이름이 해제됩니다.
+             * @description 새 사용 기한이며 미래 시각으로 지정해요. 기한이 지나도 연장하지 않은 이름은 해제 대상이 되고, 해제할 때 레코드를 삭제해요.
              */
             renewDueAt: string;
         };
-        /** @description 빈 객체. 커스텀 도메인마다 소유권 재검증을 접수합니다. */
+        /** @description 빈 객체예요. 커스텀 도메인마다 소유권 재검증 요청을 접수해요. */
         AdminBulkDomainVerifyChange: Record<string, never>;
         AdminBulkListChange: {
-            /** @description REPLACE는 목록을 통째로 바꾸고, ADD는 없는 값을 더하며, REMOVE는 있는 값을 뺍니다. 비우려면 REPLACE에 빈 배열을 보냅니다. */
+            /** @description REPLACE는 목록을 통째로 바꾸고 ADD는 없는 값을 더하며 REMOVE는 있는 값을 빼요. 목록을 비우려면 REPLACE에 빈 배열을 보내요. */
             op: components["schemas"]["AdminBulkListOp"];
-            /** @description 적용할 값. 각 키의 현재 목록과 합친 결과가 단일 변경과 같은 규칙으로 검사됩니다. */
+            /** @description 적용할 값이며 각 키의 현재 목록과 합친 결과를 단일 변경과 같은 규칙으로 검사해요. */
             values: string[];
         };
         /** @enum {string} */
@@ -4920,81 +4920,81 @@ export interface components {
         AdminBulkLlmKeyExpiryChange: {
             /**
              * Format: date
-             * @description 새 종료일(KST, 이 날까지 포함). 키는 다음 날 0시에 만료됩니다. 오늘 이후여야 합니다.
+             * @description 새 종료일이에요(KST, 해당 날짜까지 포함). 키는 다음 날 0시에 만료되며 오늘 이후여야 해요.
              */
             endDate: string;
         };
         AdminBulkLlmKeyLimitsChange: {
             /**
              * Format: int32
-             * @description 동시 요청 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
+             * @description 동시 요청 한도예요. 생략하면 유지하고 null이면 서비스 기본값을 따라요.
              */
             concurrency?: number | null;
-            /** @description 유료 모델 허용 목록에 적용할 변경. 생략하면 그대로 둡니다. */
+            /** @description 유료 모델 허용 목록에 적용할 변경이며 생략하면 유지해요. */
             creditAllowedModels?: components["schemas"]["AdminBulkListChange"] | null;
-            /** @description 유료 모델 차단 목록에 적용할 변경. 생략하면 그대로 둡니다. */
+            /** @description 유료 모델 차단 목록에 적용할 변경이며 생략하면 유지해요. */
             creditDeniedModels?: components["schemas"]["AdminBulkListChange"] | null;
-            /** @description 금액 한도(USD 크레딧). 생략하면 그대로 둡니다. null은 허용하지 않고, 유료 모델을 닫으려면 0을 보냅니다. */
+            /** @description 금액 한도예요(USD 크레딧). 생략하면 유지해요. null은 허용하지 않으며 유료 모델을 닫으려면 0을 보내요. */
             creditLimit?: number;
-            /** @description 금액 한도 리셋 창. 생략하면 그대로 두고, null이면 리셋 없는 총액 상한입니다. */
+            /** @description 금액 한도 리셋 창이에요. 생략하면 유지하고 null이면 리셋 없는 총액 상한이에요. */
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
-             * @description 일일 토큰 한도. 생략하면 그대로 두고, null이면 무제한이며 0이면 토큰 축을 닫습니다.
+             * @description 일일 토큰 한도예요. 생략하면 유지하고 null이면 무제한이며 0이면 토큰 축을 닫아요.
              */
             dailyTokens?: number | null;
-            /** @description 기능 권한 목록에 적용할 변경. 생략하면 그대로 둡니다. 현재 변경 요청에는 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions를 지정할 수 있습니다. 결과 목록의 web_search와 pdf_ocr는 chat과 함께 부여해야 합니다. */
+            /** @description 기능 권한 목록에 적용할 변경이며 생략하면 유지해요. 현재 변경 요청에는 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions를 지정할 수 있어요. 결과 목록에 web_search나 pdf_ocr가 있으면 chat도 함께 있어야 해요. */
             passthroughEndpoints?: components["schemas"]["AdminBulkListChange"] | null;
             /**
              * Format: int32
-             * @description 분당 요청 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
+             * @description 분당 요청 한도예요. 생략하면 유지하고 null이면 서비스 기본값을 따라요.
              */
             rpm?: number | null;
             /**
              * Format: int32
-             * @description 분당 토큰 한도. 생략하면 그대로 두고, null이면 서비스 기본값을 따릅니다.
+             * @description 분당 토큰 한도예요. 생략하면 유지하고 null이면 서비스 기본값을 따라요.
              */
             tpm?: number | null;
         };
         /** @enum {string} */
         AdminBulkLlmKeyStatusAction: "SUSPEND" | "RESUME" | "REVOKE";
         AdminBulkLlmKeyStatusChange: {
-            /** @description SUSPEND는 활성 키를 정지하고, RESUME은 정지된 키를 되살리며, REVOKE는 폐기합니다. 이미 그 상태인 키는 UNCHANGED로 답합니다. */
+            /** @description SUSPEND는 활성 키를 정지하고 RESUME은 정지된 키를 되살리며 REVOKE는 폐기해요. 이미 같은 상태인 키는 UNCHANGED로 응답해요. */
             action: components["schemas"]["AdminBulkLlmKeyStatusAction"];
-            /** @description 정지 사유. SUSPEND에서는 필수이고 감사 기록에 남습니다. */
+            /** @description 정지 사유이며 SUSPEND에서 필수로 입력하고 감사 기록에 남겨요. */
             reason?: string | null;
         };
         /** @enum {string} */
         AdminBulkVmDeletionAction: "SCHEDULE" | "CANCEL";
         AdminBulkVmDeletionChange: {
-            /** @description SCHEDULE은 관리자 삭제를 예약하고, CANCEL은 접수된 삭제를 취소합니다. */
+            /** @description SCHEDULE은 관리자 삭제를 예약하고 CANCEL은 접수된 삭제를 취소해요. */
             action: components["schemas"]["AdminBulkVmDeletionAction"];
-            /** @description 삭제 사유. SCHEDULE에서는 필수이고 워크스페이스에 안내됩니다. */
+            /** @description 삭제 사유이며 SCHEDULE에서 필수로 입력해요. VM과 워크스페이스의 활성 소유자에게 보내는 안내에 포함해요. */
             reason?: string | null;
             /**
              * Format: date-time
-             * @description 삭제 예정 시각. SCHEDULE에서는 필수이고 미래여야 합니다.
+             * @description 삭제 예정 시각이며 SCHEDULE에서 필수로 미래 시각을 지정해요.
              */
             scheduledFor?: string | null;
         };
         AdminBulkVmPeriodChange: {
-            /** @description true면 종료일을 지워 무기한으로 만듭니다. endDate와 함께 보낼 수 없습니다. */
+            /** @description true면 종료일을 지워 무기한으로 바꿔요. endDate와 함께 보낼 수 없어요. */
             clearEndDate?: boolean | null;
             /**
              * Format: date
-             * @description 새 종료일(KST, 이 날까지 포함). 무기한으로 바꾸려면 clearEndDate를 씁니다.
+             * @description 새 종료일이에요(KST, 해당 날짜까지 포함). 무기한으로 바꾸려면 clearEndDate를 사용해요.
              */
             endDate?: string | null;
         };
         AdminBulkVmPowerChange: {
-            /** @description 관리자 전원 개입과 같은 네 가지입니다. 시작은 STOPPED에서만, 종료와 재부팅은 RUNNING에서만, 강제 종료는 RUNNING 또는 REBOOTING에서만 받습니다. */
+            /** @description 관리자 전원 개입과 같은 네 가지예요. 시작은 STOPPED에서만, 종료와 재부팅은 RUNNING에서만, 강제 종료는 RUNNING 또는 REBOOTING에서만 받아요. */
             action: components["schemas"]["VmPowerAction"];
         };
         AdminCampusIpRequestView: {
             adminNote?: string | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 연결된 교내 IP 주소 (10.0.0.0/8) */
+            /** @description 등록한 교내 IP 주소 (10.0.0.0/8) */
             grantedAddress?: string | null;
             /** Format: uuid */
             id: string;
@@ -5012,7 +5012,7 @@ export interface components {
             requestedBy: string;
             /** @description 신청자 이메일 */
             requesterEmail?: string | null;
-            /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
+            /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 주소 등록, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
             /** Format: uuid */
             vmId: string;
@@ -5034,11 +5034,11 @@ export interface components {
         };
         AdminDomainRootView: {
             allowedWorkIds: string[];
-            /** @description true면 이 루트 아래 이름 신청이 접수와 동시에 승인됩니다. false면 승인 큐를 탑니다. **지금 이 값이 다스리는 것은 외부 도메인 발급뿐이고 가상머신 서브도메인 공개는 아직 아닙니다.** */
+            /** @description true면 이 루트 아래 이름 신청이 접수와 동시에 승인돼요. false면 승인이 필요해요. 이 정책은 외부 도메인 발급에만 적용하고 VM 서브도메인 공개에는 적용하지 않아요. */
             autoApprove: boolean;
             /**
              * Format: int64
-             * @description 이 루트 아래 지금 서 있는 외부 도메인 수
+             * @description 이 루트 아래 남아 있는 외부 도메인 수
              */
             issuedNames?: number | null;
             metadataVisible: boolean;
@@ -5075,7 +5075,7 @@ export interface components {
             releasedAt?: string | null;
             /**
              * Format: date-time
-             * @description 사용 기한. 외부 도메인만 갖습니다 — 다른 종류는 가상머신이나 소유자의 DNS가 수명을 정하므로 null입니다.
+             * @description 외부 도메인의 사용 기한이에요. 다른 종류는 null이에요.
              */
             renewDueAt?: string | null;
             /** Format: date-time */
@@ -5089,10 +5089,10 @@ export interface components {
             verifiedAt?: string | null;
             /**
              * Format: uuid
-             * @description 이 이름을 쓰는 가상머신. 외부 도메인은 가상머신에 매이지 않으므로 null입니다.
+             * @description 이 이름을 사용하는 VM이며, 외부 도메인은 VM에 연결되지 않아 null이에요.
              */
             vmId?: string | null;
-            /** @description 이 이름을 쓰는 가상머신의 이름. 외부 도메인은 null입니다. */
+            /** @description 이 이름을 사용하는 VM의 이름이며, 외부 도메인은 null이에요. */
             vmName?: string | null;
             /** Format: uuid */
             workspaceId?: string | null;
@@ -5101,7 +5101,7 @@ export interface components {
         /** @enum {string} */
         AdminGlobalRole: "USER" | "SYS_VIEWER" | "SYS_MANAGER" | "SYS_ADMIN";
         AdminLlmAccountKeyUsageResponse: {
-            /** @description 이 키가 이 기간에 쓴 금액(USD). 가격이 붙은 요청이 없으면 null이며 0으로 표시하지 않습니다. */
+            /** @description 이 키의 선택 기간 금액이에요(USD). 가격이 확인된 요청이 없으면 null이며 0으로 보지 않아요. */
             attributedCostUsd?: number | null;
             /** Format: int64 */
             inputTokens: number;
@@ -5119,27 +5119,27 @@ export interface components {
             requests: number;
         };
         AdminLlmAccountUsageResponse: {
-            /** @description 이 기간에 이 계정에 귀속된 금액(USD). 공급자가 말하는 지출액이 아닙니다 — 그쪽은 계정 잔액과 함께 따로 오고 기간도 다릅니다. 가격이 붙은 요청이 하나도 없으면 null입니다. */
+            /** @description 현재 이 계정에 연결된 키의 선택 기간 금액이에요(USD). 공급자의 지출액과는 집계 기간과 출처가 달라요. 가격이 확인된 요청이 없으면 null이에요. */
             attributedCostUsd?: number | null;
             /** Format: date */
             from: string;
             /** Format: date-time */
             generatedAt: string;
-            /** @description 이 기간에 실제로 호출된 키의 현재 페이지. 요청한 정렬을 따르며 기본은 공급자가 보고한 요청 금액순입니다. keysUsed는 현재 페이지 수가 아닌 전체 해당 키 수입니다. */
+            /** @description 선택 기간에 실제로 호출한 키의 현재 페이지예요. 요청한 정렬을 따르며 기본은 공급자가 보고한 요청 금액순이에요. keysUsed는 현재 페이지의 수가 아니라 전체 해당 키 수예요. */
             keys: components["schemas"]["AdminLlmAccountKeyUsageResponse"][];
             /**
              * Format: int32
-             * @description 현재 이 계정에 연결된 모든 상태의 키 수. 기간 소비와 현재 열람 가능한 키 부분집합과 다른 모집단입니다.
+             * @description 현재 이 계정에 연결된 모든 상태의 키 수예요. 기간별 소비 키 수와 현재 열람 가능한 키 수는 각각 다른 모집단이에요.
              */
             keysLinked: number;
             /**
              * Format: int32
-             * @description 선택 KST 일자별 rollup과 현재 계정 결합에 따른 전체 소비 키 수. 현재 페이지나 보존 원문 capacity의 키 수가 아닙니다.
+             * @description 선택한 KST 일자별 rollup과 현재 계정 연결을 기준으로 한 전체 소비 키 수예요. 현재 페이지나 보존 원문 capacity의 키 수와는 다른 값이에요.
              */
             keysUsed: number;
             /** Format: int32 */
             page: number;
-            /** @description 하루 한 점, 오래된 날부터. 호출이 없던 날도 채워집니다. */
+            /** @description 하루에 한 점씩 오래된 날부터 제공하며 호출이 없던 날도 채워요. */
             points: components["schemas"]["LlmUsageCostPointResponse"][];
             /**
              * Format: int64
@@ -5163,7 +5163,7 @@ export interface components {
             /** Format: int32 */
             totalKeyPages: number;
         };
-        /** @description 요청 시각 기준의 관측된 수요. 최종 upstream 소비는 중간 재시도 부하나 개인별 GPU 점유율을 뜻하지 않습니다. */
+        /** @description 요청 시각을 기준으로 관측한 수요예요. 최종 upstream 소비는 중간 재시도 부하나 개인별 GPU 점유율을 뜻하지 않아요. */
         AdminLlmCapacityResponse: {
             /** Format: int32 */
             bucketSeconds: number;
@@ -5195,21 +5195,21 @@ export interface components {
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열은 제한 없음 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 이 키의 유료 모델 허용 패턴. 빈 배열은 목록 제한 없음 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             creditAllowedModels?: string[] | null;
-            /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
+            /** @description 유료 모델용 키의 연결 구성 여부 */
             creditAxisConnected?: boolean | null;
-            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열은 차단 없음. 허용 목록과 함께 걸리면 차단이 이긴다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 이 키의 유료 모델 차단 패턴. 빈 배열은 차단 없음. 허용 패턴과 겹치면 차단을 우선해요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             creditDeniedModels?: string[] | null;
             creditLimit?: number | null;
-            /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
+            /** @description OpenRouter가 보고한 키 잔여 한도. 미관측 또는 무한도면 null */
             creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /** @description OpenRouter가 마지막으로 보고한 키의 누적 사용액. 현재 리셋 창의 소비량이 아니며 미관측이면 null */
             creditUsage?: number | null;
             /**
              * Format: date-time
-             * @description Key 금액을 vendor에서 관측한 시각. 미관측이면 null
+             * @description 키 금액을 공급자에서 관측한 시각. 미관측이면 null
              */
             creditUsageAt?: string | null;
             /** Format: int64 */
@@ -5220,12 +5220,12 @@ export interface components {
             financeVisible: boolean;
             /** Format: uuid */
             id: string;
-            /** @description 현재 예산 명령의 최초 사업 계정 결합 가능 여부. 예산 명령 참조가 없으면 null이며 사용액 관측값을 제공하지 않습니다. */
+            /** @description 현재 예산 명령에서 사업 계정을 처음 연결할 수 있는지 나타내요. 예산 명령 참조가 없으면 null이며 사용액 관측값은 제공하지 않아요. */
             initialAccountBindingAllowed?: boolean | null;
             /** Format: date-time */
             lastUsedAt?: string | null;
             limitsProjection?: components["schemas"]["LlmKeyLimitsProjection"] | null;
-            /** @description 키 metadata의 현재 열람 권한 */
+            /** @description 키 메타데이터의 현재 열람 권한 */
             metadataVisible: boolean;
             name: string;
             /** @description 키 사용 관측의 현재 열람 권한 */
@@ -5236,7 +5236,7 @@ export interface components {
             /** Format: uuid */
             orgId?: string | null;
             orgName: string;
-            /** @description 이 키에 부여된 기능 권한. 빈 배열은 부여 없음(chat 포함). 모델 목록 둘과 반대로 채워야 열린다. */
+            /** @description 이 키에 부여된 기능 권한. 빈 배열은 chat을 포함한 기능 부여가 없다는 뜻이에요. */
             passthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             purpose?: string | null;
             quotaExhausted?: boolean | null;
@@ -5257,46 +5257,46 @@ export interface components {
         AdminLlmKeyExpiryRequest: {
             /**
              * Format: date
-             * @description 새 종료일(KST, 이 날까지 포함). 키는 다음 날 0시에 만료됩니다. 오늘 이후여야 합니다.
+             * @description 새 종료일이에요(KST, 해당 날짜까지 포함). 키는 다음 날 0시에 만료돼요. 오늘 이후로 지정해 주세요.
              */
             endDate: string;
         };
         AdminLlmKeyLimitsRequest: {
-            /** @description chat 기능만 변경합니다. 생략하면 유지하고 null은 허용하지 않습니다. */
+            /** @description chat 기능만 변경해요. 생략하면 유지하고 null은 허용하지 않아요. */
             chatEnabled?: boolean;
             /**
              * Format: int32
-             * @description 동시 요청 한도. null이면 서비스 기본값을 따릅니다.
+             * @description 동시 요청 한도예요. 생략하면 유지하고 null이면 서비스 기본값을 따라요.
              */
             concurrency?: number | null;
-            /** @description 유료 모델 허용 목록. 빈 배열이나 null이면 제한이 없습니다. 금액 한도와 달리 null이 0을 뜻하지 않습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 유료 모델 허용 패턴이에요. 생략하면 유지하고 빈 배열이나 null이면 이 목록의 제한을 비워요. 금액 한도와 달리 null은 0을 뜻하지 않아요. 자체 서빙 모델은 이 값의 영향을 받지 않아요. 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             creditAllowedModels?: string[] | null;
-            /** @description 유료 모델 차단 목록. 빈 배열이나 null이면 차단하는 모델이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 허용 목록과 달리 금액 한도가 0이어도 남습니다. 자체 서빙 모델은 이 값에 영향을 받지 않습니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 유료 모델 차단 패턴이에요. 생략하면 유지하고 빈 배열이나 null이면 차단 패턴을 비워요. 허용 패턴과 겹치면 차단을 우선해요. 허용 목록과 달리 금액 한도가 0이어도 유지해요. 자체 서빙 모델은 이 값의 영향을 받지 않아요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             creditDeniedModels?: string[] | null;
-            /** @description 금액 한도(USD 크레딧). 생략하면 유지하고 null은 허용하지 않습니다. 0이면 유료 모델을 닫습니다. */
+            /** @description 금액 한도예요(USD 크레딧). 생략하면 유지하고 null은 허용하지 않아요. 0이면 유료 모델을 닫아요. */
             creditLimit?: number;
-            /** @description 금액 한도 리셋 창. null이면 리셋 없는 총액 상한입니다. */
+            /** @description 금액 한도 리셋 창이에요. 생략하면 유지하고 null이면 리셋 없는 총액 상한이에요. */
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
-             * @description 일일 토큰 한도. null이면 무제한이고 0이면 토큰 축을 닫습니다.
+             * @description 일일 토큰 한도예요. 생략하면 유지하고 null이면 무제한이며 0이면 토큰 축을 닫아요.
              */
             dailyTokens?: number | null;
             /**
              * Format: uuid
-             * @description 유료 모델을 결제할 사업 계정. 생략하거나 null이면 기존 연결을 유지합니다.
+             * @description 유료 모델을 결제할 사업 계정이며 생략하거나 null이면 기존 연결을 유지해요.
              */
             openrouterAccountId?: string | null;
-            /** @description 이 키에 부여할 기능 권한. 빈 배열이나 null이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 값에 영향을 받지 않습니다. */
+            /** @description 이 키에 부여할 기능 권한이에요. 생략하면 유지하고 빈 배열이나 null이면 chat을 포함한 모든 기능을 닫아요. 기능은 이 목록에 추가해야 열려요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions예요. web_search나 pdf_ocr를 부여하려면 chat도 함께 있어야 해요. 모델 조회는 이 값의 영향을 받지 않아요. */
             passthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
-             * @description 분당 요청 한도. null이면 서비스 기본값을 따릅니다.
+             * @description 분당 요청 한도예요. 생략하면 유지하고 null이면 서비스 기본값을 따라요.
              */
             rpm?: number | null;
             /**
              * Format: int32
-             * @description 분당 토큰 한도. null이면 서비스 기본값을 따릅니다.
+             * @description 분당 토큰 한도예요. 생략하면 유지하고 null이면 서비스 기본값을 따라요.
              */
             tpm?: number | null;
         };
@@ -5306,17 +5306,17 @@ export interface components {
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 유료 모델이 발급되어 현재 연결되어 있는지 */
+            /** @description 유료 모델용 키의 연결 구성 여부 */
             creditAxisConnected?: boolean | null;
             creditLimit?: number | null;
-            /** @description OpenRouter가 보고한 key 잔여 한도. 미관측 또는 무한도면 null */
+            /** @description OpenRouter가 보고한 키 잔여 한도. 미관측이거나 무한도 또는 금융 정보 미제공이면 null */
             creditLimitRemaining?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /** @description OpenRouter가 마지막으로 보고한 키의 누적 사용액. 현재 리셋 창의 소비량이 아니며 미관측이면 null */
             creditUsage?: number | null;
             /**
              * Format: date-time
-             * @description Key 금액을 vendor에서 관측한 시각. 미관측이면 null
+             * @description 키 금액을 공급자에서 관측한 시각. 미관측이거나 금융 정보가 미제공이면 null
              */
             creditUsageAt?: string | null;
             /** Format: int64 */
@@ -5329,7 +5329,7 @@ export interface components {
             id: string;
             /** Format: date-time */
             lastUsedAt?: string | null;
-            /** @description 키 metadata의 현재 열람 권한 */
+            /** @description 키 메타데이터의 현재 열람 권한 */
             metadataVisible: boolean;
             name: string;
             /** @description 키 사용 관측의 현재 열람 권한 */
@@ -5354,18 +5354,18 @@ export interface components {
             workspaceName: string;
         };
         AdminLlmKeyUsageResponse: {
-            /** @description 일별 금액. 소유자 화면에는 없는 계열입니다 — 소유자는 모델별 금액만 봅니다. */
+            /** @description 일별 금액 계열이에요. */
             costPoints?: components["schemas"]["LlmUsageCostPointResponse"][] | null;
             /** @description 이 기간에 실제로 호출된 경로만, 요청이 많은 순 */
             endpointKinds?: components["schemas"]["InstitutionAdminLlmEndpointUsageResponse"][] | null;
             financeVisible: boolean;
-            /** @description 공급자가 요청과 다른 모델로 응답한 사례. 없으면 빈 목록이고, 빈 것이 「대체가 없었다」를 증명하지는 않습니다. */
+            /** @description 공급자가 전달받은 모델과 다른 모델로 응답한 기록이에요. 빈 목록만으로 대체가 없었다고 판단할 수는 없어요. */
             servedModels?: components["schemas"]["LlmServedModelUsageResponse"][] | null;
             /** @description 키 소유자가 보는 것과 같은 응답, 같은 계산 */
             trend: components["schemas"]["InstitutionAdminLlmTrendResponse"];
         };
         AdminLlmUsageResponse: {
-            /** @description 같은 기간을 「무엇을」로 자른 셋. 모델별, 경로별, 그리고 기능 권한이 실제로 쓰이고 있는지입니다. */
+            /** @description 같은 기간의 모델별과 경로별 사용량, 기능 권한의 사용 현황이에요. */
             breakdown: components["schemas"]["LlmUsageBreakdownResponse"];
             consumers: components["schemas"]["LlmUsageConsumersResponse"];
             /** Format: int32 */
@@ -5391,16 +5391,16 @@ export interface components {
             workspaceName: string;
         };
         AdminNoticeView: {
-            /** @description 지금 게시 기간 안에 있는지. 관리 화면에는 예정·종료된 공지도 나옵니다. */
+            /** @description 현재 게시 기간 안에 있는지 나타내요. 관리 화면에는 게시 예정이거나 종료된 공지도 나와요. */
             active: boolean;
             body: string;
             /** Format: date-time */
             createdAt: string;
-            /** @description 공지를 등록한 사람의 이름. 계정이 지워졌으면 비어 있습니다. */
+            /** @description 공지를 등록한 사람의 이름이며, 계정이 삭제됐으면 null이에요. */
             createdByName?: string | null;
             /**
              * Format: date-time
-             * @description 게시 종료 시각. 비어 있으면 만료되지 않습니다.
+             * @description 게시 종료 시각이며, null이면 만료되지 않아요.
              */
             endsAt?: string | null;
             /** Format: uuid */
@@ -5408,7 +5408,7 @@ export interface components {
             images: components["schemas"]["NoticeImageView"][];
             /** @description 목록 상단 고정 여부 */
             pinned: boolean;
-            /** @description 콘솔이 화면을 막지 않는 카드로 띄울 공지인지. 이 공지가 로그인 없이도 보이는지도 같은 값이 정합니다. */
+            /** @description 화면을 막지 않는 카드로 띄울 공지인지 나타내요. 켜면 게시 기간 동안 로그인 없이도 읽을 수 있어요. */
             popup: boolean;
             /** Format: date-time */
             startsAt: string;
@@ -5467,7 +5467,7 @@ export interface components {
             name: string;
             permission?: components["schemas"]["InstitutionPermissionView"] | null;
             requestMail?: boolean | null;
-            /** @description 이 기관에서 보유한 역할. 계정의 최고 역할과 구분합니다. */
+            /** @description 이 기관에서 보유한 역할이며 계정의 최고 역할과 구분해요. */
             role: components["schemas"]["UserRole"];
             selectionReason?: string | null;
             status: components["schemas"]["UserStatus"];
@@ -5554,7 +5554,7 @@ export interface components {
             agentVersion?: string | null;
             /**
              * Format: int64
-             * @description 에이전트가 적용을 확인한 마지막 세대
+             * @description 에이전트가 적용했다고 보고한 마지막 세대
              */
             appliedGeneration: number;
             /**
@@ -5572,7 +5572,7 @@ export interface components {
              * @description 공개 포트 대역 사용률(%)
              */
             bandUsagePercent: number;
-            /** @description 접촉 두절 여부 (마지막 동기화가 폴링 주기 3배를 초과) */
+            /** @description 마지막 동기화가 폴링 주기의 3배를 넘었는지 나타내요. 동기화 기록이 없으면 false예요. */
             contactLost: boolean;
             enabled: boolean;
             /** Format: uuid */
@@ -5594,11 +5594,11 @@ export interface components {
             name: string;
             /** @description 사용자 접속용 공개 호스트 (설정 전이면 null) */
             publicHost?: string | null;
-            /** @description 동기화 토큰 발급 여부 (미발급이면 에이전트 인증이 항상 실패) */
+            /** @description 동기화 토큰 발급 여부이며, 미발급이면 에이전트의 새 동기화 인증에 실패해요. */
             tokenIssued: boolean;
         };
         AdminRequestGeneratedResourceResponse: {
-            /** @description 현재 종류별 관리자 상세 조회 가능 여부. 도메인의 REMOVED 이력은 목록 범위에서 관측하되 상세는 열리지 않습니다. */
+            /** @description 현재 종류별 관리자 상세 조회 가능 여부예요. 도메인의 REMOVED 이력은 목록 범위에서 확인하며 상세는 열리지 않아요. */
             canReadDetail: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -5614,7 +5614,7 @@ export interface components {
             recipientId?: string | null;
             /**
              * Format: date-time
-             * @description 서버 기록이 갱신된 시각. 외부 시스템 적용이나 연결 성공을 측정한 시각이 아닙니다.
+             * @description 서버 기록이 갱신된 시각이에요. 외부 시스템 적용이나 연결 성공을 측정한 시각은 아니에요.
              */
             recordUpdatedAt: string;
             /** Format: date-time */
@@ -5623,7 +5623,7 @@ export interface components {
             renewDueAt?: string | null;
             /** Format: date-time */
             reservedUntil?: string | null;
-            /** @description 종류별 서버 상태. VM은 CREATING/ERROR/RUNNING 등 VM 상태, LLM 키는 만료를 반영한 상태, GPU는 할당 상태, 도메인은 원래 행의 상태입니다. 서로 다른 상태를 완료 하나로 합치지 않습니다. */
+            /** @description 종류별 서버 상태예요. VM은 CREATING/ERROR/RUNNING 등 VM 상태, LLM 키는 만료를 반영한 상태, GPU는 할당 상태, 도메인은 원래 행의 상태예요. 서로 다른 상태를 완료 하나로 합치지 않아요. */
             state: string;
             type: components["schemas"]["ResourceType"];
             /** Format: uuid */
@@ -5633,7 +5633,7 @@ export interface components {
             displayName: string;
             /**
              * Format: int32
-             * @description 신청 화면에서의 표시 순서. 값이 같으면 먼저 만든 것이 앞에 옵니다.
+             * @description 신청 화면의 표시 순서예요. 값이 같으면 먼저 만든 항목이 앞에 와요.
              */
             displayOrder: number;
             /**
@@ -5648,7 +5648,7 @@ export interface components {
             name: string;
             status: components["schemas"]["CatalogStatus"];
         };
-        /** @description 종류별 저장 날짜. 해당 종류에 없는 날짜와 저장되지 않은 날짜는 null입니다. 기한 경과는 외부 처리 완료를 증명하지 않습니다. */
+        /** @description 종류별 저장 날짜예요. 해당 종류에 없거나 저장되지 않은 날짜는 null이에요. 기한이 지났더라도 외부 처리 완료를 뜻하지 않아요. */
         AdminResourceDeadlineDates: {
             /** Format: date-time */
             allocatedAt?: string | null;
@@ -5678,17 +5678,17 @@ export interface components {
             startDate?: string | null;
         };
         /**
-         * @description 기한 종류. VM 사용 종료, LLM 키 만료, 외부 도메인 갱신·예약, GPU 승인기간·실제 임대 종료를 구분합니다.
+         * @description VM 사용 종료와 LLM 키 만료, 외부 도메인 갱신과 예약, GPU 승인기간과 실제 임대 종료를 구분하는 기한 종류예요.
          * @enum {string}
          */
         AdminResourceDeadlineKind: "VM_USAGE_END" | "LLM_KEY_EXPIRY" | "DOMAIN_RENEWAL" | "DOMAIN_RESERVATION" | "GPU_GRANT_END" | "GPU_LEASE_END";
         AdminResourceDeadlineResponse: {
-            /** @description GPU의 저장 연결 상태. 다른 종류는 null입니다. */
+            /** @description GPU의 저장된 연결 상태이며 다른 종류는 null이에요. */
             connectionStatus?: string | null;
             dates: components["schemas"]["AdminResourceDeadlineDates"];
             /**
              * Format: date-time
-             * @description 현재 주 기한. 날짜 종료는 다음 날 0시(KST)로 정규화합니다. 이 시각 경과는 정지·회수·삭제 완료를 뜻하지 않습니다.
+             * @description 현재 주 기한이에요. 날짜 종료는 다음 날 0시(KST)로 정규화해요. 이 시각이 지나도 정지나 회수, 삭제 완료를 뜻하지 않아요.
              */
             deadlineAt: string;
             deadlineKind: components["schemas"]["AdminResourceDeadlineKind"];
@@ -5696,23 +5696,23 @@ export interface components {
             id: string;
             /**
              * Format: date
-             * @description 그날까지 포함하는 종료일. VM·GPU 승인기간에 표시하며, LLM 키는 만료가 실제 KST 0시일 때만 전날을 표시합니다. 임의 시각의 기한에는 null입니다.
+             * @description 해당 날짜를 포함하는 종료일이에요. VM과 GPU 승인기간에 제공하며, LLM 키는 실제 만료가 KST 0시일 때만 전날을 제공해요. 임의 시각의 기한에는 null이에요.
              */
             inclusiveEndDate?: string | null;
             name: string;
             /**
              * Format: date-time
-             * @description 기한 판정과 함께 사용한 서버 시각. 마이크로초 정밀도입니다.
+             * @description 기한 판정에 사용한 서버 시각이며 마이크로초 정밀도예요.
              */
             observedAt: string;
             /** Format: uuid */
             orgId?: string | null;
             orgName?: string | null;
-            /** @description 서버 관측 시각에 주 기한이 경과했는지. 실제 후속 처리 상태와 별개입니다. */
+            /** @description 서버 관측 시각에 주 기한이 지났는지 나타내요. 실제 후속 처리 상태와는 별개예요. */
             overdue: boolean;
             /** @description DB에 저장된 종류별 상태 */
             sourceStatus: string;
-            /** @description 조회 시각의 종류별 상태. LLM 키는 정확한 만료 시각을 반영하며 다른 종류는 저장 상태입니다. */
+            /** @description 조회 시각의 종류별 상태예요. LLM 키는 정확한 만료 시각을 반영하며 다른 종류는 저장 상태예요. */
             status: string;
             type: components["schemas"]["ResourceType"];
             /** Format: uuid */
@@ -5836,7 +5836,7 @@ export interface components {
             type: components["schemas"]["ResourceType"];
         };
         AdminUserResourceAccessResponse: {
-            /** @description 활성 계정, 소유 워크스페이스 구성원과 리소스 부여의 공통 조건만 충족했는지. 종류별 작업이나 실제 연결 성공을 보장하지 않습니다. */
+            /** @description 활성 계정과 소유 워크스페이스 구성원, 리소스 부여의 공통 조건을 충족했는지 나타내요. 종류별 작업이나 실제 연결 성공을 보장하지 않아요. */
             baseConditionsSatisfied?: boolean | null;
             /** @description 현재 관리자가 기존 일괄 접근 변경으로 이 사용자의 개인 부여를 회수할 수 있는지 */
             canRevoke?: boolean | null;
@@ -5848,11 +5848,11 @@ export interface components {
             orgId: string;
             orgName: string;
             personalGrantRole?: components["schemas"]["ResourceRole"] | null;
-            /** @description 공통 진단 사유. ACCOUNT_INACTIVE, NOT_WORKSPACE_MEMBER, NO_RESOURCE_GRANT, RESOURCE_ENDED, RESOURCE_NOT_READY. 종류별 상세 조건은 별도 확인이 필요합니다. */
+            /** @description 공통 진단 사유. ACCOUNT_INACTIVE, NOT_WORKSPACE_MEMBER, NO_RESOURCE_GRANT, RESOURCE_ENDED, RESOURCE_NOT_READY. 종류별 상세 조건은 별도로 확인해야 해요. */
             reasons?: string[] | null;
             /** Format: uuid */
             requestId?: string | null;
-            /** @description 회수 조건. ALLOWED, FORBIDDEN, RESOURCE_NOT_FOUND, NO_PERSONAL_GRANT. 기존 개인 부여의 회수는 계정 비활성이나 구성원 해제 이후에도 가능합니다. */
+            /** @description 회수 조건. ALLOWED, FORBIDDEN, RESOURCE_NOT_FOUND, NO_PERSONAL_GRANT. 계정이 비활성화되거나 구성원에서 해제된 뒤에도 기존 개인 부여를 회수할 수 있어요. */
             revokeReason?: string | null;
             standingRights?: boolean | null;
             status: string;
@@ -5917,7 +5917,7 @@ export interface components {
         AdminUserSupportResourceCount: {
             /**
              * Format: int64
-             * @description 공간과 기관 필터 안의 종류 전체 행 수를 읽을 수 있을 때만 제공하며 그 외에는 null입니다. 종료된 이력을 포함하며 도메인은 모든 종류를 셉니다.
+             * @description 워크스페이스와 기관 필터 안의 종류별 전체 행 수를 읽을 수 있을 때만 제공하며 그 외에는 null이에요. 종료된 이력을 포함하며 도메인은 모든 종류를 세요.
              */
             count?: number | null;
             type: components["schemas"]["ResourceType"];
@@ -5931,7 +5931,7 @@ export interface components {
             /** @description 관계 데이터가 업무나 대상 범위에 따라 일부만 제공되거나 제공되지 않았는지 */
             relationshipsLimited: boolean;
             requests?: components["schemas"]["AdminUserSupportRelatedRequest"][] | null;
-            /** @description 학생 지원과 종류별 업무·대상 범위를 적용한 리소스 관계. 제공할 수 없는 진단 필드는 null입니다. 기관 선택은 필터입니다. 도메인은 EXTERNAL만 포함하며 VM 연결 도메인은 워크스페이스 도메인 목록과 연결 VM에서 확인합니다. 종료된 리소스 이력도 포함합니다. */
+            /** @description 학생 지원과 종류별 업무 및 대상 범위를 적용한 리소스 관계예요. 제공할 수 없는 진단 필드는 null이며 기관 선택은 필터예요. 도메인은 EXTERNAL만 포함하며 VM 연결 도메인은 워크스페이스 도메인 목록과 연결 VM에서 확인해요. 종료된 리소스 이력도 포함해요. */
             resources?: components["schemas"]["AdminUserResourceAccessResponse"][] | null;
             /** Format: uuid */
             userId: string;
@@ -5955,19 +5955,19 @@ export interface components {
             vcpu: number;
             /**
              * Format: uuid
-             * @description 명령 대상 워크스페이스. 지정 범위 권한으로 조회할 때 필요합니다.
+             * @description 명령 대상 워크스페이스이며 지정 범위 권한으로 조회할 때 필요해요.
              */
             workspaceId?: string | null;
         };
         AdminVmPlacementPreviewResponse: {
             candidates: components["schemas"]["AdminVmPlacementCandidate"][];
-            /** @description 현재 한 VM의 제안 사양이 맞는 노드가 있는지. N명 전체 용량 예약이나 승인 성공을 보장하지 않습니다. */
+            /** @description 현재 한 VM의 제안 사양에 맞는 노드가 있는지 나타내요. N명 전체의 용량 예약이나 승인 성공을 보장하지 않아요. */
             fitsAnyOneNow: boolean;
-            /** @description 입력 이미지와 같은 논리 revision의 canonical 이미지 정보. 입력 식별자는 inputImageId로 확인합니다. */
+            /** @description 입력 이미지와 같은 논리 revision의 canonical 이미지 정보예요. 입력 ID는 inputImageId로 확인해요. */
             image: components["schemas"]["AdminApprovalImageReference"];
             /**
              * Format: uuid
-             * @description 검증한 입력 이미지 식별자. 호환 replica를 입력하면 아래 image.id의 canonical 식별자와 다를 수 있습니다.
+             * @description 검증한 입력 이미지 ID예요. 호환 replica를 입력하면 image.id의 canonical ID와 다를 수 있어요.
              */
             inputImageId: string;
             /** Format: date-time */
@@ -6005,7 +6005,7 @@ export interface components {
             /** Format: date-time */
             joinedAt?: string | null;
             name: string;
-            /** @description 현재 관리자에게 이 구성원의 사용자 관계·지원 상세를 열람할 권한이 있는지 여부 */
+            /** @description 현재 관리자에게 이 구성원의 사용자 관계와 지원 상세를 열람할 권한이 있는지 여부 */
             supportDetailVisible: boolean;
             /** Format: uuid */
             userId: string;
@@ -6110,7 +6110,7 @@ export interface components {
             /** @deprecated */
             applicantResources: components["schemas"]["Resources"];
             domain?: components["schemas"]["DomainContext"] | null;
-            /** @description 이 신청의 실제 request_id로 연결된 자원의 기록과 상태. 자원 행 등록은 VM 프로비저닝 완료가 아닙니다. 신청 FK가 없는 과거 도메인 이름에서 현재 자원 ID를 추론하지 않습니다. */
+            /** @description 이 신청의 실제 request_id로 연결된 리소스의 기록과 상태예요. 리소스 행 등록은 VM 프로비저닝 완료를 뜻하지 않아요. 신청 FK가 없는 과거 도메인 이름에서 현재 리소스 ID를 추론하지 않아요. */
             generatedResources: components["schemas"]["AdminRequestGeneratedResourceResponse"][];
             gpu?: components["schemas"]["GpuContext"] | null;
             /** @deprecated */
@@ -6123,7 +6123,7 @@ export interface components {
             /** Format: uuid */
             orgId: string;
             orgName: string;
-            /** @description 저장된 실제 대상 계정별 관리자 사용자 상세 조회 허용 여부. 현재 디렉터리 권한과 교집합이며, 워크스페이스를 떠난 계정도 포함합니다. 가입 전 식별자로 계정을 추정하지 않습니다. */
+            /** @description 저장된 실제 대상 계정별 관리자 사용자 상세 조회 가능 여부예요. 현재 디렉터리 권한과의 교집합이며, 워크스페이스를 떠난 계정도 포함해요. 가입 전 식별자로 계정을 추정하지 않아요. */
             recipientUserReadFlags: {
                 [key: string]: boolean;
             };
@@ -6136,7 +6136,7 @@ export interface components {
             gpuId?: string | null;
             /**
              * Format: int32
-             * @description 관리자가 승인하는 양의 정수 시간입니다. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않습니다.
+             * @description 관리자가 승인하는 양의 정수 시간이에요. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않아요.
              */
             leaseHours: number;
             /** Format: int32 */
@@ -6146,37 +6146,37 @@ export interface components {
         ApproveLlmKeyRequestSpec: {
             /**
              * Format: int32
-             * @description 부여 동시 요청 수. 비우면 서비스 기본값이 적용됩니다.
+             * @description 부여할 동시 요청 수이며, 생략하거나 null이면 서비스 기본값을 적용해요.
              */
             grantedConcurrency?: number | null;
-            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 비우면 제한이 없고, 자체 서빙 모델은 이 목록과 무관합니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 이 키의 유료 모델 허용 목록이에요. 생략하거나 비어 있으면 이 목록으로 제한하지 않아요. 자체 서빙 모델에는 적용하지 않아요. 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             grantedCreditAllowedModels?: string[] | null;
-            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 비우면 차단하는 모델이 없고, 허용 목록과 함께 걸리면 차단이 이깁니다. 허용 목록과 달리 금액 한도가 0이어도 남습니다. 자체 서빙 모델은 이 목록과 무관합니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 이 키의 유료 모델 차단 목록이에요. 생략하거나 비어 있으면 이 목록으로 차단하지 않아요. 허용 목록과 겹치면 차단을 적용하며, 허용 목록과 달리 금액 한도가 0이어도 유지돼요. 자체 서빙 모델에는 적용하지 않아요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             grantedCreditDeniedModels?: string[] | null;
-            /** @description 부여 금액 한도(USD 크레딧). 비우거나 0이면 유료 모델을 쓸 수 없습니다. */
+            /** @description 키 하나에 부여할 금액 한도예요(USD 크레딧). 생략하거나 null이나 0을 보내면 유료 모델을 쓸 수 없어요. */
             grantedCreditLimit?: number | null;
-            /** @description 금액 한도 리셋 창. 비우면 리셋 없는 총액 상한입니다. 창은 UTC 자정에 초기화됩니다. */
+            /** @description 금액 한도 리셋 창이에요. 생략하거나 null이면 리셋 없는 총액 상한이며, 리셋 창은 UTC 자정을 기준으로 해요. */
             grantedCreditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
-             * @description 부여 일일 토큰 수. 비우면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
+             * @description 부여할 일일 토큰 수예요. 생략하거나 null이면 일일 한도가 없고, 0이면 자체 서빙(토큰) 축을 쓸 수 없어요.
              */
             grantedDailyTokens?: number | null;
-            /** @description 이 키에 부여할 기능 권한. 생략하거나 null이면 신청자가 고른 목록(reqPassthroughEndpoints)으로 승인하고, 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat도 포함). 모델 목록과 반대로 이 목록은 채워야 열립니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions이고, web_search와 pdf_ocr은 chat과 함께 부여해야 합니다. 모델 조회는 이 목록과 무관합니다. */
+            /** @description 이 키에 부여할 기능 권한이에요. 생략하거나 null이면 신청 목록(reqPassthroughEndpoints)으로 승인하며, 빈 배열이면 chat을 포함해 어떤 기능도 쓸 수 없어요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions이며, web_search나 pdf_ocr를 포함하면 chat도 함께 부여해야 해요. 모델 조회에는 이 목록을 적용하지 않아요. */
             grantedPassthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
-             * @description 부여 분당 요청 수. 비우면 서비스 기본값이 적용됩니다.
+             * @description 부여할 분당 요청 수이며, 생략하거나 null이면 서비스 기본값을 적용해요.
              */
             grantedRpm?: number | null;
             /**
              * Format: int32
-             * @description 부여 분당 토큰 수. 비우면 서비스 기본값이 적용됩니다.
+             * @description 부여할 분당 토큰 수이며, 생략하거나 null이면 서비스 기본값을 적용해요.
              */
             grantedTpm?: number | null;
             /**
              * Format: uuid
-             * @description 유료 모델을 결제할 기관 사업 계정. 하나뿐이면 생략할 수 있습니다.
+             * @description 유료 모델을 결제할 기관 사업 계정이에요. 연결 가능한 계정이 하나뿐이면 생략할 수 있어요.
              */
             openrouterAccountId?: string | null;
         };
@@ -6234,7 +6234,7 @@ export interface components {
             detail?: unknown;
             /**
              * Format: uuid
-             * @description 감사 로그 행의 공개 식별자. 목록 렌더링용 키이며 어떤 조회 파라미터도 아닙니다.
+             * @description 감사 로그 행의 공개 ID이며, 조회 파라미터로 쓰지 않아요.
              */
             id: string;
             ip?: string | null;
@@ -6261,11 +6261,11 @@ export interface components {
             adminNote?: string | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 연결된 교내 IP 주소 (GRANTED 이후) */
+            /** @description 등록한 교내 IP 주소 (GRANTED 이후) */
             grantedAddress?: string | null;
             /** Format: uuid */
             id: string;
-            /** @description 사용할 포트 번호 목록 (중복 제거·오름차순 정규화) */
+            /** @description 사용할 포트 번호 목록이며, 중복을 제거하고 오름차순으로 정렬해요. */
             ports: number[];
             /** Format: date-time */
             processedAt?: string | null;
@@ -6273,7 +6273,7 @@ export interface components {
             purpose: string;
             /** Format: uuid */
             requestedBy: string;
-            /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
+            /** @description 신청 상태 (REQUESTED = 신청, APPROVED = 관리자 승인, GRANTED = 교내 IP 주소 등록, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
             /** Format: uuid */
             vmId: string;
@@ -6288,7 +6288,7 @@ export interface components {
             cpuThreads: number;
             /**
              * Format: int64
-             * @description ACTIVE 노드의 thin pool 용량 합(GB) — 용량 미등록 노드가 있으면 null
+             * @description ACTIVE 노드의 thin pool 용량 합이에요(GB). 용량이 미등록된 노드가 있으면 null이에요.
              */
             diskGb?: number | null;
             /** Format: int64 */
@@ -6320,11 +6320,11 @@ export interface components {
             /** Format: int32 */
             totalPages: number;
         };
-        /** @description 보존된 raw event의 관측 수. 요청 기간 전체가 삭제 경계 밖이면 수치는 null입니다. 부분 삭제 기간은 quality를 함께 확인해야 합니다. */
+        /** @description 보존된 raw event에서 관측한 수치예요. 요청 기간 전체가 삭제 경계 밖이면 null이에요. 일부 기간이 삭제됐다면 quality를 함께 확인해요. */
         CapacityCounts: {
             /** Format: int64 */
             canceled?: number | null;
-            /** @description 공급자가 보고한 요청 금액의 합. TOKEN/CREDIT 축과 독립이며 사용자·플랫폼 부담이나 원가를 확정하지 않습니다. 권한 없음 또는 가격 표본 없음은 null입니다. */
+            /** @description 공급자가 보고한 요청 금액의 합이에요. TOKEN/CREDIT 축과 독립된 값이며 사용자나 플랫폼의 부담액, 원가를 확정하지 않아요. 권한이나 가격 표본이 없으면 null이에요. */
             costUsd?: number | null;
             /** Format: int64 */
             creditAxisRequests?: number | null;
@@ -6351,7 +6351,7 @@ export interface components {
             unknownAxisRequests?: number | null;
             /**
              * Format: int64
-             * @description 최종 upstream 미기록 요청 수. 모델 판정 전 거절과 과거 미귀속도 포함하며 특정 장비 수요로 귀속하지 않습니다.
+             * @description 최종 upstream이 기록되지 않은 요청 수예요. 모델 판정 전 거절과 과거 미귀속도 포함하며 특정 장비 수요로 보지 않아요.
              */
             unknownFinalUpstreamRequests?: number | null;
             /** Format: int64 */
@@ -6359,7 +6359,7 @@ export interface components {
             /** Format: int64 */
             unknownModelRequests?: number | null;
         };
-        /** @description 조회 시점에 저장된 키별 override. 과거 요청 당시 적용값이나 gateway 반영 완료가 아닙니다. null RPM/TPM/동시성의 실제 서비스 기본값은 보고되지 않았습니다. */
+        /** @description 조회 시점에 저장된 키별 override예요. 과거 요청 당시 적용값이나 Gateway 반영 완료를 뜻하지 않아요. null RPM/TPM/동시성에 적용되는 실제 서비스 기본값은 보고되지 않았어요. */
         CapacityCurrentLimits: {
             /** Format: int32 */
             concurrency?: number | null;
@@ -6367,7 +6367,7 @@ export interface components {
             configurationObservedAt: string;
             /**
              * Format: int64
-             * @description 저장된 일일 TOKEN 한도. null은 무제한, 0은 TOKEN 축 사용 불가입니다.
+             * @description 저장된 일일 TOKEN 한도예요. null은 무제한이며 0은 TOKEN 축 사용 차단을 뜻해요.
              */
             dailyTokens?: number | null;
             quotaExhausted: boolean;
@@ -6379,7 +6379,7 @@ export interface components {
         };
         /** @enum {string} */
         CapacityGroup: "ORG" | "WORKSPACE" | "KEY";
-        /** @description 보존과 전달 품질. latestUsageReceivedAt은 API 수신 시각이며 completeness watermark가 아닙니다. 집계가 비어도 미수집·전송 손실이 없다는 뜻은 아닙니다. */
+        /** @description 보존과 전달 품질이에요. latestUsageReceivedAt은 API 수신 시각이며 해당 시각까지의 수집 완료를 보장하지 않아요. 빈 집계만으로 미수집이나 전송 손실이 없다고 판단할 수 없어요. */
         CapacityQuality: {
             completeness: string;
             /** Format: int32 */
@@ -6395,7 +6395,7 @@ export interface components {
         };
         /** @enum {string} */
         CapacityRawHistoryState: "NOT_SWEPT" | "WITHIN_RETAINED_RANGE" | "PARTIALLY_SWEPT" | "FULLY_SWEPT";
-        /** @description 정상 응답을 제외한 원문 오류 유형과 분류의 조합. GLOBAL_ADMISSION은 실제 attempts=0 근거가 있을 때만 분류하며 과거 시도 횟수 미기록은 미분류로 보존합니다. PROVIDER는 공급 경로 결과이며 공급자 과실이나 중간 처리 경로를 확정하지 않습니다. */
+        /** @description 정상 응답을 제외한 원문 오류 유형과 분류의 조합이에요. GLOBAL_ADMISSION은 실제 attempts=0 근거가 있을 때만 분류하며 과거 시도 횟수가 미기록이면 미분류로 유지해요. PROVIDER는 공급 경로의 결과이며 공급자 과실이나 중간 처리 경로를 확정하지 않아요. */
         CapacityReason: {
             category: components["schemas"]["CapacityReasonCategory"];
             errorType?: string | null;
@@ -6417,7 +6417,7 @@ export interface components {
             totalItems: number;
             truncated: boolean;
         };
-        /** @description 현재 관측 업무가 허용한 실제 키 관계와 보이는 등록 공급원의 최소 참조. 워크스페이스 관리나 전역 장비 권한이 아닙니다. */
+        /** @description 현재 관측 업무가 허용한 실제 키 관계와 조회 가능한 등록 공급원의 최소 참조예요. 워크스페이스 관리나 전역 장비 권한을 뜻하지 않아요. */
         CapacitySelectors: {
             institutions: components["schemas"]["CapacityReferenceCollection"];
             upstreams: components["schemas"]["CapacityReferenceCollection"];
@@ -6431,7 +6431,7 @@ export interface components {
             /** Format: date-time */
             to: string;
         };
-        /** @description SYS 전역 장비 관측과 기관 수요는 서로 다른 모집단입니다. 기관에는 상태 외 전역 source·장비·엔진 값을 제공하지 않습니다. */
+        /** @description SYS 전역 장비 관측과 기관 수요는 서로 다른 모집단이에요. 기관에는 상태 외의 전역 source와 장비, 엔진 값을 제공하지 않아요. */
         CapacityTelemetry: {
             device?: components["schemas"]["InferenceObservationView"] | null;
             status: components["schemas"]["CapacityTelemetryStatus"];
@@ -6455,14 +6455,14 @@ export interface components {
             capacityCpuThreads: number;
             /**
              * Format: int64
-             * @description ACTIVE 노드의 thin pool 용량 합(GB) — 오버프로비저닝 전제의 조언용 분모, 용량 미등록 노드가 있으면 null
+             * @description ACTIVE 노드의 thin pool 용량 합(GB). 오버프로비저닝을 전제로 한 참고용 분모이며 용량 미등록 노드가 있으면 null
              */
             capacityDiskGb?: number | null;
             /** Format: int64 */
             capacityMemoryMb: number;
             /** Format: date */
             from: string;
-            /** @description 일 단위 스냅샷 — 해당 일 종료 시점에 살아 있던 VM의 할당 합 */
+            /** @description 일별 스냅샷이며 해당 일 종료 시점에 살아 있던 VM의 할당 합계 */
             points: components["schemas"]["CapacityTrendPointResponse"][];
             /** Format: date */
             to: string;
@@ -6493,7 +6493,7 @@ export interface components {
             confirmed: boolean;
         };
         ConfirmOpenRouterAccountRequest: {
-            /** @description Account 이름과 정확히 같아야 하는 확인값 */
+            /** @description 사업 계정 이름과 정확히 같아야 하는 확인값 */
             confirmName: string;
         };
         ConfirmTerminationRequest: {
@@ -6524,12 +6524,12 @@ export interface components {
         };
         CreateDomainRequestSpec: {
             /**
-             * @description 루트 도메인 바로 아래 한 라벨. 영문 소문자와 숫자, 하이픈만 쓸 수 있습니다.
+             * @description 루트 도메인 바로 아래 한 라벨이며, 영문 소문자와 숫자, 하이픈만 쓸 수 있어요.
              * @example myblog
              */
             label: string;
             /**
-             * @description 이름을 발급받을 루트 도메인. 이 이름이 속할 기관이 여기서 정해집니다.
+             * @description 이름을 발급받을 루트 도메인이며, 이 이름이 속할 기관도 여기서 정해져요.
              * @example pusan.dev
              */
             rootDomain: string;
@@ -6537,7 +6537,7 @@ export interface components {
         CreateGpuRequestSpec: {
             /**
              * Format: int32
-             * @description 직접 입력한 양의 정수 시간입니다. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않습니다.
+             * @description 직접 입력한 양의 정수 시간이에요. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않아요.
              */
             leaseHours: number;
             /** Format: uuid */
@@ -6545,49 +6545,49 @@ export interface components {
         };
         CreateLlmKeyRequestSpec: {
             /**
-             * @description 희망 금액 한도(USD). 유료 모델을 쓸 때만 적습니다.
+             * @description 희망 금액 한도예요(USD). 유료 모델 사용을 신청할 때만 입력해요.
              * @example 20
              */
             reqCreditLimit?: number | null;
             /**
              * Format: int64
-             * @description 희망 일일 토큰 수. 비우면 서비스 기본값을 받습니다.
+             * @description 희망 일일 토큰 수이며, 생략하면 서비스 기본값을 요청해요.
              */
             reqDailyTokens?: number | null;
-            /** @description 신청자가 고른 기능 권한. 필수이며 빈 배열도 받습니다. 승인 화면의 초깃값이 되고, 무엇을 부여할지는 승인자가 정합니다. 지금 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions이고 나머지는 422로 거절합니다. web_search와 pdf_ocr은 chat과 함께 골라야 합니다. */
+            /** @description 신청자가 요청한 기능 권한이며 필수값이지만 빈 배열도 보낼 수 있어요. 승인 화면의 초깃값이며, 부여할 목록은 승인자가 정해요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions이며, 나머지는 422로 거절해요. web_search나 pdf_ocr를 선택하면 chat도 함께 선택해야 해요. */
             reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
-             * @description 희망 분당 요청 수. 비우면 서비스 기본값을 받습니다.
+             * @description 희망 분당 요청 수이며, 생략하면 서비스 기본값을 요청해요.
              */
             reqRpm?: number | null;
             /**
              * Format: int32
-             * @description 희망 분당 토큰 수. 비우면 서비스 기본값을 받습니다.
+             * @description 희망 분당 토큰 수이며, 생략하면 서비스 기본값을 요청해요.
              */
             reqTpm?: number | null;
-            /** @description 자체 서빙 모델을 쓸지. 비우면 사용으로 봅니다. */
+            /** @description 자체 서빙 모델 사용 여부예요. 생략하거나 null이면 사용하는 것으로 봐요. */
             useCampusModels?: boolean | null;
-            /** @description 유료 모델을 쓸지. 비우면 사용하지 않는 것으로 봅니다. */
+            /** @description 유료 모델 사용 여부예요. 생략하거나 null이면 사용하지 않는 것으로 봐요. */
             useCommercialModels?: boolean | null;
         };
         CreateOpenRouterAccountRequest: {
             /** @description 오입력 방지를 위해 name과 정확히 같아야 하는 확인값 */
             confirmName: string;
-            /** @description 이 account를 물어볼 담당자. 없으면 null */
+            /** @description 이 사업 계정의 담당자. 없으면 null */
             contact?: string | null;
-            /** @description 승인 화면 프리필에 쓸 유료 모델 허용 목록 기본값. 비우면 제한 없음이 기본이 됩니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 승인 화면에 처음 채울 유료 모델 허용 목록의 기본값이에요. 비우면 제한 없는 목록을 기본값으로 써요. 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             defaultCreditAllowedModels?: string[] | null;
-            /** @description 승인 화면 프리필에 쓸 유료 모델 차단 목록 기본값. 비우면 차단 없음이 기본이 됩니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 승인 화면에 처음 채울 유료 모델 차단 목록의 기본값이에요. 비우면 차단 없는 목록을 기본값으로 써요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             defaultCreditDeniedModels?: string[] | null;
             /** @description 기관 관리자가 구분하는 사업 계정 이름 */
             name: string;
             /**
              * Format: uuid
-             * @description Account를 소유할 기관 공개 ID
+             * @description 사업 계정을 소유할 기관의 공개 ID
              */
             orgId: string;
-            /** @description 이 account가 청구되는 사업. 없으면 null */
+            /** @description 이 사업 계정의 비용을 청구하는 사업. 없으면 null */
             program?: string | null;
         };
         CreateOrgRequest: {
@@ -6607,25 +6607,25 @@ export interface components {
             displayName: string;
             /**
              * Format: int32
-             * @description 표시 순서. 비우면 0입니다.
+             * @description 표시 순서예요. 비우면 0이에요.
              */
             displayOrder?: number | null;
             /**
              * Format: date
-             * @description 종료일. 모든 기간 항목은 끝나는 날이 있습니다.
+             * @description 종료일이에요. 모든 기간 항목에는 종료일이 있어요.
              */
             endDate: string;
             name: string;
         };
-        /** @description 리소스를 받을 대상자 한 명. userId, invitationId, studentNo 중 정확히 하나를 보냅니다. */
+        /** @description 리소스를 받을 대상자 한 명이에요. userId, invitationId, studentNo 중 정확히 하나를 보내요. */
         CreateRequestRecipient: {
             /**
              * Format: uuid
-             * @description 워크스페이스의 대기 중인 초대. 초대받은 사람이 가입하면 그때 리소스를 만듭니다.
+             * @description 워크스페이스의 대기 중인 초대예요. 수락 뒤 리소스 생성은 신청 승인과 이용 기간, 활성 구성원 여부 등 현재 조건을 확인해 별도 작업으로 처리해요.
              */
             invitationId?: string | null;
             /**
-             * @description 대상자의 학번. 그 학번의 활성 계정이 구성원이면 그 사람이 대상자가 되고, 구성원이 아니면 제출할 때 구성원으로 추가합니다. 계정이 없으면 대기 중인 초대를 쓰거나 제출할 때 새로 초대하며, 그 사람이 가입하면 리소스를 만듭니다. 추가와 초대는 신청이 나중에 반려되거나 취소되어도 남고, 신청자의 시간당 초대 인원 한도에 포함됩니다. 개인 워크스페이스에는 쓸 수 없습니다.
+             * @description 대상자의 학번이에요. 해당 학번의 활성 계정이 구성원이면 그 사람이 대상자가 되고, 구성원이 아니면 제출할 때 구성원으로 추가해요. 계정이 없으면 대기 중인 초대를 쓰거나 제출할 때 새로 초대해요. 리소스 생성은 신청 승인 뒤 이용 기간과 활성 구성원 여부 등 현재 조건을 확인하는 별도 작업으로 처리해요. 추가와 초대는 신청이 나중에 반려되거나 취소되어도 남고, 신청자의 시간당 초대 인원 한도에 포함돼요. 개인 워크스페이스에는 쓸 수 없어요.
              * @example 209900001
              */
             studentNo?: string | null;
@@ -6636,7 +6636,7 @@ export interface components {
             userId?: string | null;
         };
         CreateRequestRequest: {
-            /** @description 제출과 동시에 승인할 때의 내용. 일반 신청 승인 업무가 필요하며, 새 명단은 명단 발급 업무로 그 명령 안에서 승인할 수 있습니다. 승인 화면에서 보내는 내용과 같습니다. */
+            /** @description 제출과 동시에 승인할 때의 내용이에요. 일반 신청 승인 업무가 필요하며, 새 명단은 명단 발급 업무로 같은 명령 안에서 승인할 수 있어요. 승인 화면에서 보내는 내용과 같아요. */
             approval?: components["schemas"]["ApproveRequestRequest"] | null;
             displayName: string;
             domain?: components["schemas"]["CreateDomainRequestSpec"] | null;
@@ -6645,17 +6645,17 @@ export interface components {
             llmKey?: components["schemas"]["CreateLlmKeyRequestSpec"] | null;
             /**
              * Format: uuid
-             * @description 신청할 기관. 리소스 종류가 기관을 스스로 정하지 않을 때만 필수입니다. 외부 도메인은 고른 루트 도메인이 기관을 정하므로 보내지 않습니다.
+             * @description 신청할 기관이에요. 리소스 종류가 기관을 스스로 정하지 않을 때만 필수예요. 외부 도메인은 선택한 루트 도메인으로 기관을 정하므로 보내지 않아요.
              */
             orgId?: string | null;
             /** Format: uuid */
             periodPresetId?: string | null;
             purpose: string;
-            /** @description 리소스를 받을 대상자. 비우면 신청자 본인이 받는 일반 신청입니다. VM과 LLM API 키에만 쓸 수 있고, 워크스페이스 소유자나 해당 명단 발급 업무가 있는 담당자가 지정할 수 있습니다. 대상자마다 리소스를 하나씩 만들며, 가입 전인 초대 대상자는 가입할 때 만듭니다. */
+            /** @description 리소스를 받을 대상자예요. 비우면 신청자 본인이 받는 일반 신청이에요. VM과 LLM API 키에만 사용할 수 있고, 워크스페이스 소유자나 해당 명단 발급 업무가 있는 담당자가 지정할 수 있어요. 대상자마다 리소스 하나를 만들며, 실제 생성은 신청 승인 뒤 이용 기간과 활성 구성원 여부 등 현재 조건에 따라 별도 작업으로 진행해요. */
             recipients?: components["schemas"]["CreateRequestRecipient"][] | null;
             /** Format: date */
             reqEndDate?: string | null;
-            /** @description true면 종료일 없이 신청합니다. reqEndDate·periodPresetId와 함께 보낼 수 없습니다. */
+            /** @description true면 종료일 없이 신청해요. reqEndDate나 periodPresetId와 함께 지정할 수 없어요. */
             reqIndefinite?: boolean | null;
             type: components["schemas"]["ResourceType"];
             vm?: components["schemas"]["CreateVmRequestSpec"] | null;
@@ -6698,7 +6698,7 @@ export interface components {
         };
         CreateWorkspaceRequest: {
             description?: string | null;
-            /** @description 워크스페이스 유형. PERSONAL은 가입 시 자동 생성되고 TEAM은 폐기된 값이라 요청으로 만들 수 없습니다 */
+            /** @description 워크스페이스 유형이에요. PERSONAL은 가입할 때 자동 생성되며 TEAM은 폐기된 값이라 요청으로 만들 수 없어요. */
             kind: components["schemas"]["CreatableWorkspaceKind"];
             name: string;
         };
@@ -6715,19 +6715,19 @@ export interface components {
         };
         DesiredRecordSet: {
             /**
-             * @description 도메인 이름 기준 상대 이름. 빈 문자열은 도메인 이름 자신입니다.
+             * @description 도메인 기준 상대 이름이며, 빈 문자열은 도메인 이름 자체예요.
              * @example www
              */
             name: string;
             /**
              * Format: int32
-             * @description TTL(초). 60에서 86400 사이입니다.
+             * @description TTL(초)이며, 60 이상 86400 이하로 입력해 주세요.
              * @example 300
              */
             ttl?: number;
             /** @description 레코드 종류. */
             type: components["schemas"]["DnsRecordType"];
-            /** @description 이 세트의 값 전체. 순서가 의미를 갖는 종류가 있어 그대로 보존됩니다. */
+            /** @description 이 세트의 값 전체예요. 순서에 의미가 있는 종류가 있어 입력 순서를 그대로 유지해요. */
             values: string[];
         };
         /** @enum {string} */
@@ -6748,7 +6748,7 @@ export interface components {
             fqdn: string;
             /** Format: uuid */
             id: string;
-            /** @description 요청자가 이 도메인의 접근 목록에서 받은 등급. 부여가 없으면 null이고, 그런 행은 목록에만 나타납니다. 상세는 부여가 있어야 열리므로 언제나 값이 있습니다. */
+            /** @description 이 도메인의 접근 목록에서 요청자가 받은 등급이에요. 부여가 없으면 null이며 목록에서만 볼 수 있어요. 상세는 접근 권한이 있어야 열 수 있어 항상 등급을 반환해요. */
             myResourceRole?: components["schemas"]["ResourceRole"] | null;
             ownerNames: string[];
             /** Format: int32 */
@@ -6817,7 +6817,7 @@ export interface components {
         DomainRecordStatus: "PENDING" | "APPLIED" | "FAILED" | "REMOVED";
         DomainRequestSpecResponse: {
             /**
-             * @description 승인이 실제로 발급한 이름. 승인 전에는 null입니다.
+             * @description 승인으로 발급한 도메인 이름이며, 승인 전에는 null이에요.
              * @example myblog.pusan.dev
              */
             grantedFqdn?: string | null;
@@ -6903,7 +6903,7 @@ export interface components {
         ExtendGpuLeaseRequest: {
             /**
              * Format: int32
-             * @description 추가할 양의 정수 시간입니다. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않습니다.
+             * @description 추가할 양의 정수 시간이에요. 1.5처럼 정수가 아닌 값이나 문자열은 허용하지 않아요.
              */
             hours: number;
             reason?: string | null;
@@ -6916,9 +6916,9 @@ export interface components {
             message: string;
         };
         FinalizeOpenRouterCredentialRequest: {
-            /** @description Account 이름과 정확히 같아야 하는 확인값 */
+            /** @description 사업 계정 이름과 정확히 같아야 하는 확인값 */
             confirmName: string;
-            /** @description Vendor console에서 대상 management key를 폐기했으면 true. API는 vendor key를 폐기하지 않습니다. */
+            /** @description OpenRouter에서 대상 관리용 키를 폐기했음을 운영자가 확인하면 true로 보내요. API가 관리용 키 자체를 폐기하지는 않아요. */
             vendorRevocationConfirmed: boolean;
         };
         ForceDeleteVmRequest: {
@@ -7053,7 +7053,7 @@ export interface components {
         GrantOrgRoleRequest: {
             /** Format: int64 */
             expectedRevision: number;
-            /** @description 명시 부여할 기관 업무와 범위. 표시 역할은 이 값에서 계산합니다. */
+            /** @description 명시적으로 부여할 기관 업무와 범위예요. 표시 역할은 이 값에서 계산해요. */
             permission: components["schemas"]["InstitutionPermissionInput"];
         };
         /** @description 접근 권한을 가진 사용자 */
@@ -7080,7 +7080,7 @@ export interface components {
         };
         /** @enum {string} */
         IdentityProvider: "GOOGLE";
-        /** @description 원래 물리 모델·엔진과 수집 epoch·프로세스·구성 identity를 유지합니다. identity 누락·변화·reset·gap에서는 연속 비율을 계산하지 않습니다. */
+        /** @description 원래 물리 모델과 엔진, 수집 epoch, 프로세스, 구성 identity를 유지해요. identity가 없거나 달라지거나 reset이나 gap이 있으면 연속 비율을 계산하지 않아요. */
         InferenceObservationEngine: {
             /** Format: int64 */
             baselineIntervals: number;
@@ -7108,7 +7108,7 @@ export interface components {
             /** Format: int64 */
             validIntervals: number;
         };
-        /** @description 최신 원천 보고 시각과 요청 기간의 표본 품질을 구분합니다. OUTSIDE의 기간 수치는 null이며 PARTIAL은 보존된 부분만 셉니다. truncated이면 읽은 표본 수는 하한입니다. 설치·무손실·기간 전체 수집 완료를 보장하지 않습니다. */
+        /** @description 최신 원천 보고 시각과 요청 기간의 표본 품질을 구분해요. OUTSIDE의 기간 수치는 null이며 PARTIAL은 보존된 부분만 세요. truncated이면 읽은 표본 수는 하한이에요. 설치 상태와 무손실 수집, 기간 전체의 수집 완료를 보장하지 않아요. */
         InferenceObservationEvidence: {
             /** Format: int64 */
             baselineIntervals?: number | null;
@@ -7136,7 +7136,7 @@ export interface components {
         InferenceObservationFreshness: "NOT_REPORTED" | "FRESH" | "STALE";
         /** @enum {string} */
         InferenceObservationIntervalState: "VALID" | "PARTIAL" | "BASELINE" | "UNAVAILABLE";
-        /** @description gauge mean은 실제 측정 시각의 표본 평균입니다. 명시 sampleAt이 요청 기간·보존 범위 밖이면 UNKNOWN/null이며 현재 시각으로 옮기지 않습니다. rate mean은 누적 차분 합/실제 시간 합, histogram mean은 sum 차분 합/count 차분 합입니다. 양끝이 요청 기간과 보존 범위 안인 완전 구간만 종료 시각의 버킷에 귀속하며 부분 구간을 분할 추정하지 않습니다. min/max는 gauge 표본값 또는 완전 구간 평균의 범위이며 분위수가 아닙니다. intervalSeconds는 해당 버킷에서 끝나는 완전 관측 구간의 실제 초 합으로 버킷 길이를 넘을 수 있고 gauge는 0입니다. 버킷 안의 정확한 요청 시각 분포나 연속 센싱·시간 점유율을 뜻하지 않습니다. null과 실제 0은 다릅니다. */
+        /** @description gauge mean은 실제 측정 시각의 표본 평균이에요. 명시 sampleAt이 요청 기간이나 보존 범위 밖이면 UNKNOWN/null이며 현재 시각으로 옮기지 않아요. rate mean은 누적 차분 합/실제 시간 합, histogram mean은 sum 차분 합/count 차분 합이에요. 양끝이 요청 기간과 보존 범위 안인 완전 구간만 종료 시각의 버킷에 귀속하며, 부분 구간을 나눠 추정하지 않아요. min/max는 gauge 표본값 또는 완전 구간 평균의 범위이며 분위수는 아니에요. intervalSeconds는 해당 버킷에서 끝나는 완전 관측 구간의 실제 초 합으로 버킷 길이를 넘을 수 있고, gauge는 0이에요. 버킷 안의 정확한 요청 시각 분포나 연속 센싱, 시간 점유율을 뜻하지 않아요. null과 실제 0은 달라요. */
         InferenceObservationMetric: {
             /** Format: double */
             intervalSeconds: number;
@@ -7150,7 +7150,7 @@ export interface components {
             observedSamples: number;
             state: components["schemas"]["InferenceObservationValueState"];
         };
-        /** @description 요청한 시작 포함·종료 제외 버킷입니다. samples는 원천 observedAt에 따른 snapshot 행수이며 gauge의 명시 측정 시각이나 완전 구간 종료 시각과 다를 수 있습니다. samples가 0이어도 개별 metric의 실제 측정값은 유효할 수 있습니다. 보존 범위 밖 수치와 계산할 수 없는 비율은 null이며 장비 측정값 0으로 채우지 않습니다. */
+        /** @description 요청한 시작 시각을 포함하고 종료 시각을 제외한 버킷이에요. samples는 원천 observedAt에 따른 snapshot 행 수이며, gauge의 명시 측정 시각이나 완전 구간의 종료 시각과 다를 수 있어요. samples가 0이어도 개별 metric의 실제 측정값은 유효할 수 있어요. 보존 범위 밖 수치와 계산할 수 없는 비율은 null이며, 장비 측정값 0으로 채우지 않아요. */
         InferenceObservationPoint: {
             engines: components["schemas"]["InferenceObservationEngine"][];
             /** Format: int64 */
@@ -7170,7 +7170,7 @@ export interface components {
         InferenceObservationRetentionState: "WITHIN" | "PARTIAL" | "OUTSIDE";
         /** @enum {string} */
         InferenceObservationValueState: "OBSERVED" | "UNKNOWN" | "NOT_REPORTED" | "UNSUPPORTED" | "SOURCE_FAILED";
-        /** @description 고정된 보고 원천의 장비 전역 표본입니다. 기관·워크스페이스·원인·공개 모델 수요 필터의 개인별 장비 점유율이 아닙니다. */
+        /** @description 고정된 보고 원천의 장비 전체 표본이에요. 기관과 워크스페이스, 원인, 공개 모델 수요 필터에 따른 개인별 장비 점유율은 제공하지 않아요. */
         InferenceObservationView: {
             /** Format: int32 */
             bucketSeconds: number;
@@ -7193,44 +7193,44 @@ export interface components {
         InstitutionAdminLlmBudgetResponse: {
             /**
              * Format: date
-             * @description 총액 한도를 최근 소비 속도로 소진할 것으로 예상하는 날짜. 주기별 한도이거나, 이력이 부족하거나 최근 소비가 없으면 null입니다.
+             * @description 총액 한도를 최근 소비 속도로 소진할 것으로 예상한 날짜예요. 주기별 한도이거나 이력이 부족한 경우, 최근 소비가 없거나 금융 미제공이면 null이에요.
              */
             creditDepletionForecast?: string | null;
-            /** @description 유료 모델에 쓸 수 있는 금액 한도(USD). 0이면 유료 모델을 쓸 수 없습니다. */
+            /** @description 유료 모델의 금액 한도예요(USD). 0이면 유료 모델을 쓸 수 없고 금융 정보가 미제공이면 null이에요. */
             creditLimit?: number | null;
-            /** @description 공급자가 보고한 키의 누적 사용액(USD). 일·주·월 리셋별 사용액이나 현재 창의 소비량을 뜻하지 않습니다. 아직 보고된 적이 없으면 null입니다. */
+            /** @description 공급자가 보고한 키의 누적 사용액이에요(USD). 일간과 주간, 월간 리셋별 사용액이나 현재 창의 소비량과 구분해요. 미관측이거나 금융 미제공이면 null이에요. */
             creditUsage?: number | null;
             /**
              * Format: date-time
-             * @description 그 누적 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
+             * @description 누적 사용액을 읽은 시각이에요. 30분 주기를 기준으로 갱신을 시도하며 미관측이거나 금융 미제공이면 null이에요.
              */
             creditUsageAt?: string | null;
             /**
              * Format: int64
-             * @description 하루에 쓸 수 있는 토큰 수. null이면 한도가 없고, 0이면 자체 서빙 모델을 쓸 수 없습니다.
+             * @description 하루에 쓸 수 있는 토큰 수예요. 관측 정보가 제공될 때 null은 무제한이며 0은 자체 서빙 모델 사용 차단을 뜻해요. 관측 정보가 미제공인 경우에도 null이에요.
              */
             dailyTokens?: number | null;
-            /** @description 한도에 도달해 자체 서빙 모델 요청이 거절되고 있는 상태. */
+            /** @description 기록된 자체 서빙 모델의 일일 토큰 한도 소진 상태. 관측 미제공이면 null */
             quotaExhausted?: boolean | null;
             /**
              * Format: int64
-             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 유료 모델 사용은 금액 한도에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
+             * @description 오늘(KST) 자체 서빙 모델에 기록된 입출력 토큰 합계예요. 유료 모델 사용은 금액 한도로 계산하며 포함하지 않아요. 배치 전송으로 최근 사용량이 늦게 반영될 수 있고 관측 미제공이면 null이에요.
              */
             todayTokens?: number | null;
         };
         InstitutionAdminLlmEndpointUsageResponse: {
-            /** @description 이 경로가 쓴 금액(USD). 가격이 붙은 요청이 없으면 null입니다. */
+            /** @description 이 경로의 금액이에요(USD). 가격이 확인된 요청이 없으면 null이에요. */
             attributedCostUsd?: number | null;
             /**
              * Format: int64
-             * @description 이 경로 요청 중 유료 모델로 나간 요청 수. 한 경로에는 두 축이 섞이므로 금액이 빠진 건수를 세려면 전체 요청이 아니라 이 값에서 빼야 합니다. 자체 서빙 요청에는 금액이라는 것이 아예 없으므로, 전체 요청에서 빼면 자체 서빙까지 「금액을 모르는 요청」으로 세게 됩니다.
+             * @description 요청 당시 CREDIT 축으로 기록된 이 경로의 요청 수예요. 금융 정보가 미제공이면 null이에요. 실제 공급자나 부담 주체를 뜻하지 않아요.
              */
             creditAxisRequests?: number | null;
-            /** @description 요청이 들어온 경로. 값은 게이트웨이가 정하는 열린 어휘이고, null은 「기타」가 아니라 이 축이 기록되기 전의 요청입니다. */
+            /** @description Gateway가 보고한 요청 경로예요. 새로운 값도 올 수 있고 null은 경로 정보가 기록되지 않았다는 뜻이에요. 이전 기록도 포함하며 기타 경로로 바꾸지 않아요. */
             endpoint?: string | null;
             /**
              * Format: int64
-             * @description 한도 거부가 **아닌** 사유로 실패한 요청 수. 한도 거부를 여기 넣지 않는 것은 집계 표와 같은 가름이라야 같은 이름이 두 숫자를 뜻하지 않기 때문입니다.
+             * @description 한도 거절 이외의 사유로 실패한 요청 수예요.
              */
             failed: number;
             /**
@@ -7244,12 +7244,12 @@ export interface components {
             outputTokens: number;
             /**
              * Format: int64
-             * @description 이 경로 요청 중 공급자가 금액을 알려 준 요청 수
+             * @description 예산 축에 관계없이 금액이 보고된 이 경로의 요청 수. 금융 정보 미제공이면 null
              */
             pricedRequests?: number | null;
             /**
              * Format: int64
-             * @description 한도에 걸려 거부된 요청 수. failed와 겹치지 않습니다 — 셋을 더하면 requests가 됩니다.
+             * @description 한도로 거절된 요청 수예요. failed와 겹치지 않으며 succeeded와 rateLimited, failed의 합이 requests예요.
              */
             rateLimited: number;
             /** Format: int64 */
@@ -7258,11 +7258,11 @@ export interface components {
             succeeded: number;
         };
         InstitutionAdminLlmModelUsageResponse: {
-            /** @description 이 기간에 이 모델 요청에 공급자가 알려 준 금액(USD)의 합. 한도나 잔액과 견주는 값이 아니며, 가격이 붙지 않은 요청은 들어 있지 않습니다 (pricedRequests 참조). 가격이 붙은 요청이 하나도 없으면 null입니다. */
+            /** @description 선택 기간에 공급자가 이 모델 요청에 보고한 금액의 합이에요(USD). 한도나 잔액과 직접 비교할 값은 아니며 pricedRequests에 해당하는 요청만 포함해요. 가격이 확인된 요청이 없으면 null이에요. */
             attributedCostUsd?: number | null;
             /**
              * Format: int64
-             * @description 이 모델 요청의 평균 응답 시간(ms). 실패와 거부까지 포함한 평균이라 정상 응답만 재는 백분위와는 다른 값입니다.
+             * @description 이 모델 요청의 평균 응답 시간이에요(ms). 실패와 거절을 포함하므로 정상 응답만 집계한 백분위와 구분해요.
              */
             avgLatencyMs: number;
             /** Format: int64 */
@@ -7276,23 +7276,23 @@ export interface components {
             imageCount: number;
             /** Format: int64 */
             inputTokens: number;
-            /** @description 호출한 모델의 공개 이름. 모델이 정해지기 전에 실패한 요청은 null이며, 화면에서는 '모델 미상'으로 묶입니다. */
+            /** @description 호출한 모델의 공개 이름이에요. 모델이 정해지기 전에 실패했으면 null이에요. */
             modelName?: string | null;
             /** Format: int64 */
             outputTokens: number;
             /**
              * Format: int64
-             * @description 금액이 붙은 요청만의 평균 응답 시간(ms). 그런 요청이 없으면 0입니다.
+             * @description 가격이 확인된 요청의 평균 응답 시간이에요(ms). 해당 요청이 없으면 0이에요.
              */
             pricedAvgLatencyMs?: number | null;
             /**
              * Format: int64
-             * @description 금액이 붙은 요청 가운데 실패한 수.
+             * @description 가격이 확인된 요청 중 실패한 수
              */
             pricedFailed?: number | null;
             /**
              * Format: int64
-             * @description 금액이 붙은 요청이 쓴 입력 토큰 수. 금액이 붙지 않은 요청의 입력 토큰은 inputTokens에서 이 값을 뺀 것입니다.
+             * @description 가격이 확인된 요청의 입력 토큰 수예요. 미확인 요청의 입력 토큰 수는 inputTokens에서 이 값을 빼서 구해요.
              */
             pricedInputTokens?: number | null;
             /**
@@ -7302,7 +7302,7 @@ export interface components {
             pricedOutputTokens?: number | null;
             /**
              * Format: int64
-             * @description 이 모델 요청 중 공급자가 금액을 알려 준 요청 수. requests보다 작으면 나머지는 금액을 모르는 것이지 공짜였던 것이 아닙니다.
+             * @description 이 모델 요청 중 예산 축에 관계없이 금액이 보고된 요청 수예요. 포함되지 않은 요청은 금액이 보고되지 않았으며 무료를 뜻하지 않아요. 금융 정보가 미제공이면 null이에요.
              */
             pricedRequests?: number | null;
             /** Format: int64 */
@@ -7313,7 +7313,7 @@ export interface components {
             succeeded: number;
             /**
              * Format: int64
-             * @description 금액이 붙지 않은 요청만의 평균 응답 시간(ms). 그런 요청이 없으면 0입니다.
+             * @description 가격이 확인되지 않은 요청의 평균 응답 시간이에요(ms). 해당 요청이 없으면 0이에요.
              */
             unpricedAvgLatencyMs?: number | null;
         };
@@ -7329,9 +7329,9 @@ export interface components {
             errorTypes?: components["schemas"]["LlmKeyErrorTypeResponse"][] | null;
             /** Format: date */
             from: string;
-            /** @description 요일 x 시각(KST) 요청 분포. 요청이 있는 칸만 담깁니다. */
+            /** @description 요일 x 시각(KST)의 요청 분포예요. 요청이 있는 칸만 제공해요. */
             hourly?: components["schemas"]["LlmKeyHourlyUsageResponse"][] | null;
-            /** @description 정상 응답 요청의 응답 시간 백분위. 정상 응답이 없으면 null입니다. */
+            /** @description 정상 응답 요청의 응답 시간 백분위예요. 정상 응답이 없거나 관측 미제공이면 null이에요. */
             latency?: components["schemas"]["LlmKeyLatencyResponse"] | null;
             /** @description 이 기간에 실제로 호출된 모델만, 요청이 많은 순 */
             models?: components["schemas"]["InstitutionAdminLlmModelUsageResponse"][] | null;
@@ -7339,7 +7339,7 @@ export interface components {
             points?: components["schemas"]["LlmKeyUsagePointResponse"][] | null;
             /**
              * Format: date-time
-             * @description 게이트웨이가 이 키의 사용량을 마지막으로 보고한 시각. 보고는 배치라 몇 분 늦을 수 있습니다. 보고가 한 번도 없었으면 null입니다.
+             * @description Gateway가 사용량을 마지막으로 보고한 시각이에요. 배치 전송으로 늦게 반영될 수 있고 보고가 없거나 관측 미제공이면 null이에요.
              */
             reportedUntil?: string | null;
             /** Format: date */
@@ -7372,7 +7372,7 @@ export interface components {
         InstitutionPermissionInput: {
             /**
              * Format: int64
-             * @description 기존 부여의 현재 버전. 새 부여는 0이며 회수 후 재부여한 버전은 재사용하지 않습니다.
+             * @description 기존 부여의 현재 버전을 보내요. 새 부여는 0이며, 회수 후 다시 부여하면 이전과 다른 버전이 할당돼요.
              */
             expectedRevision: number;
             mode: components["schemas"]["InstitutionPermissionMode"];
@@ -7422,11 +7422,11 @@ export interface components {
         InstitutionWorkspaceScopeMode: "ALL" | "LISTED";
         InviteWorkspaceMembersRequest: {
             confirmation?: components["schemas"]["AccessConfirmation"] | null;
-            /** @description 초대할 사람 목록. 1명에서 200명까지이며, 한 항목에는 이메일과 학번 중 하나만 씁니다. */
+            /** @description 초대할 사람 목록이에요. 1명에서 200명까지이며, 한 항목에는 이메일과 학번 중 하나만 써요. */
             entries: components["schemas"]["WorkspaceInvitationEntry"][];
         };
         InviteWorkspaceMembersResponse: {
-            /** @description 요청 항목마다 한 건씩, 요청과 같은 순서입니다. */
+            /** @description 요청한 항목마다 한 건씩, 요청과 같은 순서로 반환해요. */
             results: components["schemas"]["WorkspaceInvitationResult"][];
         };
         IpAllocationResponse: {
@@ -7469,7 +7469,7 @@ export interface components {
         IssuedLlmKeyResponse: {
             /**
              * Format: date-time
-             * @description 만료 시각. 없으면 만료되지 않습니다.
+             * @description 만료 시각이며, null이면 만료가 없어요.
              */
             expiresAt?: string | null;
             /**
@@ -7479,7 +7479,7 @@ export interface components {
             id: string;
             /** @description 키 이름 */
             name: string;
-            /** @description 발급된 API Key 평문. **이 응답에서만 볼 수 있습니다** — 서버에는 해시만 저장되며 다시 조회할 수 없습니다. 분실하면 재발급해야 합니다. */
+            /** @description 발급된 API 키 평문이며 **이 응답에서만 볼 수 있어요.** 서버가 평문 대신 해시를 저장하므로 다시 조회할 수 없어요. 잃어버렸다면 재발급해 주세요. */
             token: string;
         };
         LinkedIdentity: {
@@ -7491,7 +7491,7 @@ export interface components {
         LiveCoverage: {
             /**
              * Format: int32
-             * @description 메모리 측정값이 있는 노드 수 — nodeCount보다 작으면 메모리 합계는 부분 측정
+             * @description 메모리 측정값이 있는 노드 수. nodeCount보다 작으면 합계는 부분 측정
              */
             memoryMeasuredNodeCount: number;
             /**
@@ -7501,11 +7501,11 @@ export interface components {
             nodeCount: number;
             /**
              * Format: int32
-             * @description 스토리지 측정값이 있는 노드 수 — nodeCount보다 작으면 스토리지 합계는 부분 측정
+             * @description 스토리지 측정값이 있는 노드 수. nodeCount보다 작으면 합계는 부분 측정
              */
             storageMeasuredNodeCount: number;
         };
-        /** @description 현재 서버 cache의 계정 배정과 같은 기준으로 평가한 변경 후 값입니다. 실제 다음 리셋·vendor 적용·계정 전체 실측이나 보장된 상한을 뜻하지 않습니다. */
+        /** @description 현재 캐시의 계정 배정과 같은 기준으로 계산한 변경 후 값이에요. 실제 다음 리셋이나 공급자 적용, 계정 전체 실측 또는 보장된 상한을 뜻하지 않아요. */
         LlmAccountImpact: {
             /** Format: uuid */
             accountId: string;
@@ -7521,7 +7521,7 @@ export interface components {
             overAllocated?: boolean | null;
             quality: components["schemas"]["LlmAccountImpactQuality"];
         };
-        /** @description 현재 live 키의 명목 한도와 server-cached 남은 배정입니다. 미보고 usage에는 해당 키의 full cap을 보수적으로 대입하지만 계정 전체 실측·상한이라고 부르지 않습니다. 새 리셋 창에 옛 usage를 쓸 수 없으면 변경 후 remainingCommitment는 null입니다. */
+        /** @description 살아 있는 키의 명목 한도와 캐시에 기록된 남은 배정이에요. 사용액 미보고 키에는 전체 한도를 보수적으로 대입하지만 계정 전체 실측이나 상한을 뜻하지 않아요. 새 리셋 창에 이전 사용액을 적용할 수 없으면 변경 후 remainingCommitment는 null이에요. */
         LlmAccountImpactAmounts: {
             /** Format: int64 */
             awaitingProvisionKeyCount: number;
@@ -7536,7 +7536,7 @@ export interface components {
             /** Format: int64 */
             usageUnreportedKeyCount: number;
         };
-        /** @description 전체 제안의 계정별 정보 스냅샷입니다. 계정 금융과 대상 키 관측·금융의 완전한 source가 없으면 미제공하며, 이를 이유로 기존 허용 명령을 차단하지 않습니다. 새 금융 CAS나 잔액 예약이 아닙니다. */
+        /** @description 전체 제안의 계정별 스냅샷이에요. 계정 금융 조회 권한이 필요하며 각 대상 키의 관측과 금융도 같은 출처에서 함께 허용돼야 제공해요. 미제공을 이유로 기존에 허용된 명령을 막지 않으며 새 금융 CAS나 잔액 예약을 뜻하지 않아요. */
         LlmAccountImpactProjection: {
             accounts?: components["schemas"]["LlmAccountImpact"][] | null;
             basisFingerprint?: string | null;
@@ -7544,7 +7544,7 @@ export interface components {
             observedAt: string;
             state: components["schemas"]["LlmAccountImpactState"];
         };
-        /** @description 서버 cache의 출처·시각과 독립적인 품질입니다. reset 변경, 변경하지 않은 미보고 키, stale이 함께 존재할 수 있습니다. 창이 있는 vendor 사용액의 자연 리셋 정렬은 확인되지 않았으며 다음 대사 전에는 남은 배정을 과소 표시할 수도 있습니다. */
+        /** @description 캐시의 출처와 시각, 품질을 나타내요. reset 변경과 변경하지 않은 미보고 키, stale이 함께 존재할 수 있어요. 공급자의 리셋 창 정렬은 확인되지 않았으며 다음 대사 전에는 남은 배정을 과소 표시할 수도 있어요. */
         LlmAccountImpactQuality: {
             /** Format: int64 */
             afterAwaitingProvisionKeys: number;
@@ -7577,7 +7577,7 @@ export interface components {
         };
         /** @enum {string} */
         LlmAccountImpactState: "NOT_APPLICABLE" | "NOT_PROVIDED" | "AVAILABLE";
-        /** @description 현재 읽을 수 있는 키 행의 탐색 수입니다. 전체 계정의 금융 합계, 승인 후 키 생성 대기 계획, 기간별 소비 키와는 다른 모집단입니다. */
+        /** @description 현재 읽을 수 있는 키 행의 탐색 수예요. 계정 전체 금융 합계와 승인 후 생성 대기 계획, 기간별 소비 키는 각각 다른 모집단이에요. */
         LlmAccountKeyNavigation: {
             awaitingProvision: components["schemas"]["LlmNavigationCount"];
             committed: components["schemas"]["LlmNavigationCount"];
@@ -7587,7 +7587,7 @@ export interface components {
             population: string;
             usageUnreported: components["schemas"]["LlmNavigationCount"];
         };
-        /** @description gateway의 out-of-band /models probe 최신 결과. routing과 cooldown을 바꾸지 않으며 마지막 시도가 intervalSeconds의 3배보다 오래되면 availability에는 UNKNOWN으로 반영됩니다. */
+        /** @description gateway의 out-of-band /models probe 최신 결과. routing과 cooldown을 바꾸지 않아요. 마지막 시도가 intervalSeconds의 3배보다 오래되면 availability에 UNKNOWN으로 반영해요. */
         LlmActiveObservationResponse: {
             /**
              * Format: int32
@@ -7628,14 +7628,14 @@ export interface components {
             modelCount?: number | null;
             /** @description 마지막 probe 시도가 intervalSeconds의 3배보다 오래됐는지 서버가 계산한 값. 미관측 UNKNOWN은 false */
             stale: boolean;
-            /** @description 마지막으로 보고된 raw probe 결과. freshness가 만료돼도 값 자체는 OK로 남을 수 있으며, 현재 상태는 lastAttemptAt·intervalSeconds를 직접 재해석하지 말고 top-level availability를 사용. AUTH_UNVERIFIED는 도달했지만 인증 여부를 확인하지 못한 상태 */
+            /** @description 마지막으로 보고된 raw probe 결과. freshness가 만료돼도 값 자체는 OK로 남을 수 있어요. 현재 상태는 lastAttemptAt과 intervalSeconds를 직접 재해석하지 않고 availability로 확인해요. AUTH_UNVERIFIED는 도달했지만 인증 여부를 확인하지 못한 상태 */
             status: components["schemas"]["LlmActiveProbeStatus"];
         };
         /** @enum {string} */
         LlmActiveProbeStatus: "OK" | "AUTH_UNVERIFIED" | "FAILED" | "UNKNOWN";
         /** @enum {string} */
         LlmApiKeyStatus: "PENDING" | "ACTIVE" | "SUSPENDED" | "REVOKED" | "EXPIRED";
-        /** @description 설정 catalog와 성공한 /models 응답의 비교. 오래된 비교 결과는 availability를 낮추지 않습니다. */
+        /** @description 설정 catalog와 성공한 /models 응답의 비교. 오래된 비교 결과는 availability를 낮추지 않아요. */
         LlmCatalogObservationResponse: {
             /**
              * Format: int32
@@ -7653,7 +7653,7 @@ export interface components {
             status: components["schemas"]["LlmCatalogStatus"];
             /**
              * Format: int32
-             * @description /models 응답에만 있던 예상 밖 모델 수. curated non-passthrough 비교에서 없으면 0, passthrough subset 비교·미비교 상태에서는 null
+             * @description /models 응답에만 있던 예상 밖 모델 수. curated non-passthrough 비교에서 없으면 0, passthrough subset 비교이거나 비교하지 않았으면 null
              */
             unexpectedModelCount?: number | null;
         };
@@ -7663,18 +7663,18 @@ export interface components {
         LlmConsumerSort: "REQUESTS_DESC" | "TOKENS_DESC" | "REPORTED_COST_DESC";
         /** @enum {string} */
         LlmGatewayReportState: "NOT_REPORTED" | "FRESH" | "STALE";
-        /** @description LLM gateway heartbeat와 usage 전송 상태. reportState, usageQueueReportState와 lastContactAt은 모든 관리자에게 보입니다. Queue 수치와 loss counter를 포함한 나머지 진단 필드는 SYS 계층에만 값이 있고 ORG 계층에서는 null입니다. */
+        /** @description LLM gateway heartbeat와 usage 전송 상태. reportState, usageQueueReportState와 lastContactAt은 이 조회가 허용된 관리자에게 제공해요. queue 수치와 누락 counter 등 나머지 진단 필드는 SYS 계층에만 제공하며 ORG 계층에서는 null이에요. */
         LlmGatewayStatusResponse: {
-            /** @description gateway binary 버전. SYS 전용이며 구 gateway·ORG에서는 null */
+            /** @description Gateway binary 버전. SYS 전용이며 구 Gateway이거나 ORG면 null */
             agentVersion?: string | null;
             /**
              * Format: int64
-             * @description gateway가 적용했다고 보고한 세대. SYS 전용이며 미보고·ORG에서는 null
+             * @description Gateway가 적용했다고 보고한 세대. SYS 전용이며 미보고이거나 ORG면 null
              */
             appliedGeneration?: number | null;
             /**
              * Format: int64
-             * @description 본문 전달 포기 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             * @description 본문 전달 포기 누적 수. SYS 전용이며 구 Gateway이거나 ORG면 null
              */
             bodiesDropped?: number | null;
             /**
@@ -7696,84 +7696,84 @@ export interface components {
             lastError?: string | null;
             /**
              * Format: date-time
-             * @description 마지막 usage 전송 성공 시각. SYS 전용이며 성공 이력 없음·ORG에서는 null
+             * @description 마지막 usage 전송 성공 시각. SYS 전용이며 성공 기록이 없거나 ORG면 null
              */
             lastUsageShipSuccessAt?: string | null;
             /**
              * Format: int32
-             * @description gateway 동시 처리 상한. SYS 전용이며 미보고·ORG에서는 null
+             * @description Gateway 동시 처리 상한. SYS 전용이며 미보고이거나 ORG면 null
              */
             maxInFlight?: number | null;
             /**
              * Format: date-time
-             * @description 미전송 queue에서 가장 오래된 event 시각. SYS 전용이며 빈 queue·미관측·ORG에서는 null
+             * @description 미전송 queue의 가장 오래된 event 시각. SYS 전용이며 queue가 비었거나 미관측, ORG면 null
              */
             oldestUnshippedEventAt?: string | null;
             /**
              * Format: int64
-             * @description usage queue byte 수. SYS 전용이며 관측 시각이 있으면 빈 queue는 0, 미관측·ORG에서는 null
+             * @description usage queue byte 수. SYS 전용이며 관측했고 queue가 비었으면 0, 미관측이거나 ORG면 null
              */
             queuedUsageBytes?: number | null;
             /**
              * Format: int64
-             * @description usage queue event 수. SYS 전용이며 관측 시각이 있으면 빈 queue는 0, 미관측·ORG에서는 null
+             * @description usage queue event 수. SYS 전용이며 관측했고 queue가 비었으면 0, 미관측이거나 ORG면 null
              */
             queuedUsageEvents?: number | null;
             /**
              * Format: int32
-             * @description authorization 문서에서 거절한 항목의 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             * @description authorization 문서에서 거절한 항목의 누적 수. SYS 전용이며 구 Gateway이거나 ORG면 null
              */
             rejectedEntries?: number | null;
             /**
              * Format: int64
-             * @description authorization reload 실패 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             * @description authorization reload 실패 누적 수. SYS 전용이며 구 Gateway이거나 ORG면 null
              */
             reloadFailures?: number | null;
             /** @description 5초 sync heartbeat의 보고 신선도 */
             reportState: components["schemas"]["LlmGatewayReportState"];
             /**
              * Format: int64
-             * @description usage event spool 기록 실패 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             * @description usage event spool 기록 실패 누적 수. SYS 전용이며 구 Gateway이거나 ORG면 null
              */
             spoolWriteFailures?: number | null;
             /**
              * Format: date-time
-             * @description gateway 프로세스 시작 시각. SYS 전용이며 미보고·ORG에서는 null
+             * @description Gateway 프로세스 시작 시각. SYS 전용이며 미보고이거나 ORG면 null
              */
             startedAt?: string | null;
             /**
              * Format: int32
-             * @description gateway가 지원하는 authorization document 형식. SYS 전용이며 미보고·ORG에서는 null
+             * @description Gateway가 지원하는 authorization document 형식. SYS 전용이며 미보고이거나 ORG면 null
              */
             supportedFormat?: number | null;
             /**
              * Format: date-time
-             * @description usage queue를 마지막으로 온전히 조사한 시각. SYS 전용이며 구 gateway·ORG에서는 null
+             * @description usage queue를 마지막으로 온전히 조사한 시각. SYS 전용이며 구 Gateway이거나 ORG면 null
              */
             usageQueueObservedAt?: string | null;
             /** @description usage queue 관측 신선도. 관측 시각 없음은 NOT_REPORTED, 10분 초과는 STALE, 그 이하는 FRESH */
             usageQueueReportState: components["schemas"]["LlmGatewayReportState"];
             /**
              * Format: int64
-             * @description usage queue 조사 실패 누적 수. SYS 전용이며 관측 시각이 있으면 실패 없음은 0, 미관측·ORG에서는 null
+             * @description usage queue 조사 실패 누적 수. SYS 전용이며 관측했고 실패가 없으면 0, 미관측이거나 ORG면 null
              */
             usageQueueScanFailures?: number | null;
             /**
              * Format: int64
-             * @description usage batch 전송 실패 누적 수. SYS 전용이며 구 gateway·ORG에서는 null
+             * @description usage batch 전송 실패 누적 수. SYS 전용이며 구 Gateway이거나 ORG면 null
              */
             usageShipFailures?: number | null;
         };
         LlmKeyBodyDetailResponse: {
-            /** @description 이 기록과 같은 요청에서 나온 사용량 이벤트의 식별자입니다. */
+            /** @description 이 기록과 같은 요청에서 나온 사용량 이벤트 ID예요. */
             eventUuid: string;
             /** Format: uuid */
             id: string;
-            /** @description false면 이 기록을 푸는 암호화 키가 서버에 없어 본문을 읽을 수 없습니다. */
+            /** @description false면 저장된 본문을 읽을 수 없어요. */
             readable: boolean;
             /** Format: date-time */
             receivedAt: string;
-            /** @description 보낸 프롬프트. 보통은 messages 배열 그대로이고, 길이 제한에 걸린 경우에는 앞부분을 담은 문자열입니다. 기록되지 않았으면 null입니다. */
+            /** @description 보낸 프롬프트이며 보통 messages 배열이에요. 길이 제한에 걸리면 앞부분을 담은 문자열이에요. 읽을 수 없거나 기록하지 않았으면 null이에요. */
             request?: unknown;
             /** Format: int32 */
             requestBytes: number;
@@ -7781,7 +7781,7 @@ export interface components {
             requestTruncated: boolean;
             /** Format: date-time */
             requestedAt: string;
-            /** @description 받은 응답 텍스트. 기록되지 않았으면 null입니다. */
+            /** @description 받은 응답 텍스트이며, 읽을 수 없거나 기록하지 않았으면 null이에요. */
             response?: string | null;
             /** Format: int32 */
             responseBytes: number;
@@ -7789,11 +7789,11 @@ export interface components {
             responseTruncated: boolean;
         };
         LlmKeyBodySummaryResponse: {
-            /** @description 이 기록과 같은 요청에서 나온 사용량 이벤트의 식별자입니다. 리소스 id가 아니라 두 기록을 잇는 값이고, 클라이언트 로그와 대조할 때 씁니다. */
+            /** @description 이 기록과 같은 요청에서 나온 사용량 이벤트 ID예요. 리소스 ID와는 다른 값이며, 클라이언트 로그와 대조할 때 써요. */
             eventUuid: string;
             /** Format: uuid */
             id: string;
-            /** @description false면 이 기록을 푸는 암호화 키가 서버에 없어 본문을 읽을 수 없습니다. 미리보기도 null입니다. */
+            /** @description false면 저장된 본문을 읽을 수 없어요. 미리보기도 null이에요. */
             readable: boolean;
             /**
              * Format: date-time
@@ -7805,13 +7805,13 @@ export interface components {
              * @description 기록된 프롬프트의 바이트 수
              */
             requestBytes: number;
-            /** @description 프롬프트 앞부분. 읽을 수 없거나 기록되지 않았으면 null입니다. */
+            /** @description 프롬프트 앞부분이며, 읽을 수 없거나 기록하지 않았으면 null이에요. */
             requestPreview?: string | null;
             /** @description 프롬프트가 길이 제한에 걸려 앞부분만 기록됐는지 여부 */
             requestTruncated: boolean;
             /**
              * Format: date-time
-             * @description 요청 시각. 게이트웨이가 보고한 값입니다.
+             * @description Gateway가 보고한 요청 시각이에요.
              */
             requestedAt: string;
             /**
@@ -7819,7 +7819,7 @@ export interface components {
              * @description 기록된 응답의 바이트 수
              */
             responseBytes: number;
-            /** @description 응답 앞부분. 읽을 수 없거나 기록되지 않았으면 null입니다. */
+            /** @description 응답 앞부분이며, 읽을 수 없거나 기록하지 않았으면 null이에요. */
             responsePreview?: string | null;
             /** @description 응답이 길이 제한에 걸려 앞부분만 기록됐는지 여부 */
             responseTruncated: boolean;
@@ -7853,28 +7853,28 @@ export interface components {
         LlmKeyBudgetResponse: {
             /**
              * Format: date
-             * @description 총액 한도를 최근 소비 속도로 소진할 것으로 예상하는 날짜. 주기별 한도이거나, 이력이 부족하거나 최근 소비가 없으면 null입니다.
+             * @description 총액 한도를 최근 소비 속도로 소진할 것으로 예상하는 날짜예요. 주기별 한도이거나 이력이 부족하거나 최근 소비가 없으면 null이에요.
              */
             creditDepletionForecast?: string | null;
-            /** @description 유료 모델에 쓸 수 있는 금액 한도(USD). 0이면 유료 모델을 쓸 수 없습니다. */
+            /** @description 유료 모델의 금액 한도예요(USD). 0이면 유료 모델을 쓸 수 없어요. */
             creditLimit: number;
-            /** @description 공급자가 보고한 키의 누적 사용액(USD). 일·주·월 리셋별 사용액이나 현재 창의 소비량을 뜻하지 않습니다. 아직 보고된 적이 없으면 null입니다. */
+            /** @description 공급자가 보고한 키의 누적 사용액이에요(USD). 일간과 주간, 월간 리셋별 사용액이나 현재 창의 소비량을 뜻하지 않아요. 아직 보고된 적이 없으면 null이에요. */
             creditUsage?: number | null;
             /**
              * Format: date-time
-             * @description 그 누적 사용액을 읽어 온 시각. 30분마다 갱신됩니다.
+             * @description 누적 사용액을 읽어 온 시각이에요. 30분 주기로 갱신을 시도해요.
              */
             creditUsageAt?: string | null;
             /**
              * Format: int64
-             * @description 하루에 쓸 수 있는 토큰 수. null이면 한도가 없고, 0이면 자체 서빙 모델을 쓸 수 없습니다.
+             * @description 하루에 쓸 수 있는 토큰 수예요. null이면 한도가 없고 0이면 자체 서빙 모델을 쓸 수 없어요.
              */
             dailyTokens?: number | null;
-            /** @description 한도에 도달해 자체 서빙 모델 요청이 거절되고 있는 상태. */
+            /** @description 자체 서빙 모델의 일일 토큰 한도 소진 상태 */
             quotaExhausted: boolean;
             /**
              * Format: int64
-             * @description 오늘(KST) 자체 서빙 모델에 쓴 입출력 토큰 합계. 유료 모델 사용은 금액 한도에 계상되므로 여기 들어가지 않습니다. 사용량 전송이 배치라 방금 쓴 만큼은 아직 반영되지 않았을 수 있습니다.
+             * @description 오늘(KST) 자체 서빙 모델에 기록된 입출력 토큰 합계예요. 유료 모델 사용량은 금액 한도로 계산하므로 포함하지 않아요. 사용량은 배치로 전달돼 최근 사용량이 아직 반영되지 않았을 수 있어요.
              */
             todayTokens: number;
         };
@@ -7890,75 +7890,75 @@ export interface components {
             accessManageAllowed: boolean;
             /**
              * Format: int32
-             * @description 동시 요청 한도. null이면 게이트웨이 기본값을 따릅니다.
+             * @description 동시 요청 한도이며, null이면 Gateway 기본값을 따라요.
              */
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
-            /** @description 이 키가 쓸 수 있는 유료 모델 목록. 빈 배열이면 제한이 없습니다. 자체 서빙 모델은 이 목록과 무관하게 쓸 수 있습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 이 키의 유료 모델 허용 목록이에요. 빈 배열이면 이 목록으로 제한하지 않아요. 자체 서빙 모델에는 적용하지 않아요. 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             creditAllowedModels: string[];
-            /** @description 유료 모델 사용 가능 여부. 금액 한도가 부여됐지만 아직 연결 전이면 false입니다. */
+            /** @description 유료 모델 연결 상태예요. 금액 한도를 부여해도 아직 키 연결 전이면 false예요. */
             creditAxisConnected: boolean;
-            /** @description 이 키가 쓸 수 없는 유료 모델 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 이 키의 유료 모델 차단 목록이에요. 빈 배열이면 이 목록으로 차단하지 않아요. 허용 목록과 겹치면 차단을 적용해요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             creditDeniedModels: string[];
-            /** @description 유료 모델 한도, USD 크레딧. 0이면 유료 모델을 쓸 수 없습니다. */
+            /** @description 유료 모델의 금액 한도예요(USD 크레딧). 0이면 유료 모델을 쓸 수 없어요. */
             creditLimit: number;
-            /** @description 금액 한도 리셋 창. null이면 리셋 없는 총액 상한입니다. 창은 UTC 자정 기준입니다. */
+            /** @description 금액 한도 리셋 창이에요. null이면 리셋 없는 총액 상한이며, 리셋 창은 UTC 자정을 기준으로 해요. */
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
-             * @description 일일 토큰 한도. null이면 일일 한도가 없고, 0이면 자체 서빙 모델을 쓸 수 없습니다.
+             * @description 일일 토큰 한도이며, null이면 일일 한도가 없고 0이면 자체 서빙 모델을 쓸 수 없어요.
              */
             dailyTokens?: number | null;
             /**
              * Format: date-time
-             * @description 만료 시각. null이면 만료가 없습니다.
+             * @description 만료 시각이며, null이면 만료가 없어요.
              */
             expiresAt?: string | null;
             /** Format: uuid */
             id: string;
             /**
              * Format: date-time
-             * @description 마지막 사용 시각. 게이트웨이가 배치로 보고하므로 지연될 수 있습니다.
+             * @description 마지막 사용 시각이에요. Gateway가 배치로 보고하므로 지연될 수 있어요.
              */
             lastUsedAt?: string | null;
             /** @description 요청자가 이 키의 접근 목록에서 받은 등급 */
             myResourceRole?: components["schemas"]["ResourceRole"] | null;
             /** @description 키 이름 */
             name: string;
-            /** @description 이 키에 부여된 기능 권한. 빈 배열이면 기능을 하나도 쓸 수 없습니다(chat 포함). 모델 목록 둘과 반대로 이 목록은 채워야 열립니다. 모델 조회는 이 목록과 무관합니다. */
+            /** @description 이 키에 부여된 기능 권한이에요. 빈 배열이면 chat을 포함해 어떤 기능도 쓸 수 없어요. 모델 조회에는 이 목록을 적용하지 않아요. */
             passthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /** @description 용도 */
             purpose?: string | null;
-            /** @description 프롬프트·응답 본문 기록 여부 */
+            /** @description 프롬프트와 응답 본문 기록 설정 */
             recordBodies: boolean;
             /**
              * Format: date-time
-             * @description 회수된 시각. 회수되지 않았으면 null입니다.
+             * @description 폐기한 시각이며, 폐기하지 않았으면 null이에요.
              */
             revokedAt?: string | null;
             /**
              * Format: int32
-             * @description 분당 요청 한도. null이면 게이트웨이 기본값을 따릅니다.
+             * @description 분당 요청 한도이며, null이면 Gateway 기본값을 따라요.
              */
             rpm?: number | null;
             status: components["schemas"]["LlmApiKeyStatus"];
-            /** @description 평문 앞부분 — 두 키를 구별하기 위한 값입니다. 아직 발급 전이면 null입니다. */
+            /** @description 두 키를 구별하는 평문 앞부분이에요. 아직 발급 전이면 null이에요. */
             tokenPrefix?: string | null;
             /**
              * Format: int32
-             * @description 분당 토큰 한도. null이면 게이트웨이 기본값을 따릅니다.
+             * @description 분당 토큰 한도이며, null이면 Gateway 기본값을 따라요.
              */
             tpm?: number | null;
             /**
              * Format: uuid
-             * @description 소유 워크스페이스. 행이 사라진 경우에만 null입니다.
+             * @description 소유 워크스페이스이며, 해당 행이 사라진 경우에만 null이에요.
              */
             workspaceId?: string | null;
             workspaceName: string;
         };
         LlmKeyErrorTypeResponse: {
-            /** @description 오류 종류. 게이트웨이가 종류를 남기지 않은 실패는 null이며, 화면에서는 '기타'로 묶입니다. */
+            /** @description 오류 유형이며, Gateway가 유형을 남기지 않은 실패는 null이에요. */
             errorType?: string | null;
             /** Format: int64 */
             requests: number;
@@ -7989,11 +7989,11 @@ export interface components {
             p99Ms: number;
             /**
              * Format: int64
-             * @description 백분위를 낸 요청 수. 표본이 적을수록 p99는 흔들립니다.
+             * @description 백분위를 계산한 요청 수예요. 표본이 적으면 p99의 변동이 커요.
              */
             samples: number;
         };
-        /** @description 서버가 평가한 읽을 수 있는 금액 제안과 presence입니다. resetSet=false는 제안 없음, true이면서 reset=null은 명시한 총액 한도입니다. 화면의 현재 제안과 일치할 때만 결과를 표시합니다. */
+        /** @description 서버가 평가한 열람 가능한 금액 제안과 항목별 지정 여부예요. creditLimitResetSet=false는 제안 없음이며 true이고 creditLimitReset=null이면 명시한 총액 한도를 뜻해요. */
         LlmKeyLimitsDraft: {
             creditLimit?: number | null;
             creditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
@@ -8002,7 +8002,7 @@ export interface components {
             /** Format: uuid */
             openrouterAccountId?: string | null;
         };
-        /** @description 현재 키의 허용된 제안을 DB cache로 계산한 정보입니다. 읽기이며 저장·계정 결합·세대 변경·외부 호출을 하지 않습니다. accountImpact 미제공은 기존 허용 명령을 막는 새 권한 조건이 아닙니다. */
+        /** @description 현재 키에서 허용된 제안을 저장된 값으로 계산한 정보예요. 조회로 저장이나 계정 연결, 세대 변경, 외부 호출을 실행하지 않아요. accountImpact를 제공하지 않더라도 기존에 허용된 명령을 막는 새 권한 조건이 생기지는 않아요. */
         LlmKeyLimitsProjection: {
             accountImpact: components["schemas"]["LlmAccountImpactProjection"];
             /** Format: date-time */
@@ -8010,11 +8010,11 @@ export interface components {
             draft: components["schemas"]["LlmKeyLimitsDraft"];
         };
         LlmKeyModelUsageResponse: {
-            /** @description 이 기간에 이 모델 요청에 공급자가 알려 준 금액(USD)의 합. 한도나 잔액과 견주는 값이 아니며, 가격이 붙지 않은 요청은 들어 있지 않습니다 (pricedRequests 참조). 가격이 붙은 요청이 하나도 없으면 null입니다. */
+            /** @description 이 기간에 이 모델 요청에 공급자가 보고한 금액의 합계예요(USD). 한도나 잔액과 비교하는 값이 아니며 금액이 보고된 요청만 포함해요(pricedRequests 참조). 금액이 보고된 요청이 없으면 null이에요. */
             attributedCostUsd?: number | null;
             /**
              * Format: int64
-             * @description 이 모델 요청의 평균 응답 시간(ms). 실패와 거부까지 포함한 평균이라 정상 응답만 재는 백분위와는 다른 값입니다.
+             * @description 이 모델 요청의 평균 응답 시간이에요(ms). 실패와 거절도 포함하므로 정상 응답만 집계한 백분위와는 다른 값이에요.
              */
             avgLatencyMs: number;
             /** Format: int64 */
@@ -8028,13 +8028,13 @@ export interface components {
             imageCount: number;
             /** Format: int64 */
             inputTokens: number;
-            /** @description 호출한 모델의 공개 이름. 모델이 정해지기 전에 실패한 요청은 null이며, 화면에서는 '모델 미상'으로 묶입니다. */
+            /** @description 요청한 모델의 공개 이름이에요. 모델이 정해지기 전에 실패한 요청은 null이며 모델 미상으로 구분해요. */
             modelName?: string | null;
             /** Format: int64 */
             outputTokens: number;
             /**
              * Format: int64
-             * @description 금액이 붙은 요청만의 평균 응답 시간(ms). 그런 요청이 없으면 0입니다.
+             * @description 금액이 보고된 요청만의 평균 응답 시간이에요(ms). 해당 요청이 없으면 0이에요.
              */
             pricedAvgLatencyMs: number;
             /**
@@ -8044,7 +8044,7 @@ export interface components {
             pricedFailed: number;
             /**
              * Format: int64
-             * @description 금액이 붙은 요청이 쓴 입력 토큰 수. 금액이 붙지 않은 요청의 입력 토큰은 inputTokens에서 이 값을 뺀 것입니다.
+             * @description 금액이 보고된 요청의 입력 토큰 수예요. 금액이 보고되지 않은 요청의 입력 토큰 수는 inputTokens에서 이 값을 빼서 구해요.
              */
             pricedInputTokens: number;
             /**
@@ -8054,7 +8054,7 @@ export interface components {
             pricedOutputTokens: number;
             /**
              * Format: int64
-             * @description 이 모델 요청 중 공급자가 금액을 알려 준 요청 수. requests보다 작으면 나머지는 금액을 모르는 것이지 공짜였던 것이 아닙니다.
+             * @description 이 모델 요청 중 예산 축에 관계없이 금액이 보고된 요청 수예요. 포함되지 않은 요청은 금액이 보고되지 않았으며 무료를 뜻하지 않아요.
              */
             pricedRequests: number;
             /** Format: int64 */
@@ -8065,11 +8065,11 @@ export interface components {
             succeeded: number;
             /**
              * Format: int64
-             * @description 금액이 붙지 않은 요청만의 평균 응답 시간(ms). 그런 요청이 없으면 0입니다.
+             * @description 금액이 보고되지 않은 요청만의 평균 응답 시간이에요(ms). 해당 요청이 없으면 0이에요.
              */
             unpricedAvgLatencyMs: number;
         };
-        /** @description 이 LLM API 키로 호출할 수 있는 모델 */
+        /** @description 이 LLM API 키의 모델 후보 */
         LlmKeyModelsResponse: {
             /** @description 유료 모델 */
             paid: components["schemas"]["PaidModels"];
@@ -8079,42 +8079,42 @@ export interface components {
         LlmKeyRequestSpecResponse: {
             /**
              * Format: int32
-             * @description 부여 동시 요청 수. 비어 있으면 서비스 기본값입니다.
+             * @description 부여한 동시 요청 수예요. 승인 후 값이 없으면 서비스 기본값이에요.
              */
             grantedConcurrency?: number | null;
-            /** @description 부여된 유료 모델 허용 목록. 빈 배열이면 제한이 없습니다. 어떤 모델을 열지는 신청자가 요구하는 값이 아니라 승인자가 정하는 값이라 희망 쪽 짝이 없습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 승인자가 부여한 유료 모델 허용 목록이에요. 빈 배열이면 이 목록으로 제한하지 않아요. 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             grantedCreditAllowedModels: string[];
-            /** @description 부여된 유료 모델 차단 목록. 빈 배열이면 차단이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 승인자가 부여한 유료 모델 차단 목록이며, 빈 배열이면 이 목록으로 차단하지 않아요. 허용 목록과 겹치면 차단을 적용해요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             grantedCreditDeniedModels: string[];
-            /** @description 부여 금액 한도(USD 크레딧). 비어 있거나 0이면 유료 모델을 쓸 수 없습니다. */
+            /** @description 부여한 금액 한도예요(USD 크레딧). 승인 후 값이 없거나 0이면 유료 모델을 쓸 수 없어요. */
             grantedCreditLimit?: number | null;
-            /** @description 금액 한도 리셋 창. 비어 있으면 리셋 없는 총액 상한입니다. */
+            /** @description 금액 한도 리셋 창이에요. 승인 후 값이 없으면 리셋 없는 총액 상한이에요. */
             grantedCreditLimitReset?: components["schemas"]["CreditLimitReset"] | null;
             /**
              * Format: int64
-             * @description 부여 일일 토큰 수. 비어 있으면 일일 한도가 없습니다. 0이면 자체 서빙(토큰) 축을 쓸 수 없습니다.
+             * @description 부여한 일일 토큰 수예요. 승인 후 값이 없으면 일일 한도가 없고, 0이면 자체 서빙(토큰) 축을 쓸 수 없어요.
              */
             grantedDailyTokens?: number | null;
-            /** @description 승인자가 부여한 기능 권한. 빈 배열이면 부여된 기능이 없습니다. 검토 전 신청은 빈 배열입니다. */
+            /** @description 승인자가 부여한 기능 권한이며, 빈 배열이면 부여한 기능이 없어요. 검토 전 신청은 빈 배열이에요. */
             grantedPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
-             * @description 부여 분당 요청 수. 비어 있으면 서비스 기본값입니다.
+             * @description 부여한 분당 요청 수예요. 승인 후 값이 없으면 서비스 기본값이에요.
              */
             grantedRpm?: number | null;
             /**
              * Format: int32
-             * @description 부여 분당 토큰 수. 비어 있으면 서비스 기본값입니다.
+             * @description 부여한 분당 토큰 수예요. 승인 후 값이 없으면 서비스 기본값이에요.
              */
             grantedTpm?: number | null;
-            /** @description 신청자가 요청한 금액 한도(USD). 유료를 쓰지 않는 신청은 비어 있습니다. */
+            /** @description 요청한 금액 한도예요(USD). 유료 모델을 신청하지 않았으면 null이에요. */
             reqCreditLimit?: number | null;
             /**
              * Format: int64
              * @description 희망 일일 토큰 수
              */
             reqDailyTokens?: number | null;
-            /** @description 신청자가 고른 기능 권한. 승인 화면의 초깃값입니다. 이 항목이 생기기 전의 신청은 ["chat"]으로 이관되었습니다. */
+            /** @description 요청된 기능 권한이며 승인 화면의 초깃값이에요. 이 항목이 생기기 전의 신청은 ["chat"]으로 이관됐어요. */
             reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
@@ -8126,61 +8126,61 @@ export interface components {
              * @description 희망 분당 토큰 수
              */
             reqTpm?: number | null;
-            /** @description 신청자가 자체 서빙 모델을 쓰겠다고 했는지. */
+            /** @description 신청에 자체 서빙 모델 사용을 포함하는지 */
             useCampusModels: boolean;
-            /** @description 신청자가 유료 모델을 쓰겠다고 했는지. */
+            /** @description 신청에 유료 모델 사용을 포함하는지 */
             useCommercialModels: boolean;
         };
         /** @enum {string} */
         LlmKeySort: "NEWEST" | "NAME_ASC" | "TOKEN_USAGE_DESC" | "CREDIT_LIMIT_DESC" | "CREDIT_REMAINING_ASC";
         LlmKeySummaryResponse: {
-            /** @description true면 이 키의 접근 권한이 없어 이름·상태·소유자만 표시됩니다. */
+            /** @description true면 이 키의 접근 권한이 없어 이름과 상태, 소유자 등 기본 정보만 제공해요. */
             accessLimited: boolean;
-            /** @description 접근 권한이 없어도 접근 권한 목록을 관리할 수 있는지. 워크스페이스 소유자가 참입니다. */
+            /** @description 접근 권한 목록을 관리할 수 있는지 나타내요. 키 접근 권한이 없어도 워크스페이스 소유자는 true예요. */
             accessManageAllowed: boolean;
             /**
              * Format: int32
-             * @description 동시 요청 한도. null이면 게이트웨이 기본값을 따릅니다. 접근 권한이 없으면 생략됩니다.
+             * @description 동시 요청 한도이며, null이면 Gateway 기본값을 따라요. 접근 권한이 없으면 제공하지 않아요.
              */
             concurrency?: number | null;
             /** Format: date-time */
             createdAt: string;
             /**
              * Format: date-time
-             * @description 만료 시각. null이면 만료가 없습니다. 접근 권한이 없으면 생략됩니다.
+             * @description 만료 시각이며, null이면 만료가 없어요. 접근 권한이 없으면 제공하지 않아요.
              */
             expiresAt?: string | null;
             /** Format: uuid */
             id: string;
             /**
              * Format: date-time
-             * @description 마지막 사용 시각. 게이트웨이가 배치로 보고하므로 지연될 수 있습니다. 접근 권한이 없으면 생략됩니다.
+             * @description 마지막 사용 시각이에요. Gateway가 배치로 보고하므로 지연될 수 있어요. 접근 권한이 없으면 제공하지 않아요.
              */
             lastUsedAt?: string | null;
             /** @description 키 이름 */
             name: string;
-            /** @description 이 키의 소유자 이름. 접근을 요청할 상대입니다. */
+            /** @description 이 키의 소유자 이름이며, 접근을 요청할 상대예요. */
             ownerNames: string[];
-            /** @description 용도. 접근 권한이 없으면 생략됩니다. */
+            /** @description 사용 목적이며, 접근 권한이 없으면 제공하지 않아요. */
             purpose?: string | null;
-            /** @description 프롬프트·응답 본문 기록 여부. 접근 권한이 없으면 생략됩니다. */
+            /** @description 프롬프트와 응답 본문 기록 설정이며, 접근 권한이 없으면 제공하지 않아요. */
             recordBodies?: boolean | null;
             /**
              * Format: int32
-             * @description 분당 요청 한도. null이면 게이트웨이 기본값을 따릅니다. 접근 권한이 없으면 생략됩니다.
+             * @description 분당 요청 한도이며, null이면 Gateway 기본값을 따라요. 접근 권한이 없으면 제공하지 않아요.
              */
             rpm?: number | null;
             status: components["schemas"]["LlmApiKeyStatus"];
-            /** @description 평문 앞부분 — 목록에서 두 키를 구별하기 위한 값입니다. 접근 권한이 없거나 아직 발급 전이면 생략됩니다. */
+            /** @description 목록에서 두 키를 구별하는 평문 앞부분이에요. 접근 권한이 없거나 아직 발급 전이면 제공하지 않아요. */
             tokenPrefix?: string | null;
             /**
              * Format: int32
-             * @description 분당 토큰 한도. null이면 게이트웨이 기본값을 따릅니다. 접근 권한이 없으면 생략됩니다.
+             * @description 분당 토큰 한도이며, null이면 Gateway 기본값을 따라요. 접근 권한이 없으면 제공하지 않아요.
              */
             tpm?: number | null;
             /**
              * Format: uuid
-             * @description 소유 워크스페이스. 행이 사라진 경우에만 null입니다.
+             * @description 소유 워크스페이스이며, 해당 행이 사라진 경우에만 null이에요.
              */
             workspaceId?: string | null;
             workspaceName: string;
@@ -8188,14 +8188,14 @@ export interface components {
         LlmKeyUsagePointResponse: {
             /**
              * Format: int64
-             * @description 입력 토큰 중 공급자가 캐시에서 읽어 처리한 몫. 입력 토큰의 부분집합이라 입력 토큰에 더하면 이중 계산입니다.
+             * @description 입력 토큰 중 공급자가 캐시에서 읽어 처리한 부분이에요. 입력 토큰의 부분집합이므로 inputTokens에 더하면 중복 집계돼요.
              */
             cachedInputTokens: number;
             /** Format: date */
             day: string;
             /**
              * Format: int64
-             * @description 토큰 수가 실측이 아니라 추정인 요청 수. 스트리밍 응답에서 업스트림이 사용량을 주지 않으면 게이트웨이가 추정하므로, 이 값이 크면 위 토큰 합도 그만큼 추정입니다.
+             * @description 토큰 수에 추정값이 포함된 요청 수예요. 스트리밍 응답에서 업스트림이 사용량을 제공하지 않아 Gateway가 추정하는 경우 등이 포함돼요.
              */
             estimatedRequests: number;
             /**
@@ -8205,7 +8205,7 @@ export interface components {
             failed: number;
             /**
              * Format: int64
-             * @description 이 날 응답으로 돌아온 이미지 수. 요청한 장수가 아니라 실제로 받은 장수이고, 이미지 생성이 아닌 요청은 여기에 아무것도 더하지 않습니다.
+             * @description 이 날 응답에 보고된 이미지 수예요. 요청한 장수가 아닌 보고된 응답 값을 집계해요.
              */
             imageCount: number;
             /**
@@ -8220,17 +8220,17 @@ export interface components {
             outputTokens: number;
             /**
              * Format: int64
-             * @description 한도에 걸려 거부된 요청 수. 계속 0이 아니면 한도 상향을 신청할 때입니다.
+             * @description 한도에 걸려 거절된 요청 수예요.
              */
             rateLimited: number;
             /**
              * Format: int64
-             * @description 출력 토큰 중 모델이 답을 내기 전에 생각하는 데 쓴 몫. 출력 토큰의 부분집합이라 출력 토큰에 더하면 이중 계산입니다.
+             * @description 출력 토큰 중 모델이 답을 내기 전에 추론에 쓴 부분이에요. 출력 토큰의 부분집합이므로 outputTokens에 더하면 중복 집계돼요.
              */
             reasoningTokens: number;
             /**
              * Format: int64
-             * @description 이 날 이 Key로 들어온 요청 수 — 거부된 것과 실패한 것을 포함합니다.
+             * @description 이 날 이 키로 기록된 요청 수이며, 거절되거나 실패한 요청도 포함해요.
              */
             requests: number;
             /**
@@ -8251,17 +8251,17 @@ export interface components {
             errorTypes: components["schemas"]["LlmKeyErrorTypeResponse"][];
             /** Format: date */
             from: string;
-            /** @description 요일 x 시각(KST) 요청 분포. 요청이 있는 칸만 담깁니다. */
+            /** @description 요일과 시각(KST)에 따른 요청 분포이며, 요청이 있는 칸만 제공해요. */
             hourly: components["schemas"]["LlmKeyHourlyUsageResponse"][];
-            /** @description 정상 응답 요청의 응답 시간 백분위. 정상 응답이 없으면 null입니다. */
+            /** @description 정상 응답 요청의 응답 시간 백분위이며, 정상 응답이 없으면 null이에요. */
             latency?: components["schemas"]["LlmKeyLatencyResponse"] | null;
-            /** @description 이 기간에 실제로 호출된 모델만, 요청이 많은 순 */
+            /** @description 이 기간에 요청이 기록된 모델이며, 요청이 많은 순서 */
             models: components["schemas"]["LlmKeyModelUsageResponse"][];
             /** @description 하루 한 점, 오래된 날부터 */
             points: components["schemas"]["LlmKeyUsagePointResponse"][];
             /**
              * Format: date-time
-             * @description 게이트웨이가 이 키의 사용량을 마지막으로 보고한 시각. 보고는 배치라 몇 분 늦을 수 있습니다. 보고가 한 번도 없었으면 null입니다.
+             * @description Gateway가 이 키의 사용량을 마지막으로 보고한 시각이에요. 배치로 보고해 지연될 수 있어요. 보고 기록이 없으면 null이에요.
              */
             reportedUntil?: string | null;
             /** Format: date */
@@ -8289,7 +8289,7 @@ export interface components {
             totalItems: number;
             /** Format: int32 */
             totalPages: number;
-            /** @description 현재 items가 같은 한도 검토 모집단 전체를 담지 않았는지. 다음 페이지 여부는 page/totalPages로 확인합니다. */
+            /** @description 현재 items에 같은 한도 검토 모집단 전체가 들어 있지 않은지 나타내요. 다음 페이지는 page와 totalPages로 확인해요. */
             truncated: boolean;
         };
         LlmLimitReviewResponse: {
@@ -8365,7 +8365,7 @@ export interface components {
             totalEvents: number;
             upstreams: components["schemas"]["LlmUpstreamMetricResponse"][];
         };
-        /** @description 같은 상태 응답에 포함된 등록 공급원의 공개 참조. VISIBLE일 때만 ID·이름을 반환하고 나머지 상태에서는 둘 다 null입니다. */
+        /** @description 같은 상태 응답에 포함된 등록 공급원의 공개 참조. VISIBLE일 때만 ID와 이름을 반환하며 다른 상태에서는 둘 다 null이에요. */
         LlmModelRouteReference: {
             state: components["schemas"]["LlmModelRouteState"];
             /**
@@ -8376,7 +8376,7 @@ export interface components {
             /** @description 현재 응답에서 읽을 수 있는 등록 공급원 표시 이름 */
             upstreamName?: string | null;
         };
-        /** @description 공개·활성 TOKEN 모델의 주·대체 공급원 구성 관계. 현재 응답에서 읽을 수 있는 공급원 연결이 하나 이상인 모델만 포함하며 전체 모델 목록이나 실제 처리 경로가 아닙니다. */
+        /** @description 공개 상태의 활성 TOKEN 모델에서 주 공급원과 대체 공급원으로 이어지는 구성 관계예요. 현재 응답에서 읽을 수 있는 공급원 연결이 하나 이상인 모델만 포함해요. 전체 모델 목록이나 실제 처리 경로를 뜻하지 않아요. */
         LlmModelRouteResponse: {
             /** @description 대체 공급원 구성의 공개 참조 */
             fallback: components["schemas"]["LlmModelRouteReference"];
@@ -8386,11 +8386,11 @@ export interface components {
             publicName: string;
         };
         /**
-         * @description VISIBLE은 현재 응답에서 확인할 수 있는 등록 공급원입니다. NOT_CONFIGURED는 SYS 응답에서만 구성이 없음을 뜻합니다. NOT_PROVIDED는 참조를 제공하지 않는 상태이며 ORG에서는 미설정·범위 밖·미등록을 구별하지 않습니다.
+         * @description VISIBLE은 현재 응답에서 확인할 수 있는 등록 공급원이에요. NOT_CONFIGURED는 SYS 응답에서 구성이 없다는 뜻이에요. NOT_PROVIDED는 참조를 제공하지 않는 상태이며 ORG에서는 미설정과 범위 밖, 미등록을 구분하지 않아요.
          * @enum {string}
          */
         LlmModelRouteState: "VISIBLE" | "NOT_CONFIGURED" | "NOT_PROVIDED";
-        /** @description 현재 허용된 키 집합의 정확한 탐색 수. 미제공은 null이며 실제 0과 다릅니다. */
+        /** @description 현재 허용된 키 집합의 정확한 탐색 수예요. 미제공은 null이며 실제 0과 구분해요. */
         LlmNavigationCount: {
             state: components["schemas"]["LlmNavigationState"];
             /** Format: int64 */
@@ -8398,7 +8398,7 @@ export interface components {
         };
         /** @enum {string} */
         LlmNavigationState: "AVAILABLE" | "NOT_PROVIDED";
-        /** @description 실제 사용자 요청에서 얻은 passive 관측. lastAttemptAt은 표시용이며, 가용성 판정은 최근 15분 안의 lastSuccessAt·lastFailureAt만 사용합니다. */
+        /** @description 실제 사용자 요청에서 얻은 passive 관측. lastAttemptAt은 표시용이며, 가용성은 최근 15분 안의 lastSuccessAt과 lastFailureAt으로 판정해요. */
         LlmPassiveObservationResponse: {
             /**
              * Format: int32
@@ -8412,7 +8412,7 @@ export interface components {
             cooldownUntil?: string | null;
             /**
              * Format: date-time
-             * @description 마지막 실제 요청 시도 시각. key-local 거절·취소도 포함하므로 상태 판정에는 사용하지 않음
+             * @description 마지막 실제 요청 시각. key-local 거절이나 취소도 포함하므로 상태 판정에는 사용하지 않음
              */
             lastAttemptAt?: string | null;
             /**
@@ -8434,18 +8434,18 @@ export interface components {
              * @description 그 이름으로 돌아온 요청 수
              */
             requests: number;
-            /** @description 공급자가 실제로 응답한 모델 이름. 요청한 모델과 다를 때만 기록됩니다. */
+            /** @description 공급자가 실제로 응답한 모델 이름이며, 공급자에게 보낸 모델과 다를 때만 기록해요. */
             servedModelName: string;
         };
         LlmStatusResponse: {
             gateway: components["schemas"]["LlmGatewayStatusResponse"];
-            /** @description 공개·활성 TOKEN 모델 중 현재 응답의 읽을 수 있는 공급원과 연결된 구성 관계. 전체 모델 목록이 아니며 빈 배열은 현재 범위에서 연결을 확인할 수 없음을 뜻합니다. 실제 처리·사용량·영향 키를 나타내지 않습니다. */
+            /** @description 공개 상태의 활성 TOKEN 모델 중 현재 응답에서 읽을 수 있는 공급원과 연결된 구성 관계예요. 전체 모델 목록은 아니며 빈 배열은 현재 범위에서 연결을 확인할 수 없다는 뜻이에요. 실제 처리나 사용량, 영향받은 키를 나타내지 않아요. */
             modelRoutes: components["schemas"]["LlmModelRouteResponse"][];
             /** Format: date-time */
             observedAt: string;
             upstreams: components["schemas"]["LlmUpstreamStatusResponse"][];
         };
-        /** @description 보존된 TOKEN 이벤트로 읽은 오늘 KST 사용량입니다. 배치 전송 지연이 있고 gateway의 실시간 RPM·TPM·동시성 잔여가 아닙니다. remainingTokens null은 일일 한도 없음이며 이 객체의 null은 관측 읽기 미제공입니다. */
+        /** @description 보존된 TOKEN 이벤트에서 읽은 오늘의 KST 사용량이에요. 배치 전송 지연이 있으며 Gateway의 실시간 RPM과 TPM, 동시성 잔여를 뜻하지 않아요. remainingTokens가 null이면 일일 한도가 없고, 이 객체가 null이면 관측 읽기를 제공하지 않는다는 뜻이에요. */
         LlmTokenObservation: {
             /** Format: date */
             day: string;
@@ -8510,10 +8510,10 @@ export interface components {
         };
         /** @enum {string} */
         LlmUpstreamReportState: "OK" | "NOT_REPORTED" | "MISSING" | "STALE" | "DECONFIGURED" | "UNREGISTERED";
-        /** @description upstream 등록 정보와 gateway의 최신 현재 상태. ORG 응답은 허용 범위의 upstream만 포함하며 내부 ref·소유 기관 ID를 숨깁니다. */
+        /** @description upstream 등록 정보와 gateway의 최신 현재 상태. ORG 응답은 허용 범위의 upstream만 포함하며 내부 ref와 소유 기관 ID는 숨겨요. */
         LlmUpstreamStatusResponse: {
             active: components["schemas"]["LlmActiveObservationResponse"];
-            /** @description 신선한 active·passive·catalog 관측을 합성한 현재 가용성 */
+            /** @description 최근 active와 passive, catalog 관측을 종합한 현재 가용성 */
             availability: components["schemas"]["LlmUpstreamAvailability"];
             catalog: components["schemas"]["LlmCatalogObservationResponse"];
             /** @description format 1 최신 gateway 목록에 포함됐는지. 구 gateway 보고에는 기존 값을 보존 */
@@ -8537,7 +8537,7 @@ export interface components {
             name: string;
             /**
              * Format: uuid
-             * @description 소유 기관 공개 ID. SYS 계층의 기관 소유 upstream에만 있고 shared·미등록·ORG에서는 null
+             * @description 소유 기관 공개 ID. SYS 계층의 기관 소유 upstream에만 있고 공유 공급원이나 미등록 ref, ORG 응답이면 null
              */
             orgId?: string | null;
             passive: components["schemas"]["LlmPassiveObservationResponse"];
@@ -8551,17 +8551,17 @@ export interface components {
             endpointKinds: components["schemas"]["InstitutionAdminLlmEndpointUsageResponse"][];
             /** @description 이 기간에 실제로 호출된 모델만, 요청이 많은 순 */
             models: components["schemas"]["LlmUsageModelBreakdownResponse"][];
-            /** @description 기능 권한 값마다 한 줄. 부여만 되고 안 쓰이는 것이 보입니다. */
+            /** @description 기능 권한마다 부여 현황과 사용 현황을 한 행으로 제공해요. */
             passthroughGrants: components["schemas"]["LlmUsagePassthroughGrantResponse"][];
         };
         /** @enum {string} */
         LlmUsageConsumerLevel: "ORG" | "WORKSPACE" | "KEY";
         LlmUsageConsumerResponse: {
-            /** @description 이 소비처의 금액을 요청마다 더한 값(USD). 모델별 표가 쓰는 것과 같은 출처이고, 요청별 금액이 기록되기 전의 지출은 빠져 있습니다. 소비처 표는 `meteredCostUsd`를 쓰므로 이 값은 두 출처를 견줄 때만 씁니다. 가격이 붙은 요청이 하나도 없으면 null이며 0으로 표시하지 않습니다. */
+            /** @description 선택 기간의 요청별 보고 금액을 합한 값이에요(USD). 금액이 기록되기 전의 사용은 포함하지 않아요. meteredCostUsd와는 다른 출처이며 가격이 확인된 요청이 없으면 null이에요. 0으로 판단하지 않아요. */
             attributedCostUsd?: number | null;
             /**
              * Format: int64
-             * @description 이 소비처의 요청 중 유료 모델로 나간 요청 수. **한 행이 여러 모델을 묶는 표에서** 금액이 빠진 건수를 세려면 전체 요청이 아니라 이 값에서 빼야 합니다. 자체 서빙 요청에는 금액이라는 것이 아예 없으므로, 전체 요청에서 빼면 자체 서빙까지 「금액을 모르는 요청」으로 세게 됩니다. 모델별 표는 다릅니다 — 거기서는 한 모델을 두 행으로 나누고 그 둘이 모델의 요청을 남김없이 갈라야 하므로 가격 기준으로 자릅니다.
+             * @description 요청 당시 CREDIT 축으로 기록된 이 소비처의 요청 수예요. 금융 정보가 미제공이면 null이에요. 실제 공급자나 부담 주체를 뜻하지 않아요.
              */
             creditAxisRequests?: number | null;
             /** Format: int64 */
@@ -8569,11 +8569,11 @@ export interface components {
             /** Format: uuid */
             keyId?: string | null;
             keyName?: string | null;
-            /** @description 이 소비처가 이 기간에 쓴 금액(USD)으로, 공급자가 키마다 보고한 사용액에서 이 기간의 몫만 뽑은 값입니다. 요청마다 더한 `attributedCostUsd`와 달리 요청별 금액이 없던 시기의 지출도 들어 있으므로, 소비처 단위 금액은 이 값을 씁니다. 대사가 30분 주기라 방금 쓴 만큼은 아직 안 보이고, 그 시각은 `meteredObservedAt`이 말합니다. 유료 모델을 쓰지 않는 소비처나 아직 한 번도 대사되지 않은 소비처는 null입니다. */
+            /** @description 공급자가 키마다 보고한 사용액에서 선택 기간의 차이를 계산한 금액이에요(USD). 요청별 attributedCostUsd가 기록되기 전의 사용도 포함해요. 대사는 기본 30분 주기를 따르며 최근 사용량이 늦게 반영될 수 있어요. meteredObservedAt을 함께 확인해요. 계산에 필요한 대사 관측이 없거나 금융 정보가 미제공이면 null이에요. */
             meteredCostUsd?: number | null;
             /**
              * Format: date-time
-             * @description 이 소비처의 키 가운데 가장 오래된 공급자 대사 시각. 「여기 있는 금액은 적어도 이 시점까지의 것」이라는 뜻이라 가장 최근 시각을 쓰지 않습니다. 금액이 없으면 null입니다.
+             * @description 이 소비처의 키 중 가장 오래된 공급자 대사 시각이에요. 현재 금액에 반영된 관측의 오래된 경계를 나타내며 금액이 없으면 null이에요.
              */
             meteredObservedAt?: string | null;
             /** Format: uuid */
@@ -8583,7 +8583,7 @@ export interface components {
             outputTokens: number;
             /**
              * Format: int64
-             * @description 이 소비처의 요청 중 공급자가 금액을 알려 준 요청 수
+             * @description 예산 축에 관계없이 금액이 보고된 이 소비처의 요청 수. 금융 정보 미제공이면 null
              */
             pricedRequests?: number | null;
             /** Format: int64 */
@@ -8609,11 +8609,11 @@ export interface components {
             totalItems: number;
             /** Format: int32 */
             totalPages: number;
-            /** @description 이 응답의 items가 같은 조건의 전체 모집단을 모두 담지 않았는지. 다음 페이지 존재 여부와 다르며 page/totalPages로 탐색합니다. */
+            /** @description 현재 items가 같은 조건의 전체 모집단을 모두 담지 않았는지 나타내요. 다음 페이지는 page와 totalPages로 확인해요. */
             truncated: boolean;
         };
         LlmUsageCostPointResponse: {
-            /** @description 이 날 요청들에 공급자가 매긴 금액의 합(USD). 가격이 붙은 요청이 하나도 없는 날은 null이며 0으로 그리지 않습니다 — 자체 서빙만 쓴 날은 금액이 0인 것이 아니라 금액이라는 것이 없습니다. */
+            /** @description 이 날 요청에 보고된 금액의 합계예요(USD). 금액이 보고된 요청이 하나도 없으면 null이며 0으로 표시하지 않아요. */
             attributedCostUsd?: number | null;
             /** Format: date */
             day: string;
@@ -8624,7 +8624,7 @@ export interface components {
             pricedRequests: number;
             /**
              * Format: int64
-             * @description 이 날 요청 수. pricedRequests와 견주면 합계가 얼마나 덮는지 보입니다.
+             * @description 이 날 기록된 전체 요청 수
              */
             requests: number;
         };
@@ -8656,39 +8656,39 @@ export interface components {
             windows: components["schemas"]["LlmUsageWindowResponse"][];
         };
         LlmUsageModelBreakdownResponse: {
-            /** @description 이 모델이 쓴 금액(USD). 가격이 붙은 요청이 없으면 null입니다. */
+            /** @description 이 모델의 보고 금액이에요(USD). 가격이 확인된 요청이 없으면 null이에요. */
             attributedCostUsd?: number | null;
             /**
              * Format: int64
-             * @description 평균 응답 시간(ms). 일별 집계의 합을 요청 수로 나눈 값이라 백분위는 낼 수 없습니다. 백분위가 필요하면 키 상세로 갑니다. 이 모델 전체 기준입니다.
+             * @description 이 모델 전체 요청의 평균 응답 시간이에요(ms). 일별 지연 합을 요청 수로 나눈 값이며 백분위를 뜻하지 않아요.
              */
             avgLatencyMs: number;
             /**
              * Format: int64
-             * @description 이 모델의 요청 중 유료 모델로 나간 요청 수. 모델 하나는 자체 서빙이거나 유료거나 하나이므로 이 값은 사실상 0 아니면 requests 이고, **화면은 이것을 「이 모델에 유료 트래픽이 있었나」로만 씁니다.** 금액이 빠진 건수를 여기서 빼지 않습니다 — 이 표는 한 모델을 두 행으로 나누고 그 둘이 모델의 요청을 남김없이 갈라야 해서, 가격 기준(requests - pricedRequests)으로 자릅니다.
+             * @description 요청 당시 CREDIT 축으로 기록된 이 모델의 요청 수예요. 0이면 해당 축의 기록이 없으며 금융 정보가 미제공이면 null이에요. 실제 공급자나 부담 주체를 뜻하지 않아요.
              */
             creditAxisRequests?: number | null;
             /** Format: int64 */
             failed: number;
             /** Format: int64 */
             inputTokens: number;
-            /** @description 호출한 모델의 공개 이름. 모델이 정해지기 전에 실패한 요청은 null이며 화면에서는 「모델 미상」으로 묶입니다. */
+            /** @description 호출한 모델의 공개 이름이에요. 모델이 정해지기 전에 실패했으면 null이에요. */
             modelName?: string | null;
             /** Format: int64 */
             outputTokens: number;
             /**
              * Format: int64
-             * @description 금액이 붙은 요청만의 평균 응답 시간(ms). 그런 요청이 없으면 0입니다.
+             * @description 가격이 확인된 요청의 평균 응답 시간이에요(ms). 해당 요청이 없으면 0이에요.
              */
             pricedAvgLatencyMs?: number | null;
             /**
              * Format: int64
-             * @description 금액이 붙은 요청 가운데 실패한 수. 게이트웨이가 응답을 정산할 때만 금액을 쓰므로 실제로는 언제나 0이지만, 그 불변식은 다른 레포의 동작이라 세어서 보냅니다. 화면이 이 모델을 두 행으로 나눌 때 각 행의 실패율을 가정이 아니라 자료에서 냅니다.
+             * @description 가격이 확인된 요청 중 실패로 기록된 수예요. 해당 기록이 없으면 0이에요.
              */
             pricedFailed?: number | null;
             /**
              * Format: int64
-             * @description 금액이 붙은 요청이 쓴 입력 토큰 수. 화면이 이 모델을 「금액 확인」과 「금액 미상」 두 행으로 나누어 각 행의 토큰을 보여 주기 위한 값이고, 미상 쪽 토큰은 전체에서 이 값을 빼서 얻습니다. 알려진 단가로 모르는 쪽을 추정하려면 두 토큰 수가 갈려 있어야 합니다.
+             * @description 가격이 확인된 요청의 입력 토큰 수예요. 미확인 요청의 입력 토큰 수는 전체에서 이 값을 빼서 구해요.
              */
             pricedInputTokens?: number | null;
             /**
@@ -8698,19 +8698,19 @@ export interface components {
             pricedOutputTokens?: number | null;
             /**
              * Format: int64
-             * @description 이 모델 요청 중 공급자가 금액을 알려 준 요청 수
+             * @description 예산 축에 관계없이 금액이 보고된 이 모델의 요청 수. 금융 정보 미제공이면 null
              */
             pricedRequests?: number | null;
             /** Format: int64 */
             requests: number;
             /**
              * Format: int64
-             * @description 금액이 붙지 않은 요청만의 평균 응답 시간(ms). 화면이 이 모델을 두 행으로 나눌 때 각 행이 자기 요청의 값을 갖게 하려고 서버가 나눕니다 — 한 값을 두 행에 되풀이하면 행마다 다른 요청 수를 갖고도 같은 응답 시간을 말하게 됩니다. 그런 요청이 없으면 0입니다.
+             * @description 가격이 확인되지 않은 요청의 평균 응답 시간이에요(ms). 해당 요청이 없으면 0이에요.
              */
             unpricedAvgLatencyMs?: number | null;
         };
         LlmUsagePassthroughGrantResponse: {
-            /** @description 기능 권한 값. chat, images, embeddings, rerank, speech, transcriptions 중 하나입니다. 요청 본문으로 판정하는 기능(web_search, pdf_ocr)은 사용량 이벤트가 경로만 기록해 사용을 셀 수 없으므로 행이 없습니다. */
+            /** @description 기능 권한 값이며 chat, images, embeddings, rerank, speech, transcriptions 중 하나예요. 요청 본문으로 판정하는 기능(web_search, pdf_ocr)은 사용량 이벤트가 경로만 기록해 사용을 셀 수 없으므로 행을 제공하지 않아요. */
             capability: string;
             /**
              * Format: int64
@@ -8724,11 +8724,11 @@ export interface components {
             requests: number;
             /**
              * Format: int64
-             * @description 이 기간에 이 기능이 여는 경로를 실제로 호출한 키 수. **grantedKeys의 부분집합이 아닙니다** — 부여는 지금 상태이고 호출은 지나간 사실이라, 쓰고 나서 권한이 회수된 키가 여기에만 남아 grantedKeys보다 클 수 있습니다. 호출한 쪽을 부여로 걸러 내지 않는 것은 그렇게 하면 그 요청이 아래 requests 에는 있고 이 수에는 없어 두 칸이 서로를 반박하기 때문입니다.
+             * @description 선택 기간에 이 기능의 경로를 호출한 키 수예요. grantedKeys는 현재 부여 상태이므로 그 부분집합을 뜻하지 않아요. 사용 뒤 권한을 회수한 키도 포함해 grantedKeys보다 클 수 있어요.
              */
             usedKeys: number;
         };
-        /** @description 사용량 숫자의 source와 delivery 상태. latestUsageReceivedAt은 API가 마지막으로 event를 받은 시각일 뿐 completeness watermark가 아닙니다. Gateway queue와 loss 수치는 전역 값이며 SYS가 기관으로 좁혀도 전역이고, ORG에는 null입니다. */
+        /** @description 사용량 숫자의 source와 delivery 상태. latestUsageReceivedAt은 API가 마지막으로 event를 받은 시각이며 수집 완료 경계를 보장하지 않아요. Gateway queue와 누락 수치는 플랫폼 전역 값이에요. SYS가 기관으로 좁혀도 같은 값이며 ORG에는 null이에요. */
         LlmUsageQualityResponse: {
             /**
              * Format: int64
@@ -8742,7 +8742,7 @@ export interface components {
             creditMetersTotal?: number | null;
             /**
              * Format: int64
-             * @description 이 기간 요청 중 들어온 경로가 기록된 수. 경로 축은 2026-09-06에 생겼으므로 그 전 요청은 여기 들어가지 않고, 경로별 분해도 그만큼 덜 덮습니다.
+             * @description 선택 기간에 경로가 기록된 요청 수예요. 경로 항목이 추가된 2026-09-06 전의 요청은 포함하지 않아 경로별 분해 범위가 더 작을 수 있어요.
              */
             endpointRecordedRequests: number;
             /** Format: double */
@@ -8774,7 +8774,7 @@ export interface components {
             oldestUnshippedEventAt?: string | null;
             /**
              * Format: int64
-             * @description 이 기간 요청 중 공급자가 금액을 알려 준 수. 자체 서빙 요청은 금액이라는 것이 없어 여기 들어가지 않으므로, 이 값이 작은 것 자체는 결함이 아닙니다. **totalRequests와 견주지 마십시오** — 그 비율은 「금액을 못 받은 비율」이 아니라 자체 서빙 비중을 함께 담습니다. 이 요약 층에는 유료 요청 수가 없고, 그것이 필요하면 소비처와 호출 종류 행의 creditAxisRequests를 씁니다.
+             * @description 선택 기간에 예산 축과 관계없이 금액이 보고된 요청 수예요. 금융 정보가 미제공이면 null이에요. 이 값으로 실제 공급자나 부담 주체, 유료 요청의 금액 미보고 건수를 판단하지 않아요.
              */
             pricedRequests?: number | null;
             /** Format: int64 */
@@ -8938,24 +8938,24 @@ export interface components {
              * @example input_cache_read
              */
             axis: string;
-            /** @description 가격(USD). 단위는 unit을 따릅니다. */
+            /** @description 가격이에요(USD). 단위는 unit을 따라요. */
             price: number;
             /** @description 가격 단위. */
             unit: components["schemas"]["ModelPriceUnit"];
         };
-        /** @description 구간 가격 하나. 값이 있는 조건이 모두 맞을 때 적용됩니다. */
+        /** @description 구간 가격이며, 값이 있는 조건이 모두 맞을 때 적용해요. */
         ModelPriceTier: {
             /** @description 이 구간에서 바뀌는 가격 축. */
             axes: components["schemas"]["ModelPriceAxis"][];
             /**
              * Format: int32
-             * @description 입력 토큰이 이 값을 넘는 요청에 적용됩니다.
+             * @description 입력 토큰이 이 값을 넘는 요청에 적용해요.
              */
             minPromptTokens?: number | null;
-            /** @description 해석하지 못한 조건의 벤더 이름. 비어 있지 않으면 위 조건만으로는 적용 범위를 다 알 수 없습니다. */
+            /** @description 해석하지 못한 벤더 조건 이름이에요. 비어 있지 않으면 앞의 조건만으로는 적용 범위를 모두 알 수 없어요. */
             otherConditions: string[];
             /**
-             * @description 적용 요일(UTC, 영어 소문자). 비어 있으면 요일 조건이 없습니다.
+             * @description 적용 요일이에요(UTC, 영어 소문자). 빈 배열이면 요일 조건이 없어요.
              * @example [
              *       "saturday",
              *       "sunday"
@@ -8964,25 +8964,25 @@ export interface components {
             utcDays: string[];
             /**
              * Format: int32
-             * @description 적용 끝 시각(제외). UTC 자정부터 센 분이고 1440은 자정입니다.
+             * @description 적용 끝 시각(제외)이며 UTC 자정부터 센 분이에요. 1440은 다음 날 자정이에요.
              */
             utcEndMinute?: number | null;
             /**
              * Format: int32
-             * @description 적용 시작 시각. UTC 자정부터 센 분입니다.
+             * @description 적용 시작 시각이며, UTC 자정부터 센 분이에요.
              */
             utcStartMinute?: number | null;
         };
         /**
-         * @description 가격 단위. PER_MILLION_TOKENS는 100만 토큰당, PER_CALL은 그 축이 세는 호출 1회당 USD입니다(web_search는 검색 1회, request는 API 요청 1회). UNKNOWN은 단위를 알 수 없어 벤더 값을 그대로 담은 것입니다.
+         * @description 가격 단위예요. PER_MILLION_TOKENS는 100만 토큰당, PER_CALL은 해당 항목이 세는 호출 1회당 USD예요. web_search는 검색 1회, request는 API 요청 1회를 뜻해요. UNKNOWN은 단위를 알 수 없어 벤더 값을 그대로 담아요.
          * @enum {string}
          */
         ModelPriceUnit: "PER_MILLION_TOKENS" | "PER_CALL" | "UNKNOWN";
-        /** @description 모델의 가격 축 전체. 벤더가 공시한 축을 모두 담으며 입력과 출력도 포함합니다. */
+        /** @description 모델의 전체 가격 항목이며, 벤더가 공시한 입력과 출력 등의 항목을 모두 담아요. */
         ModelPricing: {
-            /** @description 기본 가격 축. 0은 그 축이 무료라는 뜻입니다. */
+            /** @description 기본 가격 항목이며, 0은 해당 항목이 무료라는 뜻이에요. */
             axes: components["schemas"]["ModelPriceAxis"][];
-            /** @description 조건이 맞을 때 기본 가격 대신 적용되는 구간 가격. 없으면 비어 있습니다. */
+            /** @description 조건이 맞을 때 기본 가격 대신 적용하는 구간 가격이며, 없으면 빈 배열이에요. */
             tiers: components["schemas"]["ModelPriceTier"][];
         };
         NodeLiveResponse: {
@@ -8997,7 +8997,7 @@ export interface components {
             name: string;
             /** Format: uuid */
             nodeId: string;
-            /** @description true = 이 노드가 상태 조회에 응답함. false = 응답하지 않음이며 나머지 필드는 모두 null. true여도 스토리지 조회는 별도 권한이라 storage* 필드는 null일 수 있음 */
+            /** @description true = 이 노드가 상태 조회에 응답함. false = 응답하지 않음이며 측정값과 checkedAt은 모두 null. true여도 스토리지 조회는 별도 권한이라 storage* 필드는 null일 수 있음 */
             reachable: boolean;
             /** Format: int64 */
             storageTotalBytes?: number | null;
@@ -9026,7 +9026,7 @@ export interface components {
             rootTotalBytes?: number | null;
             /**
              * Format: int64
-             * @description 노드 루트 파일시스템 사용량 — 게스트 디스크가 사는 thin pool은 스토리지 상태 값으로 따로 제공
+             * @description 노드 루트 파일시스템 사용량이에요. 게스트 디스크가 놓이는 thin pool은 스토리지 상태 값으로 따로 제공해요.
              */
             rootUsedBytes?: number | null;
             /** Format: int64 */
@@ -9068,7 +9068,7 @@ export interface components {
             cpuWarnThreshold: number;
             /**
              * Format: int64
-             * @description 게스트 디스크가 놓이는 thin pool 용량(GB) — 아직 측정되지 않았으면 null
+             * @description 게스트 디스크가 놓이는 thin pool 용량(GB). 아직 측정되지 않았으면 null
              */
             diskCapacityGb?: number | null;
             /** Format: uuid */
@@ -9091,16 +9091,16 @@ export interface components {
             body: string;
             /**
              * Format: date-time
-             * @description 게시 종료 시각. 생략하면 만료되지 않습니다.
+             * @description 게시 종료 시각이며, 생략하면 만료되지 않아요.
              */
             endsAt?: string | null;
-            /** @description 목록 상단 고정 여부. 생략하면 고정하지 않습니다. */
+            /** @description 목록 상단 고정 여부이며, 생략하면 고정하지 않아요. */
             pinned?: boolean;
-            /** @description 콘솔이 화면을 막지 않는 카드로 띄울지. 켜면 로그인하지 않은 방문자에게도 보입니다. 생략하면 둘 다 하지 않습니다. */
+            /** @description 화면을 막지 않는 카드로 띄울지 나타내요. 켜면 게시 기간 동안 로그인하지 않은 방문자도 읽을 수 있어요. 생략하면 카드를 띄우지 않고 비로그인 방문자에게도 공개하지 않아요. */
             popup?: boolean;
             /**
              * Format: date-time
-             * @description 게시 시작 시각. 생략하면 즉시 게시합니다.
+             * @description 게시 시작 시각이며, 생략하면 현재 시각부터 게시해요.
              */
             startsAt?: string | null;
             title: string;
@@ -9108,20 +9108,20 @@ export interface components {
         NoticeImageView: {
             /** Format: int32 */
             byteSize: number;
-            /** @description 저장된 실제 형식. 업로드 시 파일 선두 바이트로 판별한 값입니다. */
+            /** @description 저장한 실제 형식이며, 업로드할 때 파일 선두 바이트로 판별해요. */
             contentType: string;
-            /** @description 업로드 당시의 파일 이름. 클라이언트가 보내지 않았으면 비어 있습니다. */
+            /** @description 업로드 당시의 파일 이름이며, 클라이언트가 보내지 않았으면 null이에요. */
             fileName?: string | null;
             /** Format: uuid */
             id: string;
-            /** @description 이미지를 내려받는 경로. 인증 없이 열 수 있는지는 공지의 공개 범위를 따릅니다. */
+            /** @description 이미지를 내려받는 경로예요. 인증 없이 열 수 있는지는 공지의 공개 범위를 따라요. */
             url: string;
         };
         NoticeUpdateRequest: {
             body?: string;
             /**
              * Format: date-time
-             * @description 게시 종료 시각. null을 명시하면 만료 없음으로 바꿉니다.
+             * @description 게시 종료 시각이며, null을 명시하면 만료 없음으로 바꿔요.
              */
             endsAt?: string | null;
             pinned?: boolean;
@@ -9136,7 +9136,7 @@ export interface components {
             createdAt: string;
             /**
              * Format: date-time
-             * @description 게시 종료 시각. 비어 있으면 만료되지 않습니다.
+             * @description 게시 종료 시각이며, null이면 만료되지 않아요.
              */
             endsAt?: string | null;
             /** Format: uuid */
@@ -9144,7 +9144,7 @@ export interface components {
             images: components["schemas"]["NoticeImageView"][];
             /** @description 목록 상단 고정 여부 */
             pinned: boolean;
-            /** @description 콘솔이 화면을 막지 않는 카드로 띄울 공지인지. 이 공지가 로그인 없이도 보이는지도 같은 값이 정합니다. */
+            /** @description 화면을 막지 않는 카드로 띄울 공지인지 나타내요. 켜면 게시 기간 동안 로그인 없이도 읽을 수 있어요. */
             popup: boolean;
             /** Format: date-time */
             startsAt: string;
@@ -9157,7 +9157,7 @@ export interface components {
         /** @enum {string} */
         NotificationImportance: "NORMAL" | "HIGH";
         NotificationPreferencesView: {
-            /** @description 새 키 사용량 임계 알림 메일 수신 여부. 저장 전 기본값은 true이며 콘솔 알림과 기존 업무·보안 메일에는 영향을 주지 않습니다. */
+            /** @description 새 키 사용량 임계 알림 메일 수신 여부예요. 저장 전 기본값은 true이며, 콘솔 알림과 기존 업무 및 보안 메일에는 영향을 주지 않아요. */
             usageMailEnabled: boolean;
         };
         /** @enum {string} */
@@ -9213,42 +9213,42 @@ export interface components {
             expiresAt: string;
             state: string;
         };
-        /** @description 이 account에 걸린 살아 있는 key의 금액 한도 합계 */
+        /** @description 이 사업 계정에 연결된 살아 있는 키의 금액 한도 합계 */
         OpenRouterAccountAllocationResponse: {
             /**
              * Format: int64
-             * @description 금액 한도가 0보다 큰데 아직 프로비저닝되지 않아 vendor에 한도가 걸리지 않은 key 수
+             * @description 금액 한도가 0보다 크지만 아직 프로비저닝되지 않아 공급자에 한도가 반영되지 않은 키 수
              */
             awaitingProvisionKeyCount: number;
-            /** @description 네 갈래 합계를 모두 더한 값. 이미 쓴 금액을 포함한 약속의 총량이라 잔액과 직접 비교하지 않는다 */
+            /** @description 전체 한도를 더한 값이에요. 이미 쓴 금액을 포함한 약속량이므로 잔액과 직접 비교하지 않아요. */
             committedCreditLimit: number;
-            /** @description 일간 리셋 key의 한도 합. 창마다 다시 채워진다 */
+            /** @description 일간 리셋 키의 한도 합계이며 창마다 다시 채워져요. */
             committedDaily: number;
             /**
              * Format: int64
-             * @description 금액 한도가 0보다 큰 살아 있는 key 수. 한도 0인 key는 돈을 쥐고 있지 않으므로 세지 않는다
+             * @description 금액 한도가 0보다 큰 살아 있는 키 수예요. 한도 0인 키는 약속량이 없으므로 세지 않아요.
              */
             committedKeyCount: number;
-            /** @description 월간 리셋 key의 한도 합. 창마다 다시 채워진다 */
+            /** @description 월간 리셋 키의 한도 합계이며 창마다 다시 채워져요. */
             committedMonthly: number;
-            /** @description 리셋 창이 없는 key의 한도 합. 한 번 나가고 끝나는 채무 */
+            /** @description 리셋 창이 없는 키의 한도 합계 */
             committedTotalCap: number;
-            /** @description 살아 있는 key의 reset-aware 누적 사용액 합. 현재 창 사용액이 아니라 account baseline 뒤 누계이며, 폐기와 만료 key의 몫은 빠져 있어 credits.managedUsageSinceBaseline과 다른 수다 */
+            /** @description 살아 있는 키의 리셋을 반영한 누적 사용액 합계예요. 현재 창의 사용액이 아닌 사업 계정 기준점 이후의 누계이며 폐기되거나 만료된 키의 몫은 빠져 있어 credits.managedUsageSinceBaseline과는 다른 값이에요. */
             committedUsage: number;
-            /** @description 주간 리셋 key의 한도 합. 창마다 다시 채워진다 */
+            /** @description 주간 리셋 키의 한도 합계이며 창마다 다시 채워져요. */
             committedWeekly: number;
-            /** @description Key마다 한도에서 현재 limit window 사용액을 뺀 값을 0에서 끊어 더한 합. 잔액과 분모가 맞는 쪽은 이 값이다. 사용액은 30분 주기 대사값이라 리셋 직후 다음 대사 전까지는 실제보다 작을 수 있다 */
+            /** @description 키마다 금액 한도에서 공급자 누적 사용액을 빼고 음수는 0으로 두어 합산한 캐시 추정치예요. 사용액 미보고 키는 한도 전액을 포함하며 대사는 30분 주기로 시도해요. 현재 리셋 창의 실제 잔여 한도와는 달라요. */
             remainingCommitment: number;
             /**
              * Format: int64
-             * @description 프로비저닝됐지만 사용액 보고가 아직 없는 key 수. 0이 아니면 remainingCommitment의 그만큼은 실측이 아니라 한도 전액
+             * @description 프로비저닝됐지만 사용액 보고가 없는 키 수예요. 0이 아니면 remainingCommitment의 해당 부분은 실측값이 아닌 한도 전액이에요.
              */
             usageUnreportedKeyCount: number;
         };
         OpenRouterAccountCreditsResponse: {
-            /** @description 첫 paired baseline 뒤 account 누적 사용 증가분. 계산 불가하면 null */
+            /** @description 사업 계정과 관리 키 사용량을 함께 비교하는 첫 기준점 이후 사업 계정 누적 사용 증가분. 계산할 수 없으면 null */
             accountUsageSinceBaseline?: number | null;
-            /** @description 최근 7일 관측 window의 일평균 사용액. 계산 불가하면 null */
+            /** @description 최근 7일 관측 구간의 일평균 사용액. 계산할 수 없으면 null */
             averageDailyUsage?: number | null;
             /** @description totalCredits - totalUsage. 음수도 그대로 반환하며 미관측이면 null */
             balance?: number | null;
@@ -9257,7 +9257,7 @@ export interface components {
              * @description 현재 소비 속도가 계속될 때 잔액 소진 예상 시각. 계산 불가하면 null
              */
             depletionForecastAt?: string | null;
-            /** @description 마지막 시도가 실패했을 때의 분류. vendor 원문은 반환하지 않음 */
+            /** @description 마지막 시도 실패 분류. 공급자 원문은 미제공 */
             error?: components["schemas"]["OpenRouterCredentialError"] | null;
             /** @description 예상 시각이 없는 이유. 예상 시각이 있으면 null */
             forecastUnavailableReason?: components["schemas"]["OpenRouterForecastUnavailableReason"] | null;
@@ -9268,23 +9268,23 @@ export interface components {
             forecastWindowStartedAt?: string | null;
             /** @description 마지막 성공 기준 30분 미만 FRESH, 그 이상 STALE, 성공 없음 UNKNOWN */
             freshness: components["schemas"]["OpenRouterCreditsFreshness"];
-            /** @description 마지막 account key 대사가 실패했을 때의 오류 분류 */
+            /** @description 마지막 사업 계정 키 대사 실패의 오류 분류 */
             keysError?: components["schemas"]["OpenRouterCredentialError"] | null;
-            /** @description 마지막 성공한 account key 대사의 freshness */
+            /** @description 마지막 성공한 사업 계정 키 대사의 최신성 */
             keysFreshness: components["schemas"]["OpenRouterCreditsFreshness"];
             /**
              * Format: date-time
-             * @description 성공·실패를 포함한 마지막 account key 대사 시도 시각
+             * @description 성공과 실패를 포함한 마지막 사업 계정 키 대사 시도 시각
              */
             keysLastAttemptAt?: string | null;
             /**
              * Format: date-time
-             * @description 마지막으로 account key 대사가 성공한 시각. 없으면 null
+             * @description 마지막으로 사업 계정 키 대사가 성공한 시각. 없으면 null
              */
             keysLastSuccessAt?: string | null;
             /**
              * Format: date-time
-             * @description 성공·실패를 포함한 마지막 시도 시각. 시도 이력이 없으면 null
+             * @description 성공과 실패를 포함한 마지막 시도 시각. 시도 이력이 없으면 null
              */
             lastAttemptAt?: string | null;
             /**
@@ -9292,69 +9292,69 @@ export interface components {
              * @description 마지막 성공 시각. 성공 이력이 없으면 null
              */
             lastSuccessAt?: string | null;
-            /** @description Key reset·삭제를 보존한 Pickle 관리 key 사용 증가분. 없으면 null */
+            /** @description 키 리셋과 삭제를 반영한 Pickle 관리 키의 사용 증가분. 없으면 null */
             managedUsageSinceBaseline?: number | null;
             /**
              * Format: date-time
-             * @description 현재 금액 값을 vendor에서 관측한 시각. 미관측이면 null
+             * @description 현재 금액을 공급자에서 관측한 시각. 미관측이면 null
              */
             observedAt?: string | null;
             /**
              * Format: date-time
-             * @description Paired window의 account credits 관측 시각. 없으면 null
+             * @description 동일 관측 구간의 사업 계정 크레딧 관측 시각. 없으면 null
              */
             pairedCreditsObservedAt?: string | null;
             /**
              * Format: date-time
-             * @description Paired window의 전체 key 대사 관측 시각. 없으면 null
+             * @description 동일 관측 구간의 전체 키 대사 관측 시각. 없으면 null
              */
             pairedKeysObservedAt?: string | null;
-            /** @description OpenRouter가 보고한 구매 credits 합계. 성공 이력이 없으면 null */
+            /** @description OpenRouter가 보고한 구매 크레딧 합계. 성공 이력이 없으면 null */
             totalCredits?: number | null;
-            /** @description OpenRouter가 보고한 account 누적 사용액. 성공 이력이 없으면 null */
+            /** @description OpenRouter가 보고한 사업 계정 누적 사용액. 성공 이력이 없으면 null */
             totalUsage?: number | null;
             /**
              * Format: date-time
-             * @description 미관리 지출 baseline의 paired 관측 시각. 없으면 null
+             * @description 미관리 지출 기준점에 사용한 paired 관측 시각. 없으면 null
              */
             unmanagedBaselineAt?: string | null;
-            /** @description Account 증가분에서 관리 key 증가분을 뺀 금액. reset 경계면 null */
+            /** @description 사업 계정의 증가분에서 관리 키의 증가분을 뺀 금액. 리셋 경계이면 null */
             unmanagedSpend?: number | null;
             /** @description 미관리 지출이 없는 이유. 값이 있으면 null */
             unmanagedSpendUnavailableReason?: components["schemas"]["OpenRouterUnmanagedSpendUnavailableReason"] | null;
         };
         OpenRouterAccountResponse: {
-            /** @description 현재 ACTIVE credential의 secret-free 상태. 없으면 null */
+            /** @description 현재 ACTIVE 관리용 키의 상태 정보(키 값 제외). 없으면 null */
             activeCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
-            /** @description 이 account에 걸린 살아 있는 key의 금액 한도 합계 */
+            /** @description 이 사업 계정에 연결된 살아 있는 키의 금액 한도 합계 */
             allocation?: components["schemas"]["OpenRouterAccountAllocationResponse"] | null;
             /**
              * Format: int64
-             * @description 이 사업 계정에 현재 연결된 모든 상태의 LLM API 키 수. live 약속량과 현재 읽을 수 있는 keyNavigation 부분집합, 기간별 소비 키 수와 다릅니다.
+             * @description 이 사업 계정에 현재 연결된 모든 상태의 LLM API 키 수예요. 살아 있는 키의 약속량과 열람 가능한 keyNavigation 부분집합, 기간별 소비 키 수는 각각 다른 값이에요.
              */
             boundKeyCount?: number | null;
-            /** @description 이 account를 물어볼 담당자. 없으면 null */
+            /** @description 이 사업 계정의 담당자. 없으면 null */
             contact?: string | null;
             /**
              * Format: date-time
              * @description 등록 시각
              */
             createdAt: string;
-            /** @description 프로비저닝과 대사에 사용할 management credential이 있는지 */
+            /** @description 프로비저닝과 대사에 사용할 관리용 키가 있는지 */
             credentialAvailable?: boolean | null;
             credentialVisible: boolean;
-            /** @description DB cache에서 읽은 account credits·예상·미관리 지출 관측 상태 */
+            /** @description 저장된 사업 계정 credits와 예상값, 미관리 지출의 관측 상태 */
             credits?: components["schemas"]["OpenRouterAccountCreditsResponse"] | null;
-            /** @description 승인 화면이 프리필에 쓰는 유료 모델 허용 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 승인 화면에 처음 채울 유료 모델 허용 목록의 기본값이에요. 복사할 때만 쓰므로 이 값을 바꿔도 이미 발급된 키에 자동 적용하지 않아요. 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             defaultCreditAllowedModels?: string[] | null;
-            /** @description 승인 화면이 프리필에 쓰는 유료 모델 차단 목록 기본값. 복사 원본이지 상속원이 아니라서 여기를 바꿔도 이미 발급된 키는 그대로입니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 승인 화면에 처음 채울 유료 모델 차단 목록의 기본값이에요. 복사할 때만 쓰므로 이 값을 바꿔도 이미 발급된 키에 자동 적용하지 않아요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             defaultCreditDeniedModels?: string[] | null;
-            /** @description 현재 positive-credit key binding에 선택할 수 있는지 */
+            /** @description 금액 한도가 양수인 키의 연결 대상으로 선택할 수 있는지 */
             eligibleForBinding: boolean;
             financeVisible: boolean;
             /**
              * Format: uuid
-             * @description Account 공개 ID
+             * @description 사업 계정 공개 ID
              */
             id: string;
             keyNavigation?: components["schemas"]["LlmAccountKeyNavigation"] | null;
@@ -9368,15 +9368,15 @@ export interface components {
             /** @description 소유 기관 이름 */
             orgName: string;
             policyReferenceVisible: boolean;
-            /** @description 이 account가 청구되는 사업. 없으면 null */
+            /** @description 이 사업 계정의 비용을 청구하는 사업. 없으면 null */
             program?: string | null;
-            /** @description STAGED 또는 RETIRING credential의 secret-free 상태. 없으면 null */
+            /** @description STAGED 또는 RETIRING 관리용 키의 상태 정보(키 값 제외). 없으면 null */
             rotationCredential?: components["schemas"]["OpenRouterCredentialStateResponse"] | null;
-            /** @description Account lifecycle 상태 */
+            /** @description 사업 계정 상태 */
             status: components["schemas"]["OpenRouterAccountStatus"];
             /**
              * Format: date-time
-             * @description Metadata 최종 변경 시각
+             * @description 메타데이터의 최종 변경 시각
              */
             updatedAt: string;
         };
@@ -9384,7 +9384,7 @@ export interface components {
         OpenRouterAccountStatus: "ACTIVE" | "ARCHIVED";
         /** @description 카탈로그의 모델 한 건. */
         OpenRouterCatalogueModel: {
-            /** @description 백만 토큰당 출력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
+            /** @description 출력 백만 토큰당 가격이에요(USD). 미확인은 null이며 0은 해당 출력 토큰 항목이 무료라는 뜻이에요. */
             completionPricePerMillion?: number | null;
             /**
              * Format: int32
@@ -9395,33 +9395,33 @@ export interface components {
             id: string;
             /** @description 벤더가 표시하는 이름. */
             name: string;
-            /** @description 입력과 출력을 포함한 가격 축 전체. 목록이 아직 이 정보를 받지 않았으면 비어 있습니다. */
+            /** @description 입력과 출력을 포함한 전체 가격 항목이에요. 목록에 해당 정보가 없으면 null이에요. */
             pricing?: components["schemas"]["ModelPricing"] | null;
-            /** @description 백만 토큰당 입력 가격(USD). 모르면 비어 있고, 0은 무료를 뜻합니다. */
+            /** @description 입력 백만 토큰당 가격이에요(USD). 미확인은 null이며 0은 해당 입력 토큰 항목이 무료라는 뜻이에요. */
             promptPricePerMillion?: number | null;
         };
-        /** @description OpenRouter 모델 카탈로그 캐시. 승인 화면의 모델 선택 후보이며, 이 목록이 비어 있어도 모델 이름을 직접 입력할 수 있습니다. */
+        /** @description OpenRouter 모델 카탈로그 캐시. 승인 화면의 모델 선택 후보이며, 이 목록이 비어 있어도 모델 이름을 직접 입력할 수 있어요. */
         OpenRouterCatalogueResponse: {
             /**
              * Format: int32
-             * @description 연속 실패 횟수. 0이면 마지막 시도가 성공했습니다.
+             * @description 연속 실패 횟수이며 0은 연속 실패가 없다는 뜻이에요.
              */
             consecutiveFailures: number;
-            /** @description 마지막 성공 기준 신선도. 갱신 주기의 세 배를 넘기면 STALE, 성공한 적이 없으면 UNKNOWN입니다. */
+            /** @description 마지막 성공 기준 신선도. 갱신 주기의 세 배 이상이면 STALE, 성공 기록이 없으면 UNKNOWN이에요. */
             freshness: components["schemas"]["OpenRouterCreditsFreshness"];
             /**
              * Format: date-time
-             * @description 마지막 갱신 시도 시각. 실패해도 갱신됩니다.
+             * @description 마지막 갱신 시도 시각이며 실패해도 갱신해요.
              */
             lastAttemptAt?: string | null;
-            /** @description 마지막 실패의 분류. 성공했다면 비어 있습니다. 벤더 응답 본문은 담지 않습니다. */
+            /** @description 마지막 실패 분류예요. 성공하면 비우며 공급자 응답 본문은 포함하지 않아요. */
             lastError?: string | null;
             /**
              * Format: date-time
              * @description 마지막으로 벤더 목록을 성공적으로 가져온 시각.
              */
             lastSuccessAt?: string | null;
-            /** @description 캐시에 남아 있는 모델. 벤더 목록에서 사라진 모델은 제외됩니다. */
+            /** @description 캐시에 저장된 모델이에요. 성공적으로 갱신할 때 공급자 목록에서 사라진 모델을 제외해요. */
             models: components["schemas"]["OpenRouterCatalogueModel"][];
         };
         /** @enum {string} */
@@ -9439,7 +9439,7 @@ export interface components {
             createdAt: string;
             /**
              * Format: date-time
-             * @description 이 credential로 key reconciliation이 마지막으로 성공한 시각. 성공 전이면 null
+             * @description 이 관리용 키로 전체 키 대사가 마지막으로 성공한 시각. 성공 전이면 null
              */
             lastReconciledAt?: string | null;
             /**
@@ -9459,7 +9459,7 @@ export interface components {
             retiringAt?: string | null;
             /** @description RETIRING 상태가 24시간을 넘었는지 */
             retiringOverdue: boolean;
-            /** @description Credential lifecycle 상태 */
+            /** @description 관리용 키의 수명주기 상태 */
             status: components["schemas"]["OpenRouterCredentialStatus"];
             /** @description 마지막 검증 오류 분류. 최근 검증이 성공했으면 null */
             verificationError?: components["schemas"]["OpenRouterCredentialError"] | null;
@@ -9507,7 +9507,7 @@ export interface components {
             capacity: components["schemas"]["Capacity"];
             /**
              * Format: double
-             * @description 할당 디스크 / thin pool 용량 — 용량 미등록 노드가 있으면 null. 오버프로비저닝 전제라 1을 넘을 수 있고 경고 임계값은 없습니다.
+             * @description 할당 디스크를 thin pool 용량으로 나눈 비율이에요. 용량이 미등록된 노드가 있으면 null이에요. 오버프로비저닝을 전제로 하므로 1을 넘을 수 있으며 경고 임계값은 없어요.
              */
             diskUsageRatio?: number | null;
             /** Format: double */
@@ -9889,17 +9889,17 @@ export interface components {
             totalPages: number;
         };
         /**
-         * @description 유료 모델 사용 가능 여부. LISTED는 허용 목록과 차단 목록 중 어느 쪽으로든 좁혀진 상태이고, UNRESTRICTED는 두 목록이 모두 비어 금액만이 경계인 상태입니다.
+         * @description 유료 모델의 연결과 목록 제한 상태예요. LISTED는 허용 목록이나 차단 목록으로 범위를 좁힌 상태이며, UNRESTRICTED는 두 목록이 모두 비어 목록으로 제한하지 않는 상태예요.
          * @enum {string}
          */
         PaidAccess: "NONE" | "PENDING" | "UNRESTRICTED" | "LISTED";
         /** @description 유료 모델 */
         PaidModel: {
-            /** @description 출력 100만 토큰당 USD. 모르면 비어 있습니다 */
+            /** @description 출력 100만 토큰당 USD이며, 가격을 모르면 null이에요. */
             completionPricePerMillion?: number | null;
             /**
              * Format: int32
-             * @description 컨텍스트 길이. 모르면 비어 있습니다
+             * @description 컨텍스트 길이이며, 알 수 없으면 null이에요.
              */
             contextLength?: number | null;
             /**
@@ -9909,31 +9909,31 @@ export interface components {
             id: string;
             /** @description 표시 이름 */
             name: string;
-            /** @description 입력과 출력을 포함한 가격 축 전체. 목록이 아직 이 정보를 받지 않았으면 비어 있습니다 */
+            /** @description 입력과 출력을 포함한 전체 가격 항목이며, 목록에 가격 정보가 없으면 null이에요. */
             pricing?: components["schemas"]["ModelPricing"] | null;
-            /** @description 입력 100만 토큰당 USD. 모르면 비어 있습니다 */
+            /** @description 입력 100만 토큰당 USD이며, 가격을 모르면 null이에요. */
             promptPricePerMillion?: number | null;
         };
         /** @description 유료 모델과 그 목록의 상태 */
         PaidModels: {
-            /** @description 사용 가능 여부 */
+            /** @description 유료 모델 연결과 목록 제한 상태 */
             access: components["schemas"]["PaidAccess"];
-            /** @description 이 키의 모델 허용 목록. 비어 있으면 허용 쪽 제한이 없습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 이 키의 모델 허용 목록이며, 비어 있으면 이 목록으로 제한하지 않아요. 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             allowedPatterns: string[];
             /** @description 목록의 신선도 */
             catalogFreshness: components["schemas"]["CatalogFreshness"];
             /**
              * Format: date-time
-             * @description 목록을 마지막으로 가져온 시각. 한 번도 성공하지 못했으면 비어 있습니다
+             * @description 모델 목록을 마지막으로 가져온 시각이며, 성공 기록이 없으면 null이에요.
              */
             catalogObservedAt?: string | null;
-            /** @description 이 키의 모델 차단 목록. 비어 있으면 차단하는 모델이 없습니다. 허용 목록과 함께 걸리면 차단이 이깁니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 이 키의 모델 차단 목록이며, 비어 있으면 이 목록으로 차단하지 않아요. 허용 목록과 겹치면 차단을 적용해요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             deniedPatterns: string[];
-            /** @description 호출할 수 있는 모델 */
+            /** @description 정책에 맞는 모델 후보 */
             models: components["schemas"]["PaidModel"][];
-            /** @description 허용 목록에 적혀 있지만 지금 목록에서 찾지 못한 이름. 목록에서 사라진 모델이나 아직 없는 이름, 제한된 키에서 호출할 수 없는 라우터도 포함됩니다. */
+            /** @description 허용 목록에 있지만 현재 모델 목록에서 찾지 못한 이름이에요. 목록에서 사라진 모델과 아직 없는 이름, 제한된 키에서 호출할 수 없는 라우터도 포함해요. */
             unmatchedAllowedPatterns: string[];
-            /** @description 차단 목록에 적혀 있지만 지금 목록에서 찾지 못한 이름. 현재 캐시의 모델명과 별칭 중 이 패턴으로 차단되는 것이 없다는 뜻이며, 아직 나오지 않은 모델을 미리 막아 둔 경우에도 여기에 나옵니다. */
+            /** @description 차단 목록에 있지만 현재 모델 목록에서 찾지 못한 이름이에요. 현재 캐시의 모델명과 별칭 중 이 패턴으로 차단하는 것이 없다는 뜻이며, 아직 나오지 않은 모델을 미리 차단한 경우에도 여기에 나와요. */
             unmatchedDeniedPatterns: string[];
         };
         PasswordResetConfirmRequest: {
@@ -9967,10 +9967,10 @@ export interface components {
             publicHost?: string | null;
             /**
              * Format: int32
-             * @description 릴레이에서 열린 공개 포트
+             * @description 릴레이에서 배정한 공개 포트
              */
             publicPort: number;
-            /** @description 매핑 상태 (SUSPENDED = 관리자·자동 정지) */
+            /** @description 매핑 상태 (SUSPENDED = 관리자 또는 자동 정지) */
             status: components["schemas"]["PortMappingStatus"];
             /**
              * Format: int32
@@ -9987,7 +9987,7 @@ export interface components {
             label: string;
             requiresStudentNo: boolean;
         };
-        /** @description RFC 9457 오류 응답 + Pickle 확장(code, errors). 모든 비정상 응답은 이 형태로 반환됩니다. */
+        /** @description RFC 9457 오류 응답 + Pickle 확장(code, errors). 모든 비정상 응답은 이 형태로 반환해요. */
         Problem: {
             /** @description 기계 판독용 안정 오류 코드 (클라이언트 분기 기준) */
             code: string;
@@ -10052,9 +10052,9 @@ export interface components {
             password: string;
         };
         RegisterOpenRouterCredentialRequest: {
-            /** @description Account 이름과 정확히 같아야 하는 확인값 */
+            /** @description 사업 계정 이름과 정확히 같아야 하는 확인값 */
             confirmName: string;
-            /** @description OpenRouter management key. 응답에는 반환되지 않습니다. */
+            /** @description OpenRouter 관리용 키이며 응답에 반환하지 않아요. */
             managementKey: string;
         };
         RejectRequestRequest: {
@@ -10063,15 +10063,15 @@ export interface components {
         RelayTokenResponse: {
             /** Format: uuid */
             relayId: string;
-            /** @description 새 동기화 토큰(64자 hex). 이 응답에서만 확인 가능하며 저장되지 않습니다 */
+            /** @description 새 동기화 토큰이에요(64자 hex). 이 응답에서만 확인할 수 있으며 평문은 저장하지 않아요. */
             token: string;
         };
         ReplaceDnsRecordSetsRequest: {
-            /** @description 이 이름이 가져야 할 레코드 세트 전체. 빈 목록은 전부 삭제입니다. */
+            /** @description 이 이름에 적용할 레코드 세트 전체예요. 빈 목록은 모든 세트의 삭제를 뜻해요. */
             records: components["schemas"]["DesiredRecordSet"][];
         };
         RequestDetailResponse: {
-            /** @description 현재 신청에서 허용된 기관 업무. 개인 OWNER·ACL 권한과 구분하며, 유료 승인 예산은 같은 출처의 결정 업무와 함께 허용될 때만 포함합니다. */
+            /** @description 현재 신청에서 허용된 기관 업무예요. 개인 OWNER 및 ACL 권한과 구분하며, 유료 승인 예산은 같은 출처의 결정 업무와 함께 허용될 때만 포함해요. */
             allowedWorkIds?: string[] | null;
             /** Format: date-time */
             createdAt: string;
@@ -10084,26 +10084,26 @@ export interface components {
             llmKey?: components["schemas"]["LlmKeyRequestSpecResponse"] | null;
             /**
              * Format: uuid
-             * @description 신청 대상 기관. 행이 사라진 경우에만 null입니다.
+             * @description 신청 대상 기관이에요. 행이 사라졌을 때만 null이에요.
              */
             orgId?: string | null;
             orgName: string;
             /**
-             * @description 종료일을 고른 기간 항목의 이름. 직접 적었으면 null입니다.
+             * @description 신청할 때 고른 기간 항목의 현재 이름이에요. 직접 입력한 경우에는 null이에요.
              * @example 2026학년도 1학기
              */
             periodName?: string | null;
             purpose: string;
-            /** @description 여러 사람에게 리소스를 만드는 신청의 대상자. 신청자 본인이 받는 일반 신청은 빈 배열입니다. */
+            /** @description 리소스를 받을 대상자 목록이에요. 신청자 본인이 받는 일반 신청은 빈 배열이에요. */
             recipients: components["schemas"]["RequestRecipientResponse"][];
             /**
              * Format: date
-             * @description 신청한 사용 종료일. 값이 없으면 무기한을 요청한 것입니다.
+             * @description 공통 사용 기간을 정하는 신청의 종료일이에요. 해당 신청에서 값이 없으면 무기한을 요청한 뜻이에요.
              */
             reqEndDate?: string | null;
             /**
              * Format: uuid
-             * @description 신청자. 행이 사라진 경우에만 null입니다.
+             * @description 신청자예요. 행이 사라졌을 때만 null이에요.
              */
             requesterId?: string | null;
             requesterName: string;
@@ -10115,7 +10115,7 @@ export interface components {
             vm?: components["schemas"]["VmRequestSpecResponse"] | null;
             /**
              * Format: uuid
-             * @description 신청 대상 워크스페이스. 행이 사라진 경우에만 null입니다.
+             * @description 신청 대상 워크스페이스예요. 행이 사라졌을 때만 null이에요.
              */
             workspaceId?: string | null;
             workspaceName: string;
@@ -10182,14 +10182,14 @@ export interface components {
             id: string;
         };
         RequestRecipientCancellationCapability: {
-            /** @description 취소할 수 없는 이유. 등록 자원은 기존 상세와 삭제 또는 폐기 경로에서 처리합니다. */
+            /** @description 취소할 수 없는 이유예요. 이미 등록된 자원은 기존 상세의 삭제 또는 폐기 경로를 확인해요. */
             blockedReason?: string | null;
             /** @description 일반 신청 경로에서 현재 실제 OWNER로 취소할 수 있는지 */
             ownerAllowed: boolean;
             /** @description 관리자 지원 경로에서 기존 지원 쓰기 권한으로 취소할 수 있는지 */
             supportAllowed: boolean;
         };
-        /** @description 현재 한 대상자의 생성 대기 취소 영향. 조회는 가입, 큐 접수, 생성이나 취소를 실행하지 않습니다. */
+        /** @description 대상자 한 명의 생성 대기 취소 영향이에요. 조회로 가입이나 큐 접수, 생성, 취소를 실행하지 않아요. */
         RequestRecipientCancellationImpactResponse: {
             allowed: boolean;
             blockedReason?: string | null;
@@ -10208,7 +10208,7 @@ export interface components {
             /** Format: uuid */
             workspaceId: string;
         };
-        /** @description 한 대상자의 생성 대기 취소 결과. 승인과 다른 대상자, 구성원 및 초대는 유지됩니다. */
+        /** @description 대상자 한 명의 생성 대기 취소 결과예요. 승인과 다른 대상자, 구성원, 초대는 유지돼요. */
         RequestRecipientCancellationReceipt: {
             /** Format: date-time */
             canceledAt: string;
@@ -10231,26 +10231,26 @@ export interface components {
             cancellationCapability: components["schemas"]["RequestRecipientCancellationCapability"];
             /** Format: uuid */
             id: string;
-            /** @description 초대할 때 적은 이메일 또는 학번. 신청자, 워크스페이스 소유자, 학생 지원 권한이 있는 관리자에게만 보입니다. */
+            /** @description 초대할 때 적은 이메일 또는 학번이에요. 신청자, 워크스페이스 소유자 또는 해당 신청의 조회가 허용된 담당자에게 보여요. */
             invitee?: string | null;
-            /** @description 대상 계정의 이름. 가입 전인 초대 대상자는 null입니다. */
+            /** @description 대상 계정의 이름이에요. 가입 전인 초대 대상자는 null이에요. */
             name?: string | null;
-            /** @description 기존 실패 또는 자동 종료 이유. 개별 생성 대기 취소 사유는 cancellation.reason으로 구분하며 이전 실패 이력은 보존합니다. */
+            /** @description 기존 실패나 자동 종료 이유예요. 개별 생성 대기 취소 사유는 cancellation.reason으로 구분하며 이전 실패 이력은 보존해요. */
             reason?: string | null;
             /**
              * Format: uuid
-             * @description 만든 리소스. 종류는 신청의 type을 따릅니다. 만들기 전에는 null입니다.
+             * @description 만든 리소스예요. 종류는 신청의 type을 따라요. 만들기 전에는 null이에요.
              */
             resourceId?: string | null;
             status: components["schemas"]["RequestRecipientStatus"];
             /**
              * Format: uuid
-             * @description 대상 계정. 가입 전인 초대 대상자는 null입니다.
+             * @description 대상 계정이에요. 가입 전인 초대 대상자는 null이에요.
              */
             userId?: string | null;
         };
         /**
-         * @description 신청 대상자의 생성 상태. CREATED는 자원 행 등록이며 외부 준비 완료와 다릅니다. CANCELED는 자동 종료 또는 승인 결정을 유지한 개별 생성 대기 취소를 포함합니다.
+         * @description 신청 대상자의 생성 상태예요. CREATED는 자원 행 등록이며 외부 준비 완료와 달라요. CANCELED는 자동 종료 또는 승인 결정을 유지한 개별 생성 대기 취소를 포함해요.
          * @enum {string}
          */
         RequestRecipientStatus: "PENDING_JOIN" | "QUEUED" | "CREATING" | "CREATED" | "SKIPPED_EXPIRED" | "SKIPPED_INELIGIBLE" | "FAILED" | "CANCELED";
@@ -10265,10 +10265,10 @@ export interface components {
             grantedStartDate?: string | null;
             /**
              * Format: uuid
-             * @description 결재한 사람. 자동 승인이거나 계정 행이 사라진 경우 null입니다.
+             * @description 결재한 사람이에요. 자동 승인이거나 계정 행이 사라졌으면 null이에요.
              */
             reviewerId?: string | null;
-            /** @description 결재자 이름. 자동 승인이면 「자동 승인」, 계정 행이 사라졌으면 「탈퇴 회원」입니다. 두 경우 모두 reviewerId가 null이므로 이 값으로 가릅니다. */
+            /** @description 결재자 이름이에요. 자동 승인이면 「자동 승인」, 계정 행이 사라졌으면 「탈퇴 회원」이에요. 두 경우 모두 reviewerId가 null이므로 이 이름으로 구분해요. */
             reviewerName: string;
         };
         /** @enum {string} */
@@ -10287,16 +10287,16 @@ export interface components {
         ResolveRosterRequest: {
             /**
              * Format: uuid
-             * @description 신청을 낼 기관. 워크스페이스 소유자가 아니라 이 기관의 명단 발급 업무를 가진 담당자로서 확인할 때 보냅니다.
+             * @description 신청을 낼 기관이에요. 워크스페이스 소유자가 아니라 이 기관의 명단 발급 업무를 가진 담당자로서 확인할 때 보내요.
              */
             orgId?: string | null;
-            /** @description 확인할 학번 목록. 1건에서 500건까지이며, 결과는 같은 순서로 옵니다. 한 시간에 확인할 수 있는 학번은 모두 합쳐 2000건입니다. */
+            /** @description 확인할 학번 목록이에요. 한 번에 1~500건이며 요청과 같은 순서로 결과를 돌려줘요. 한 시간에 확인할 수 있는 학번은 모두 합쳐 2000건이에요. */
             studentNos: string[];
-            /** @description 기관 권한으로 명단을 확인할 신청 종류. VM 또는 LLM_API_KEY만 지원합니다. 워크스페이스 소유자는 생략할 수 있습니다. */
+            /** @description 기관 권한으로 명단을 확인할 신청 종류예요. VM 또는 LLM_API_KEY만 지원해요. 워크스페이스 소유자는 생략할 수 있어요. */
             type?: components["schemas"]["ResourceType"] | null;
         };
         ResolveRosterResponse: {
-            /** @description 요청한 학번마다 한 건씩, 요청과 같은 순서입니다. */
+            /** @description 요청한 학번마다 한 건씩 요청과 같은 순서로 반환해요. */
             results: components["schemas"]["RosterEntryResult"][];
         };
         Resource: {
@@ -10308,7 +10308,7 @@ export interface components {
             allocatedVcpu: number;
             /**
              * Format: int64
-             * @description ACTIVE 노드의 thin pool 용량 합(GB) — 용량 미등록 노드가 있으면 null
+             * @description ACTIVE 노드의 thin pool 용량 합(GB). 용량이 미등록된 노드가 있으면 null
              */
             capacityDiskGb?: number | null;
             /** Format: int64 */
@@ -10328,20 +10328,20 @@ export interface components {
             /** Format: uuid */
             userId?: string | null;
         };
-        /** @description VM 접근 권한 한 건. 대상은 지정된 사용자 한 명이거나 소유 워크스페이스 전체입니다. */
+        /** @description 리소스 접근 권한 한 건 */
         ResourceAccessGrantView: {
             /** Format: date-time */
             createdAt: string;
-            /** @description 대상 종류 — USER는 지정된 사용자, WORKSPACE은 소유 워크스페이스 전체 */
+            /** @description USER는 지정한 사용자, WORKSPACE는 소유 워크스페이스 전체예요. */
             granteeType: components["schemas"]["AccessGranteeType"];
             /** Format: uuid */
             id: string;
-            /** @description 이 대상이 이 VM에서 갖는 등급 */
+            /** @description 이 대상이 리소스에서 갖는 등급 */
             role: components["schemas"]["ResourceRole"];
-            /** @description 대상 사용자. 워크스페이스 전체 항목이면 null입니다. */
+            /** @description 대상 사용자예요. 워크스페이스 전체 항목이면 null이에요. */
             user?: components["schemas"]["Grantee"] | null;
         };
-        /** @description 리소스 접근 권한 목록과, 그 목록이 어느 리소스의 것인지 알려 주는 최소 정보 */
+        /** @description 리소스 접근 권한 목록과 대상 리소스의 기본 정보 */
         ResourceAccessListResponse: {
             /** @description 현재 수행자가 이 목록을 변경할 수 있는지 */
             canManageAccess: boolean;
@@ -10351,14 +10351,14 @@ export interface components {
             /** @description 이 목록이 속한 리소스 */
             resource: components["schemas"]["ResourceBrief"];
         };
-        /** @description 접근 권한이 없는 사람에게도 보이는 범위의 리소스 정보 */
+        /** @description 접근 목록에 포함하는 리소스 기본 정보 */
         ResourceBrief: {
-            /** @description 표시명. 지정되지 않았으면 null입니다. */
+            /** @description 표시명이며, 지정되지 않으면 null이에요. */
             displayName?: string | null;
             /** Format: uuid */
             id: string;
             name: string;
-            /** @description 리소스 종류의 상태값. 종류마다 어휘가 다릅니다. */
+            /** @description 리소스 종류별 상태값 */
             status: string;
             type: components["schemas"]["ResourceType"];
             /** Format: uuid */
@@ -10409,10 +10409,10 @@ export interface components {
         RosterEntryResult: {
             /**
              * Format: uuid
-             * @description 그 학번으로 대기 중인 초대. INVITED일 때만 있습니다.
+             * @description 해당 학번으로 대기 중인 초대예요. INVITED일 때만 있어요.
              */
             invitationId?: string | null;
-            /** @description 그 구성원의 이름. MEMBER일 때만 있고, 구성원이 아닌 REGISTERED에는 없습니다. */
+            /** @description 구성원의 이름이에요. MEMBER일 때만 있고 구성원이 아닌 REGISTERED에는 없어요. */
             name?: string | null;
             /** @description 확인 결과. */
             status: components["schemas"]["RosterEntryStatus"];
@@ -10420,18 +10420,18 @@ export interface components {
             studentNo: string;
             /**
              * Format: uuid
-             * @description 그 학번의 구성원 계정. MEMBER일 때만 있고, 구성원이 아닌 REGISTERED에는 없습니다.
+             * @description 해당 학번의 구성원 계정이에요. MEMBER일 때만 있고 구성원이 아닌 REGISTERED에는 없어요.
              */
             userId?: string | null;
         };
         /**
-         * @description 명단의 학번 한 건이 워크스페이스에서 어떤 상태인지.
-         *     MEMBER: 그 학번의 활성 계정이 이미 구성원입니다.
-         *     REGISTERED: 그 학번의 활성 계정이 있지만 구성원이 아닙니다. 대상자로 신청하면 구성원으로 추가됩니다.
-         *     INVITED: 그 학번으로 대기 중인 초대가 있습니다.
-         *     NEW: 계정도 대기 중인 초대도 없습니다. 대상자로 신청하면 초대를 만듭니다.
-         *     INVALID: 학번 형식이 아닙니다.
-         *     DUPLICATE: 같은 학번이 앞에 이미 있습니다.
+         * @description 명단의 학번 한 건이 워크스페이스에서 어떤 상태인지 나타내요.
+         *     MEMBER: 해당 학번의 활성 계정이 이미 구성원이에요.
+         *     REGISTERED: 해당 학번의 활성 계정이 있지만 구성원이 아니에요. 대상자로 신청하면 구성원으로 추가해요.
+         *     INVITED: 해당 학번으로 대기 중인 초대가 있어요.
+         *     NEW: 활성 계정도 대기 중인 초대도 없어요. 대상자로 신청하면 초대를 만들어요.
+         *     INVALID: 학번 형식이 아니에요.
+         *     DUPLICATE: 같은 학번이 앞에 이미 있어요.
          * @enum {string}
          */
         RosterEntryStatus: "MEMBER" | "REGISTERED" | "INVITED" | "NEW" | "INVALID" | "DUPLICATE";
@@ -10487,12 +10487,12 @@ export interface components {
         SelfServedModel: {
             /**
              * Format: int32
-             * @description 최대 입력 토큰. 상한이 없으면 비어 있습니다
+             * @description 최대 입력 토큰 수이며, 상한이 없으면 null이에요.
              */
             maxInputTokens?: number | null;
             /**
              * Format: int32
-             * @description 최대 출력 토큰. 상한이 없으면 비어 있습니다
+             * @description 최대 출력 토큰 수이며, 상한이 없으면 null이에요.
              */
             maxOutputTokens?: number | null;
             /**
@@ -10549,16 +10549,16 @@ export interface components {
             updatedAt?: string | null;
         };
         StageOpenRouterCredentialRequest: {
-            /** @description Account 이름과 정확히 같아야 하는 확인값 */
+            /** @description 사업 계정 이름과 정확히 같아야 하는 확인값 */
             confirmName: string;
-            /** @description OpenRouter management key. 응답에는 반환되지 않습니다. */
+            /** @description OpenRouter 관리용 키이며 응답에 반환하지 않아요. */
             managementKey: string;
         };
         SuspendAdminLlmKeyRequest: {
             reason: string;
         };
         SuspendPortMappingRequest: {
-            /** @description 정지 사유 (소유 워크스페이스에 알림으로 전달) */
+            /** @description 정지 사유예요. VM에 직접 소유자나 편집자로 등록된 사용자와 소유 워크스페이스 소유자 중 활성 계정을 대상으로 한 알림에 포함해요. */
             reason: string;
         };
         SystemDashboardSummaryResponse: {
@@ -10659,17 +10659,17 @@ export interface components {
         UpdateCampusIpRequestStatusRequest: {
             /** @description 관리자 메모 (신청자 알림에 포함) */
             adminNote?: string | null;
-            /** @description 연결한 교내 IP 주소 (GRANTED 전환 시 필수, 10.0.0.0/8 대역) */
+            /** @description 등록할 교내 IP 주소 (GRANTED 전환 시 필수, 10.0.0.0/8 대역) */
             grantedAddress?: string | null;
-            /** @description 전환할 상태 (APPROVED = 승인, GRANTED = 교내 IP 연결 완료, REJECTED = 반려, REVOKED = 회수) */
+            /** @description 전환할 상태 (APPROVED = 승인, GRANTED = 교내 IP 주소 등록, REJECTED = 반려, REVOKED = 회수) */
             status: components["schemas"]["CampusIpRequestStatus"];
         };
         UpdateDomainRenewalRequest: {
-            /** @description 기한을 바꾼 이유. 감사 기록에 남습니다. */
+            /** @description 기한을 바꾼 이유이며, 감사 기록에 남아요. */
             reason?: string;
             /**
              * Format: date-time
-             * @description 이 시각까지 연장하지 않으면 레코드가 내려가고 이름이 해제됩니다.
+             * @description 이 시각이 지나고 연장하지 않은 이름은 해제 대상이 돼요. 해제할 때 레코드도 삭제해요.
              */
             renewDueAt: string;
         };
@@ -10691,33 +10691,33 @@ export interface components {
             status: components["schemas"]["GpuStatus"];
         };
         UpdateLlmKeyRequest: {
-            /** @description 키 이름. 생략하면 그대로 둡니다. */
+            /** @description 키 이름이며, 생략하면 그대로 둬요. */
             name?: string | null;
-            /** @description 사용 목적. 생략하면 그대로 둡니다. */
+            /** @description 사용 목적이며, 생략하면 그대로 둬요. */
             purpose?: string | null;
-            /** @description 요청·응답 본문 기록 여부. 기본값은 꺼짐이며, 켜면 이 키로 보낸 프롬프트와 응답이 수집됩니다. 생략하면 그대로 둡니다. */
+            /** @description 요청과 응답 본문 기록 여부예요. 켠 설정이 Gateway에 반영되고 전역 본문 기록이 켜져 있으면 chat 요청의 프롬프트와 응답을 수집할 수 있어요. 생략하거나 null이면 유지해요. 꺼도 기존 기록은 삭제하지 않아요. */
             recordBodies?: boolean | null;
         };
         UpdateNodeStatusRequest: {
-            /** @description ACTIVE만 신규 VM 배치 대상 — MAINTENANCE/OFFLINE은 배치 제외 (기존 게스트 무영향) */
+            /** @description 신규 VM은 ACTIVE 노드에만 배치해요. MAINTENANCE/OFFLINE은 배치에서 제외하며 기존 게스트에는 영향을 주지 않아요. */
             status: components["schemas"]["NodeStatus"];
         };
         UpdateNotificationPreferencesRequest: {
-            /** @description 본인의 새 키 사용량 임계 알림 메일 수신 여부. 콘솔 알림과 다른 업무·보안 메일에는 영향을 주지 않습니다. */
+            /** @description 본인의 새 키 사용량 임계 알림 메일 수신 여부예요. 콘솔 알림과 다른 업무 및 보안 메일에는 영향을 주지 않아요. */
             usageMailEnabled: boolean;
         };
         UpdateOpenRouterAccountRequest: {
-            /** @description 새 담당자. 생략하면 유지하고 null이면 지웁니다. */
+            /** @description 새 담당자예요. 생략하면 유지하고 null이면 비워요. */
             contact?: string | null;
-            /** @description 새 유료 모델 허용 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. 항목은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하고, 특정 공급자의 허용은 ~별칭을 별도로 적어야 합니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 새 유료 모델 허용 목록의 기본값이에요. 생략하면 유지하고 null이나 빈 배열이면 기본값을 비워요. 이미 발급된 키에는 이 변경을 자동 적용하지 않아요. 각 항목에는 부호 없는 모델 패턴을 입력해요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 공급자 *는 ~별칭도 포함하며 특정 공급자를 허용할 때는 ~별칭을 별도로 적어야 해요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             defaultCreditAllowedModels?: string[] | null;
-            /** @description 새 유료 모델 차단 목록 기본값. 생략하면 유지하고, null이나 빈 배열이면 기본값을 지웁니다. 이 쓰기는 게이트웨이 문서를 바꾸지 않으므로 이미 발급된 키에는 영향이 없습니다. 항목은 허용 목록과 같은 부호 없는 모델 패턴입니다. 공급자는 정확한 이름 또는 *만 사용할 수 있습니다(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며, 별칭의 실제 대상 모델은 추적하지 않습니다. 정확한 모델명은 :batch 같은 변형도 포함합니다. 목록별 최대 50개, 항목별 200바이트입니다. */
+            /** @description 새 유료 모델 차단 목록의 기본값이에요. 생략하면 유지하고 null이나 빈 배열이면 기본값을 비워요. 이미 발급된 키에는 이 변경을 자동 적용하지 않아요. 각 항목은 허용 목록과 같은 부호 없는 모델 패턴이에요. 공급자는 정확한 이름 또는 *만 사용할 수 있어요(예: openai/*, *\/*-pro). 차단은 ~를 제거한 이름도 검사하며 별칭의 실제 대상 모델은 추적하지 않아요. 정확한 모델명은 :batch 같은 변형도 포함해요. 목록마다 최대 50개, 항목마다 200바이트까지 입력해요. */
             defaultCreditDeniedModels?: string[] | null;
-            /** @description 새 account 이름. 생략하면 유지하며 null은 허용하지 않습니다. */
+            /** @description 새 사업 계정 이름이에요. 생략하면 유지하고 null은 허용하지 않아요. */
             name?: string;
-            /** @description 새 사업. 생략하면 유지하고 null이면 지웁니다. */
+            /** @description 새 사업이에요. 생략하면 유지하고 null이면 비워요. */
             program?: string | null;
-            /** @description 새 lifecycle 상태. 생략하면 유지하며 null은 허용하지 않습니다. */
+            /** @description 새 계정 상태예요. 생략하면 유지하고 null은 허용하지 않아요. */
             status?: components["schemas"]["OpenRouterAccountStatus"];
         };
         UpdateOrgRequest: {
@@ -10727,7 +10727,7 @@ export interface components {
             status?: components["schemas"]["OrgStatus"];
         };
         UpdateOrgRequestMailRequest: {
-            /** @description 이 기관의 신청 접수 메일 수신 지정. 실제 신청 결정 업무가 있는 담당자만 켤 수 있습니다. 실제 수신자는 현재 수신 방식과 신청 종류, 실제 기관과 workspace 범위 및 계정 상태를 따릅니다. */
+            /** @description 이 기관의 신청 접수 메일 수신 여부예요. 실제 신청 결정 업무가 있는 담당자만 켤 수 있어요. 실제 수신자는 현재 수신 방식과 신청 종류, 실제 기관과 워크스페이스 범위, 계정 상태를 기준으로 정해요. */
             enabled: boolean;
             /** Format: int64 */
             expectedRevision: number;
@@ -10783,7 +10783,7 @@ export interface components {
         };
         UpdateResourceAccessGrantRequest: {
             confirmation?: components["schemas"]["AccessConfirmation"] | null;
-            /** @description 새 등급. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있습니다. */
+            /** @description 새 등급이에요. 워크스페이스 전체 항목에는 MEMBER 또는 VIEWER만 지정할 수 있어요. */
             role: components["schemas"]["ResourceRole"];
         };
         UpdateSourcePolicyRequest: {
@@ -10800,7 +10800,7 @@ export interface components {
             displayName?: string | null;
             /**
              * Format: int32
-             * @description 신청 화면에서의 표시 순서. 값이 같으면 먼저 만든 것이 앞에 옵니다.
+             * @description 신청 화면의 표시 순서예요. 값이 같으면 먼저 만든 항목이 앞에 와요.
              */
             displayOrder?: number | null;
             /** Format: int32 */
@@ -10822,7 +10822,7 @@ export interface components {
         };
         UpdateWorkspaceRequest: {
             description?: string | null;
-            /** @description 워크스페이스 유형. PERSONAL 워크스페이스는 유형을 바꿀 수 없습니다 */
+            /** @description 워크스페이스 유형이에요. PERSONAL 워크스페이스는 유형을 바꿀 수 없어요. */
             kind?: components["schemas"]["CreatableWorkspaceKind"];
             name?: string;
         };
@@ -10955,7 +10955,7 @@ export interface components {
             scheduledFor: string;
         };
         VmDetailResponse: {
-            /** @description SSH·웹 터미널로 이 VM에 접속할 수 있는지 */
+            /** @description SSH와 웹 터미널로 이 VM에 접속할 수 있는지 */
             accessAllowed: boolean;
             /** @description 접근 권한 목록을 관리할 수 있는지 */
             accessManageAllowed: boolean;
@@ -10978,7 +10978,7 @@ export interface components {
             id: string;
             /**
              * Format: uuid
-             * @description 생성에 쓰인 OS 이미지. 행이 사라졌거나 해당 조회 업무 없이 명령 결과만 확인하는 경우 null입니다.
+             * @description 생성에 쓴 OS 이미지이며, 해당 행이 사라졌거나 조회 업무 없이 명령 결과만 확인하면 null이에요.
              */
             imageId?: string | null;
             ipAddress?: string | null;
@@ -10989,7 +10989,7 @@ export interface components {
             name: string;
             /**
              * Format: uuid
-             * @description 소속 기관. 행이 사라졌거나 해당 조회 업무 없이 명령 결과만 확인하는 경우 null입니다.
+             * @description 소속 기관이며, 해당 행이 사라졌거나 조회 업무 없이 명령 결과만 확인하면 null이에요.
              */
             orgId?: string | null;
             orgName?: string | null;
@@ -11001,10 +11001,10 @@ export interface components {
             publications?: components["schemas"]["PublicationView"][] | null;
             /**
              * Format: uuid
-             * @description 이 VM을 만든 신청. 행이 사라졌거나 해당 조회 업무 없이 명령 결과만 확인하는 경우 null입니다.
+             * @description 이 VM을 만든 신청이며, 해당 행이 사라졌거나 조회 업무 없이 명령 결과만 확인하면 null이에요.
              */
             requestId?: string | null;
-            /** @description VM 설정을 볼·바꿀 수 있는지 */
+            /** @description VM 설정을 조회하고 바꿀 수 있는지 */
             settingsEditAllowed: boolean;
             sshGatewayBlocked?: boolean | null;
             sshHost?: string | null;
@@ -11019,7 +11019,7 @@ export interface components {
             vcpu?: number | null;
             /**
              * Format: uuid
-             * @description 소유 워크스페이스. 행이 사라졌거나 해당 조회 업무 없이 명령 결과만 확인하는 경우 null입니다.
+             * @description 소유 워크스페이스이며, 해당 행이 사라졌거나 조회 업무 없이 명령 결과만 확인하면 null이에요.
              */
             workspaceId?: string | null;
             workspaceName?: string | null;
@@ -11055,9 +11055,9 @@ export interface components {
             vcpu: number;
         };
         VmGatewayBlockUpdateRequest: {
-            /** @description true = SSH 게이트웨이·웹 터미널 차단, false = 차단 해제 */
+            /** @description true = SSH 게이트웨이와 웹 터미널 차단, false = 차단 해제 */
             blocked: boolean;
-            /** @description 차단·해제 사유 (VM 이벤트·감사 기록에 포함, 선택) */
+            /** @description 차단이나 해제 사유(선택). VM 이벤트와 감사 기록에 포함 */
             reason?: string | null;
         };
         VmGrantedSpecResponse: {
@@ -11065,7 +11065,7 @@ export interface components {
             grantedDiskGb: number;
             /** Format: uuid */
             grantedImageId: string;
-            /** @description 승인된 OS 이미지의 표시 이름. 카탈로그에서 내려간 이미지도 이름이 남습니다. */
+            /** @description 승인된 OS 이미지의 표시 이름이에요. 카탈로그에서 내려간 이미지의 이름도 제공해요. */
             grantedImageName: string;
             /** Format: int32 */
             grantedMemoryMb: number;
@@ -11073,7 +11073,7 @@ export interface components {
             grantedVcpu: number;
             /** Format: uuid */
             nodeId?: string | null;
-            /** @description 배치된 노드의 이름. nodeId가 있을 때 함께 있습니다. */
+            /** @description 배치된 노드의 이름이에요. nodeId가 있을 때 함께 있어요. */
             nodeName?: string | null;
         };
         VmMetricPointResponse: {
@@ -11090,12 +11090,12 @@ export interface components {
             maxmemBytes?: number | null;
             /**
              * Format: int64
-             * @description 게스트 내부 기준 메모리 사용량(바이트). 게스트 에이전트가 보고하지 않으면 하이퍼바이저 관점 값으로 대체됩니다.
+             * @description 게스트 내부 기준 메모리 사용량(바이트). 게스트 에이전트가 보고하지 않으면 하이퍼바이저 관점 값으로 대체돼요.
              */
             memBytes?: number | null;
             /**
              * Format: int64
-             * @description 하이퍼바이저 관점 메모리 사용량(바이트) — 게스트 페이지 캐시 포함.
+             * @description 하이퍼바이저 관점 메모리 사용량(바이트)이며, 게스트 페이지 캐시를 포함해요.
              */
             memHostBytes?: number | null;
             /** Format: double */
@@ -11152,11 +11152,11 @@ export interface components {
             sshUsername: string;
         };
         VmPeriodUpdateRequest: {
-            /** @description true면 종료일을 지워 무기한으로 만듭니다. endDate와 함께 보낼 수 없습니다. */
+            /** @description true이면 종료일을 지워 무기한으로 바꿔요. endDate와 함께 보낼 수 없어요. */
             clearEndDate?: boolean | null;
             /**
              * Format: date
-             * @description 새 종료일. 무기한으로 바꾸려면 clearEndDate를 씁니다.
+             * @description 새 종료일이며 무기한으로 바꾸려면 clearEndDate를 사용해요.
              */
             endDate?: string | null;
             /** Format: date */
@@ -11168,12 +11168,12 @@ export interface components {
             desiredSlug?: string | null;
             /** Format: uuid */
             flavorId?: string | null;
-            /** @description 요청한 사양 프리셋의 표시 이름. flavorId가 있을 때 함께 있습니다. */
+            /** @description 요청한 사양 프리셋의 표시 이름이에요. flavorId가 있을 때 함께 있어요. */
             flavorName?: string | null;
             granted?: components["schemas"]["VmGrantedSpecResponse"] | null;
             /** Format: uuid */
             imageId: string;
-            /** @description 요청한 OS 이미지의 표시 이름. 카탈로그에서 내려간 이미지도 이름이 남습니다. */
+            /** @description 요청한 OS 이미지의 표시 이름이에요. 카탈로그에서 내려간 이미지의 이름도 제공해요. */
             imageName: string;
             /** Format: int32 */
             reqDiskGb: number;
@@ -11221,7 +11221,7 @@ export interface components {
             /** @description 발급된 키. 아직 발급받지 않았으면 null */
             key?: components["schemas"]["VmSshKeyView"] | null;
         };
-        /** @description VM에 발급된 SSH 키 정보 (개인키는 포함하지 않는다) */
+        /** @description 개인키를 제외한 VM SSH 키 정보 */
         VmSshKeyView: {
             /**
              * Format: date-time
@@ -11252,18 +11252,18 @@ export interface components {
         /** @enum {string} */
         VmStatus: "CREATING" | "RUNNING" | "STOPPED" | "REBOOTING" | "DELETING" | "DELETED" | "ERROR" | "NEEDS_ADMIN";
         VmSummaryResponse: {
-            /** @description true면 이 VM의 접근 권한이 없어 이름·상태·소유자만 표시됩니다. */
+            /** @description true면 이 VM의 접근 권한이 없는 제한된 행이에요. 이름과 상태, 소유자 정보를 제공해요. */
             accessLimited: boolean;
-            /** @description 접근 권한이 없어도 접근 권한 목록을 관리할 수 있는지. 워크스페이스 소유자가 참입니다. */
+            /** @description 이 VM의 접근 권한이 없어도 접근 권한 목록을 관리할 수 있는지 나타내요. 워크스페이스 소유자는 true예요. */
             accessManageAllowed: boolean;
             allowedWorkIds: string[];
             /** Format: date-time */
             createdAt?: string | null;
-            /** @description 예약된 삭제. 예약이 없거나 접근 제한 행이면 null입니다. */
+            /** @description 예약된 삭제이며, 예약이 없거나 접근 제한 행이면 null이에요. */
             deletion?: components["schemas"]["VmDeletionResponse"] | null;
             /**
              * Format: int32
-             * @description 디스크(GiB). 접근 권한이 없으면 생략됩니다.
+             * @description 디스크(GiB)이며, 접근 권한이 없으면 제공하지 않아요.
              */
             diskGb?: number | null;
             displayName?: string | null;
@@ -11271,25 +11271,25 @@ export interface components {
             endDate?: string | null;
             /** Format: date-time */
             expiryStoppedAt?: string | null;
-            /** @description SSH 슬러그. 접근 권한이 없으면 생략됩니다. */
+            /** @description SSH 슬러그이며, 접근 권한이 없으면 제공하지 않아요. */
             hostname?: string | null;
             /** Format: uuid */
             id: string;
             /**
              * Format: int32
-             * @description 메모리(MiB). 접근 권한이 없으면 생략됩니다.
+             * @description 메모리(MiB)이며, 접근 권한이 없으면 제공하지 않아요.
              */
             memoryMb?: number | null;
             metadataVisible: boolean;
-            /** @description SSH 슬러그. 접근 권한이 없으면 대신 표시 이름이 들어갑니다. */
+            /** @description SSH 슬러그예요. 접근 권한이 없으면 표시 이름을 제공하며, 표시 이름도 없으면 공개 ID를 붙인 VM 이름을 제공해요. */
             name: string;
             /**
              * Format: uuid
-             * @description 소유 기관. 접근 권한이 없거나 기관 행이 사라진 경우 null입니다.
+             * @description 소유 기관이며, 접근 권한이 없거나 기관 행이 사라지면 null이에요.
              */
             orgId?: string | null;
             orgName?: string | null;
-            /** @description 이 VM의 소유자 이름. 접근을 요청할 상대입니다. */
+            /** @description 이 VM의 소유자 이름이며, 접근 권한을 요청할 상대예요. */
             ownerNames?: string[] | null;
             /** Format: uuid */
             requestId?: string | null;
@@ -11298,12 +11298,12 @@ export interface components {
             statusDetail?: string | null;
             /**
              * Format: int32
-             * @description vCPU. 접근 권한이 없으면 생략됩니다.
+             * @description vCPU 수이며, 접근 권한이 없으면 제공하지 않아요.
              */
             vcpu?: number | null;
             /**
              * Format: uuid
-             * @description 소유 워크스페이스. 행이 사라진 경우에만 null입니다.
+             * @description 소유 워크스페이스이며, 해당 행이 사라진 경우에만 null이에요.
              */
             workspaceId?: string | null;
             workspaceName: string;
@@ -11326,12 +11326,12 @@ export interface components {
         };
         WorkspaceInvitationEntry: {
             /**
-             * @description 초대할 사람의 이메일. 학번과 함께 쓸 수 없습니다.
+             * @description 초대할 사람의 이메일이며, 학번과 함께 쓸 수 없어요.
              * @example student@pusan.ac.kr
              */
             email?: string | null;
             /**
-             * @description 초대할 사람의 학번. 학번은 학생 직책 계정에만 등록되므로 교수·연구원·직원은 이메일로 초대합니다. 이메일과 함께 쓸 수 없습니다.
+             * @description 초대할 사람의 학번이에요. 학번은 학생 직책 계정에만 등록되므로 교수와 연구원, 직원은 이메일로 초대해요. 학번과 이메일을 함께 쓸 수 없어요.
              * @example 202612345
              */
             studentNo?: string | null;
@@ -11348,7 +11348,7 @@ export interface components {
         /** @enum {string} */
         WorkspaceInvitationOutcome: "ADDED" | "INVITED" | "ALREADY_MEMBER" | "ALREADY_INVITED" | "DUPLICATE_IN_REQUEST";
         WorkspaceInvitationResponse: {
-            /** @description 초대한 이메일. 학번으로 초대했으면 null입니다. */
+            /** @description 초대한 이메일이며, 학번으로 초대했으면 null이에요. */
             email?: string | null;
             /**
              * Format: uuid
@@ -11364,24 +11364,24 @@ export interface components {
             invitedBy: components["schemas"]["WorkspaceInvitationInviter"];
             /** @description 구성원이 되었을 때 받을 역할 */
             role: components["schemas"]["WorkspaceMemberRole"];
-            /** @description 초대한 학번. 이메일로 초대했으면 null입니다. */
+            /** @description 초대한 학번이며, 이메일로 초대했으면 null이에요. */
             studentNo?: string | null;
         };
         WorkspaceInvitationResult: {
-            /** @description 요청에 쓴 이메일(정규화한 값). 학번 항목이면 null입니다. */
+            /** @description 정규화한 요청 이메일이며, 학번 항목이면 null이에요. */
             email?: string | null;
             /**
              * Format: uuid
-             * @description 대기 중인 초대의 식별자. INVITED와 ALREADY_INVITED일 때만 있습니다.
+             * @description 대기 중인 초대 ID예요. INVITED나 ALREADY_INVITED일 때만 있어요.
              */
             invitationId?: string | null;
             /** @description 처리 결과. */
             outcome: components["schemas"]["WorkspaceInvitationOutcome"];
-            /** @description 요청에 쓴 학번(앞뒤 공백 제거). 이메일 항목이면 null입니다. */
+            /** @description 앞뒤 공백을 지운 요청 학번이며, 이메일 항목이면 null이에요. */
             studentNo?: string | null;
             /**
              * Format: uuid
-             * @description 구성원 계정의 공개 식별자. ADDED와 ALREADY_MEMBER일 때만 있습니다.
+             * @description 구성원 계정의 공개 ID예요. ADDED나 ALREADY_MEMBER일 때만 있어요.
              */
             userId?: string | null;
         };
@@ -11401,7 +11401,7 @@ export interface components {
         WorkspacePanel: {
             /**
              * @deprecated
-             * @description 호환용 VM 목록. 새 클라이언트는 vm.workspaceResources.activeVms를 사용합니다.
+             * @description 호환용 VM 목록이에요. 새 클라이언트는 vm.workspaceResources.activeVms를 사용해요.
              */
             activeVms?: components["schemas"]["VmBriefResponse"][] | null;
             canReadDetail: boolean;
@@ -11410,7 +11410,7 @@ export interface components {
             kind: components["schemas"]["WorkspaceKind"];
             members: components["schemas"]["MemberBrief"][];
             name: string;
-            /** @description 호환용 VM 합계. 새 클라이언트는 vm.workspaceResources.totals를 사용합니다. */
+            /** @description 호환용 VM 합계예요. 새 클라이언트는 vm.workspaceResources.totals를 사용해요. */
             totals?: components["schemas"]["ResourceTotalsResponse"] | null;
         };
         WorkspaceSummaryResponse: {
@@ -11427,17 +11427,17 @@ export interface components {
         WorkspaceTerminationAction: "DELETE_WORKSPACE" | "CANCEL_INVITATION";
         WorkspaceTerminationImpactResponse: {
             action: components["schemas"]["WorkspaceTerminationAction"];
-            /** @description 현재 종료를 막는 조건입니다. PERSONAL 또는 REMAINING_RESOURCES이며, 차단이 없으면 null입니다. */
+            /** @description 현재 종료를 막는 조건이에요. PERSONAL 또는 REMAINING_RESOURCES이며, 차단 조건이 없으면 null이에요. */
             blockedReason?: string | null;
             blockingResources: components["schemas"]["PageResponseWorkspaceTerminationResourceResponse"];
             executable: boolean;
-            /** @description 수행자, 현재 권한, 전체 영향 대상과 자원 조건의 식별값입니다. 페이지와 조회 시각은 포함하지 않습니다. */
+            /** @description 수행자와 현재 권한, 전체 영향 대상, 리소스 조건을 나타내는 식별값이에요. 페이지와 조회 시각은 포함하지 않아요. */
             fingerprint: string;
             /** Format: uuid */
             invitationId?: string | null;
             /**
              * Format: date-time
-             * @description 조회 시각입니다. 실제 종료나 자원 생성 결과를 뜻하지 않습니다.
+             * @description 조회한 시각이며, 실제 종료나 리소스 생성 결과를 뜻하지 않아요.
              */
             observedAt: string;
             recipientCounts: components["schemas"]["WorkspaceTerminationRecipientCount"][];
@@ -11463,15 +11463,15 @@ export interface components {
         WorkspaceTerminationResourceResponse: {
             /** Format: uuid */
             id: string;
-            /** @description 현재 조회 권한에 맞춘 이름입니다. VM 접근 권한이 없으면 SSH 슬러그 대신 표시 이름 또는 공개 ID가 들어갑니다. */
+            /** @description 현재 조회 권한에 맞춘 이름이에요. VM 접근 권한이 없으면 SSH 슬러그 대신 표시 이름이나 공개 ID를 반환해요. */
             name: string;
             /**
              * Format: uuid
-             * @description 현재 조회 권한으로 공개되는 실제 기관입니다. 제한된 행이나 연결 기관이 없는 경우 null입니다.
+             * @description 현재 조회 권한으로 볼 수 있는 실제 기관이에요. 제한된 행이거나 연결된 기관이 없으면 null이에요.
              */
             orgId?: string | null;
             orgName?: string | null;
-            /** @description 현재 호출 경로에서 기존 종류별 단건 상세를 읽을 수 있는지입니다. 워크스페이스 OWNER 자체는 자원 상세 권한을 뜻하지 않습니다. */
+            /** @description 현재 호출 경로에서 해당 종류의 상세를 읽을 수 있는지 나타내요. 워크스페이스 OWNER라는 이유만으로 리소스 상세 권한을 얻지는 않아요. */
             resourceReadable: boolean;
             status: string;
             type: components["schemas"]["ResourceType"];
@@ -11483,7 +11483,7 @@ export interface components {
             closingRecipients: number;
             /**
              * Format: int64
-             * @description 자동 종료되지 않고 현재 실패 이력으로 남는 대상자 수입니다.
+             * @description 자동으로 종료하지 않고 현재 실패 이력으로 남기는 대상자 수
              */
             failedRecipients: number;
             /** Format: int64 */
@@ -11500,7 +11500,7 @@ export interface components {
         WorkspaceTerminationTargetResponse: {
             /** Format: uuid */
             invitationId?: string | null;
-            /** @description 현재 OWNER 또는 지원 쓰기 권한 범위에서만 제공하는 초대 식별자입니다. */
+            /** @description 초대 대상의 이메일이나 학번이며, 현재 OWNER 또는 지원 쓰기 권한 범위에서만 제공해요. */
             invitee?: string | null;
             kind: components["schemas"]["WorkspaceTerminationTargetKind"];
             name?: string | null;
@@ -11522,7 +11522,7 @@ export interface components {
             /** Format: uuid */
             userId?: string | null;
             userReadable: boolean;
-            /** @description 현재 종료 경로가 실제로 취소할 대상입니다. FAILED 이력은 false입니다. */
+            /** @description 현재 종료 경로의 취소 대상 여부예요. FAILED 이력은 false예요. */
             willClose: boolean;
         };
     };
@@ -11555,7 +11555,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAnnouncementView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11588,7 +11588,7 @@ export interface operations {
                     "*/*": components["schemas"]["AnnouncementView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11621,7 +11621,7 @@ export interface operations {
                     "*/*": components["schemas"]["AnnouncementPreviewResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11652,7 +11652,7 @@ export interface operations {
                     "*/*": components["schemas"]["AnnouncementDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11692,7 +11692,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAuditLogViewResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11725,7 +11725,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminBulkChangeApplyResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11754,7 +11754,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminBulkChangeOperationResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11785,7 +11785,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminBulkChangeOperationResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11818,7 +11818,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminBulkChangePreviewResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11849,7 +11849,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminBulkChangePreviewResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11883,7 +11883,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminCampusIpRequestView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11918,7 +11918,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminCampusIpRequestView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11950,7 +11950,7 @@ export interface operations {
                     "*/*": components["schemas"]["CapacityTrendResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -11985,7 +11985,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminCertificateView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12014,7 +12014,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminDomainRootView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12049,7 +12049,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminDomainRootView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12085,7 +12085,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminDomainView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12116,7 +12116,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminDomainView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12147,7 +12147,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12178,7 +12178,7 @@ export interface operations {
                     "*/*": components["schemas"]["DnsRecordSetView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12213,7 +12213,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminDomainView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12244,7 +12244,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12278,7 +12278,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseDriftFindingResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12313,7 +12313,7 @@ export interface operations {
                     "*/*": components["schemas"]["DriftFindingResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12348,7 +12348,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseGpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12379,7 +12379,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12414,7 +12414,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12449,7 +12449,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12484,7 +12484,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12519,7 +12519,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12552,7 +12552,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseGpuReclaimReviewView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12585,7 +12585,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12614,7 +12614,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12649,7 +12649,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12683,7 +12683,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseIpAllocationResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12714,7 +12714,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12747,7 +12747,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12778,7 +12778,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12813,7 +12813,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12848,7 +12848,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12883,7 +12883,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12918,7 +12918,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12953,7 +12953,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -12988,7 +12988,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13023,7 +13023,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13058,7 +13058,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterAccountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13095,7 +13095,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminLlmAccountUsageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13115,24 +13115,24 @@ export interface operations {
                 to: string;
                 orgId?: string;
                 workspaceId?: string;
-                /** @description 현재 범위에서 보이는 등록 공급원의 공개 ID. 최종 처리 경로를 필터합니다. */
+                /** @description 현재 범위에서 보이는 등록 공급원의 공개 ID예요. 최종 처리 경로를 필터해요. */
                 upstreamId?: string;
                 /** @description 요청 당시 공개 모델 이름의 정확한 값 */
                 publicModelName?: string;
                 /** @description 정상 응답을 제외하고 기록된 errorType의 정확한 값 */
                 errorType?: string;
-                /** @description 정상 응답을 제외하고 errorType이 기록되지 않은 요청만 조회. errorType과 동시 지정할 수 없습니다. */
+                /** @description 정상 응답을 제외하고 errorType이 기록되지 않은 요청만 조회해요. errorType과 함께 지정할 수 없어요. */
                 errorTypeMissing?: boolean;
-                /** @description 거절·오류 분류. 오류 유형 또는 미기록 필터와 함께 같은 사유 행의 소비처를 조회합니다. */
+                /** @description 거절과 오류 분류예요. 오류 유형 또는 미기록 필터와 함께 같은 사유 행의 소비처를 조회해요. */
                 reasonCategory?: components["schemas"]["CapacityReasonCategory"];
                 group?: components["schemas"]["CapacityGroup"];
                 page?: number;
                 size?: number;
-                /** @description 버킷 초. 생략하면 기간에 맞추며 최대 1440개 버킷을 반환합니다. */
+                /** @description 버킷의 초 단위 길이예요. 생략하면 기간에 맞추며 최대 1440개 버킷을 반환해요. */
                 bucketSeconds?: number;
-                /** @description SYS 전역 장비 표본의 고정 원천 공개 ID. 기관·공간·원인·공개 모델 수요 필터와 독립이며 현재 설정된 단일 원천만 지원합니다. */
+                /** @description SYS 전역 장비 표본의 고정 원천 공개 ID예요. 기관과 공간, 원인, 공개 모델 수요 필터와 독립적이며 현재 설정된 단일 원천만 지원해요. */
                 telemetrySourceId?: string;
-                /** @description 현재 보이는 키의 사업 계정 결합으로 보존 원문을 좁히는 공개 ID. 실제 지불 주체나 과거 계정 이력의 증거가 아닙니다. */
+                /** @description 현재 보이는 키의 사업 계정 결합으로 보존 원문을 좁히는 공개 ID예요. 실제 지불 주체나 과거 계정 이력을 보여 주는 증거는 아니에요. */
                 openrouterAccountId?: string;
                 sort?: components["schemas"]["LlmConsumerSort"];
             };
@@ -13151,7 +13151,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminLlmCapacityResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13175,11 +13175,11 @@ export interface operations {
                 query?: string;
                 page?: number;
                 size?: number;
-                /** @description 현재 키 행의 모집단. 승인 후 키 생성 전 계획은 포함하지 않습니다. */
+                /** @description 현재 키 행의 모집단이에요. 승인 후 키 생성 전 계획은 포함하지 않아요. */
                 cohort?: components["schemas"]["LlmKeyCohort"];
-                /** @description 안정된 서버 정렬. 요청 집합 전체의 해당 관측·금융 source를 읽을 수 있어야 해당 값으로 정렬합니다. */
+                /** @description 안정된 서버 정렬이에요. 관측값이나 금액을 기준으로 정렬하려면 조회 대상 전체에 대해 그 정렬 기준의 관측 또는 금융 정보를 읽을 수 있어야 해요. */
                 sort?: components["schemas"]["LlmKeySort"];
-                /** @description 저장 정책과 기능 권한이 허용하는 공개 모델명. 예산·발급·라우팅·실제 처리 성공을 보장하지 않습니다. */
+                /** @description 저장 정책과 기능 권한이 허용하는 공개 모델명이에요. 예산과 발급, 라우팅, 실제 처리 성공을 보장하지 않아요. */
                 policyModel?: string;
                 policyFeature?: string;
             };
@@ -13198,7 +13198,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminLlmKeySummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13212,15 +13212,15 @@ export interface operations {
     getAdminLlmKey: {
         parameters: {
             query?: {
-                /** @description true이면 현재 허용된 금액 제안의 읽기 projection을 포함합니다. false이면 제안 파라미터를 보내지 않습니다. 저장·계정 결합·외부 호출을 하지 않습니다. */
+                /** @description true이면 현재 허용된 금액 제안의 읽기 projection을 포함해요. false이면 제안 파라미터를 함께 보낼 수 없어요. 저장과 계정 결합, 외부 호출은 하지 않아요. */
                 projectLimits?: boolean;
-                /** @description 제안 금액(USD). 생략은 현재 값 유지, 빈 값·null은 허용하지 않습니다. 0 이상, 정수 10자리·소수 2자리까지이며 0은 유료 모델을 닫습니다. */
+                /** @description 제안 금액(USD)이에요. 생략하면 현재 값을 유지하고 빈 값과 null은 허용하지 않아요. 0 이상, 정수 10자리와 소수 2자리까지이며 0은 유료 모델을 닫는 제안이에요. */
                 proposedCreditLimit?: number;
-                /** @description false는 리셋 제안 없음, true이면서 proposedCreditLimitReset 생략은 명시한 총액 한도입니다. */
+                /** @description false는 리셋 제안 없음이고, true이면서 proposedCreditLimitReset을 생략하면 명시한 총액 한도예요. */
                 proposedCreditLimitResetSet?: boolean;
-                /** @description resetSet=true일 때 제안하는 DAILY/WEEKLY/MONTHLY 창. resetSet=true이면서 이 값을 생략하면 명시한 총액 한도(null), resetSet=false는 리셋 변경 없음입니다. */
+                /** @description resetSet=true일 때 제안하는 DAILY/WEEKLY/MONTHLY 창이에요. resetSet=true이면서 이 값을 생략하면 명시한 총액 한도(null), resetSet=false는 리셋 변경 없음이에요. */
                 proposedCreditLimitReset?: components["schemas"]["CreditLimitReset"];
-                /** @description 기존 최초 계정 연결 규칙으로 평가할 공개 ID. 계정 전환이나 재결합이 아닙니다. */
+                /** @description 기존 최초 계정 연결 규칙으로 평가할 공개 ID예요. 계정 전환이나 재결합은 아니에요. */
                 proposedOpenrouterAccountId?: string;
             };
             header?: never;
@@ -13240,7 +13240,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13275,7 +13275,7 @@ export interface operations {
                     "application/json": components["schemas"]["AdminLlmKeyDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13310,7 +13310,7 @@ export interface operations {
                     "application/json": components["schemas"]["AdminLlmKeyDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13341,7 +13341,7 @@ export interface operations {
                     "*/*": components["schemas"]["InstitutionAdminLlmModelsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13372,7 +13372,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13407,7 +13407,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminLlmKeyDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13441,7 +13441,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminLlmKeyUsageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13455,7 +13455,7 @@ export interface operations {
     getAdminLlmMetrics: {
         parameters: {
             query?: {
-                /** @description 조회할 기관. 기관 계층은 맡은 기관만 지정할 수 있습니다. */
+                /** @description 조회할 기관이에요. 기관 계층에서는 맡은 기관만 지정할 수 있어요. */
                 orgId?: string;
                 /** @description 진단 기간(일), 최대 31일 */
                 days?: number;
@@ -13475,7 +13475,7 @@ export interface operations {
                     "*/*": components["schemas"]["LlmMetricsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13504,7 +13504,7 @@ export interface operations {
                     "*/*": components["schemas"]["OpenRouterCatalogueResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13536,7 +13536,7 @@ export interface operations {
                     "*/*": components["schemas"]["InstitutionLlmAccountReference"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13550,7 +13550,7 @@ export interface operations {
     getAdminLlmStatus: {
         parameters: {
             query?: {
-                /** @description 조회할 기관. 기관 계층은 맡은 기관만 지정할 수 있습니다. */
+                /** @description 조회할 기관이에요. 기관 계층에서는 맡은 기관만 지정할 수 있어요. */
                 orgId?: string;
             };
             header?: never;
@@ -13568,7 +13568,7 @@ export interface operations {
                     "*/*": components["schemas"]["LlmStatusResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13582,7 +13582,7 @@ export interface operations {
     getAdminLlmUsage: {
         parameters: {
             query?: {
-                /** @description 조회할 기관. 기관 계층은 맡은 기관만 지정할 수 있습니다. */
+                /** @description 조회할 기관이에요. 기관 계층에서는 맡은 기관만 지정할 수 있어요. */
                 orgId?: string;
                 /** @description 소비처를 key 단계로 좁힐 workspace 공개 ID */
                 workspaceId?: string;
@@ -13611,7 +13611,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminLlmUsageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13651,7 +13651,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseMailDeliveryView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13682,7 +13682,7 @@ export interface operations {
                     "*/*": components["schemas"]["MailDeliveryDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13713,7 +13713,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13742,7 +13742,7 @@ export interface operations {
                     "*/*": components["schemas"]["NodeSummaryResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13777,7 +13777,7 @@ export interface operations {
                     "*/*": components["schemas"]["NodeSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13791,7 +13791,7 @@ export interface operations {
     getAdminNodeMetrics: {
         parameters: {
             query?: {
-                /** @description 조회 구간 — HOUR/DAY/WEEK/MONTH/YEAR (해상도는 구간에 따라 거칠어짐) */
+                /** @description 조회 구간: HOUR/DAY/WEEK/MONTH/YEAR (해상도는 구간에 따라 거칠어짐) */
                 timeframe?: components["schemas"]["RrdTimeframe"];
             };
             header?: never;
@@ -13811,7 +13811,7 @@ export interface operations {
                     "*/*": components["schemas"]["NodeMetricsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13843,7 +13843,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminNoticeView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13876,7 +13876,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminNoticeView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13907,7 +13907,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminNoticeView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13936,7 +13936,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -13971,7 +13971,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminNoticeView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14009,7 +14009,7 @@ export interface operations {
                     "*/*": components["schemas"]["NoticeImageView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14039,7 +14039,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14074,7 +14074,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminNotificationResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14105,7 +14105,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14134,7 +14134,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrgDetailResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14167,7 +14167,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrgDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14202,7 +14202,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrgDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14237,7 +14237,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminOrgOperationsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14272,7 +14272,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminOrgOperationsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14307,7 +14307,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrgOperationsPreviewResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14342,7 +14342,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminOrgOperationsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14380,7 +14380,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrgOperationsPreviewResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14409,7 +14409,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminOsImageResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14444,7 +14444,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminOsImageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14479,7 +14479,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminPortMappingResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14510,7 +14510,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14545,7 +14545,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminPortMappingResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14576,7 +14576,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14611,7 +14611,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14646,7 +14646,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminPortMappingResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14677,7 +14677,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminPortMappingResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14706,7 +14706,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminRelayView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14737,7 +14737,7 @@ export interface operations {
                     "*/*": components["schemas"]["RelayTokenResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14766,7 +14766,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminRequestPeriodResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14799,7 +14799,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminRequestPeriodResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14834,7 +14834,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminRequestPeriodResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14875,7 +14875,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseRequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14906,7 +14906,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14941,7 +14941,7 @@ export interface operations {
                     "application/json": components["schemas"]["RequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -14972,7 +14972,7 @@ export interface operations {
                     "*/*": components["schemas"]["ApprovalContextResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15003,7 +15003,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestMailSelectionResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15039,7 +15039,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestRecipientCancellationReceipt"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15071,7 +15071,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestRecipientCancellationImpactResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15103,7 +15103,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15138,7 +15138,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15170,7 +15170,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessListResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15206,7 +15206,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15242,7 +15242,7 @@ export interface operations {
                     "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15273,7 +15273,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15310,7 +15310,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15349,7 +15349,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminResourceDeadlineResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15383,7 +15383,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminRouteView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15412,7 +15412,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15443,7 +15443,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15474,7 +15474,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15509,7 +15509,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15538,7 +15538,7 @@ export interface operations {
                     "*/*": components["schemas"]["SettingView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15573,7 +15573,7 @@ export interface operations {
                     "*/*": components["schemas"]["SettingView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15604,7 +15604,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrgDashboardSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15633,7 +15633,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminSupportOrgOptionResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15662,7 +15662,7 @@ export interface operations {
                     "*/*": components["schemas"]["SystemDashboardSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15697,7 +15697,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseAdminTaskResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15728,7 +15728,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15757,7 +15757,7 @@ export interface operations {
                     "*/*": components["schemas"]["TerminalSessionView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15786,7 +15786,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15823,7 +15823,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseUserAdminViewResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15854,7 +15854,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserAdminDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15889,7 +15889,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15924,7 +15924,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserAdminDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15955,7 +15955,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserAdminDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -15986,7 +15986,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16022,7 +16022,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16057,7 +16057,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16093,7 +16093,7 @@ export interface operations {
                     "*/*": components["schemas"]["ManagedOrgResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16128,7 +16128,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserAdminDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16163,7 +16163,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminUserProfileImpactResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16196,7 +16196,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminUserSupportResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16231,7 +16231,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminUserResourceAccessResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16260,7 +16260,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmFlavorResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16293,7 +16293,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmFlavorResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16328,7 +16328,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmFlavorResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16361,7 +16361,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminVmPlacementPreviewResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16400,7 +16400,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseVmSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16431,7 +16431,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16462,7 +16462,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16496,7 +16496,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseVmEventResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16531,7 +16531,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16562,7 +16562,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16597,7 +16597,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16628,7 +16628,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmNetworkPolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16663,7 +16663,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmNetworkPolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16698,7 +16698,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16729,7 +16729,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16764,7 +16764,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmDeletionResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16795,7 +16795,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16826,7 +16826,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16841,7 +16841,7 @@ export interface operations {
         parameters: {
             query?: {
                 orgId?: string;
-                /** @description true면 기관 필터와 무관하게 삭제되지 않은 모든 워크스페이스를 돌려줍니다. 관리자가 대상자를 골라 신청할 워크스페이스를 고를 때 씁니다. */
+                /** @description 삭제되지 않은 워크스페이스를 조회해요. true이면 기본 목록의 기관 필터를 해제하지만 업무별 조회 권한과 명령 대상 범위는 유지돼요. 관리자가 대상자를 골라 신청할 워크스페이스를 선택할 때 써요. */
                 all?: boolean;
             };
             header?: never;
@@ -16859,7 +16859,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminWorkspaceOptionResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16890,7 +16890,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminWorkspaceDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16923,7 +16923,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16958,7 +16958,7 @@ export interface operations {
                     "*/*": components["schemas"]["AdminWorkspaceDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -16989,7 +16989,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceInvitationResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17024,7 +17024,7 @@ export interface operations {
                     "*/*": components["schemas"]["InviteWorkspaceMembersResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17059,7 +17059,7 @@ export interface operations {
                     "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17093,7 +17093,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17129,7 +17129,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceTerminationImpactResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17159,7 +17159,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17195,7 +17195,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceMemberResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17231,7 +17231,7 @@ export interface operations {
                     "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17266,7 +17266,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceTerminationImpactResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17299,7 +17299,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17314,7 +17314,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 이중 제출 토큰 — __Host-pickle_csrf 쿠키 값과 일치해야 합니다 (필터 강제) */
+                /** @description CSRF 이중 제출 토큰이에요. 필터에서 __Host-pickle_csrf 쿠키 값과 일치하는지 검사해요. */
                 "X-Pickle-Csrf": string;
             };
             path?: never;
@@ -17331,7 +17331,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17364,7 +17364,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthTokenResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17397,7 +17397,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthTokenResponse"] | components["schemas"]["MfaChallengeResponse"] | components["schemas"]["OauthRegistrationResponse"] | components["schemas"]["OauthLinkedResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17430,7 +17430,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthTokenResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17463,7 +17463,7 @@ export interface operations {
                     "*/*": components["schemas"]["OauthStartResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17496,7 +17496,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17529,7 +17529,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17544,7 +17544,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 이중 제출 토큰 — __Host-pickle_csrf 쿠키 값과 일치해야 합니다 (필터 강제) */
+                /** @description CSRF 이중 제출 토큰이에요. 필터에서 __Host-pickle_csrf 쿠키 값과 일치하는지 검사해요. */
                 "X-Pickle-Csrf": string;
             };
             path?: never;
@@ -17563,7 +17563,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthTokenResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17596,7 +17596,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17629,7 +17629,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17662,7 +17662,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17695,7 +17695,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseDnsDomainView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17726,7 +17726,7 @@ export interface operations {
                     "*/*": components["schemas"]["DnsDomainView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17755,7 +17755,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17786,7 +17786,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessListResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17821,7 +17821,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17856,7 +17856,7 @@ export interface operations {
                     "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17886,7 +17886,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17922,7 +17922,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17953,7 +17953,7 @@ export interface operations {
                     "*/*": components["schemas"]["DnsRecordSetView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -17988,7 +17988,7 @@ export interface operations {
                     "*/*": components["schemas"]["DnsRecordSetView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18019,7 +18019,7 @@ export interface operations {
                     "*/*": components["schemas"]["DnsDomainView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18050,7 +18050,7 @@ export interface operations {
                     "*/*": components["schemas"]["DnsDomainView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18084,7 +18084,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseDomainSummaryView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18115,7 +18115,7 @@ export interface operations {
                     "*/*": components["schemas"]["DomainDetailView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18146,7 +18146,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18181,7 +18181,7 @@ export interface operations {
                     "*/*": components["schemas"]["PublicationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18212,7 +18212,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18247,7 +18247,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18278,7 +18278,7 @@ export interface operations {
                     "*/*": components["schemas"]["DomainDetailView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18311,7 +18311,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseGpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18342,7 +18342,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18373,7 +18373,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessListResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18408,7 +18408,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18443,7 +18443,7 @@ export interface operations {
                     "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18473,7 +18473,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18509,7 +18509,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18544,7 +18544,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18575,7 +18575,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAttachmentOption"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18610,7 +18610,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18645,7 +18645,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18680,7 +18680,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuAllocationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18709,7 +18709,7 @@ export interface operations {
                     "*/*": components["schemas"]["GpuView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18742,7 +18742,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseLlmKeySummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18773,7 +18773,7 @@ export interface operations {
                     "*/*": components["schemas"]["LlmKeyDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18806,7 +18806,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18837,7 +18837,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessListResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18872,7 +18872,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18907,7 +18907,7 @@ export interface operations {
                     "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18937,7 +18937,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18973,7 +18973,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -18988,7 +18988,7 @@ export interface operations {
         parameters: {
             query?: {
                 page?: number;
-                /** @description 한 번에 가져올 개수. 한 건이 최대 320 KiB라 통상 목록보다 상한이 낮습니다. */
+                /** @description 한 번에 가져올 개수. 한 건이 최대 320 KiB라 통상 목록보다 상한이 낮아요. */
                 size?: number;
             };
             header?: never;
@@ -19008,7 +19008,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseLlmKeyBodySummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19040,7 +19040,7 @@ export interface operations {
                     "*/*": components["schemas"]["LlmKeyBodyDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19071,7 +19071,7 @@ export interface operations {
                     "*/*": components["schemas"]["LlmKeyModelsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19100,7 +19100,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19131,7 +19131,7 @@ export interface operations {
                     "*/*": components["schemas"]["IssuedLlmKeyResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19165,7 +19165,7 @@ export interface operations {
                     "*/*": components["schemas"]["LlmKeyUsageTrendResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19194,7 +19194,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserProfileResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19229,7 +19229,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseActivityEntryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19258,7 +19258,7 @@ export interface operations {
                     "*/*": components["schemas"]["ConsentView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19291,7 +19291,7 @@ export interface operations {
                     "*/*": components["schemas"]["ConsentView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19320,7 +19320,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19349,7 +19349,7 @@ export interface operations {
                     "*/*": components["schemas"]["InstitutionAuthorityResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19382,7 +19382,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19415,7 +19415,7 @@ export interface operations {
                     "*/*": components["schemas"]["MfaRecoveryCodesResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19448,7 +19448,7 @@ export interface operations {
                     "*/*": components["schemas"]["MfaSetupResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19481,7 +19481,7 @@ export interface operations {
                     "*/*": components["schemas"]["MfaRecoveryCodesResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19510,7 +19510,7 @@ export interface operations {
                     "*/*": components["schemas"]["NotificationPreferencesView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19543,7 +19543,7 @@ export interface operations {
                     "*/*": components["schemas"]["NotificationPreferencesView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19576,7 +19576,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthTokenResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19609,7 +19609,7 @@ export interface operations {
                     "*/*": components["schemas"]["UserProfileResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19642,7 +19642,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19671,7 +19671,7 @@ export interface operations {
                     "*/*": components["schemas"]["ProfileOptionsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19700,7 +19700,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestOptionsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19729,7 +19729,7 @@ export interface operations {
                     "*/*": components["schemas"]["SystemStatusResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19758,7 +19758,7 @@ export interface operations {
                     "*/*": components["schemas"]["TermsVersionView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19789,7 +19789,7 @@ export interface operations {
                     "*/*": components["schemas"]["TermsDocumentView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19803,7 +19803,7 @@ export interface operations {
     listNotices: {
         parameters: {
             query?: {
-                /** @description true이면 기존 열람 범위 안에서 팝업 공지만 조회합니다. 생략하거나 false이면 기존 목록을 반환합니다. */
+                /** @description true이면 기존 열람 범위 안에서 팝업 공지만 조회해요. 생략하거나 false이면 기존 목록을 반환해요. */
                 popup?: boolean;
                 page?: number;
                 size?: number;
@@ -19823,7 +19823,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseNoticeView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19854,7 +19854,7 @@ export interface operations {
                     "*/*": components["schemas"]["NoticeView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19886,7 +19886,7 @@ export interface operations {
                     "*/*": string;
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19919,7 +19919,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseNotificationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19948,7 +19948,7 @@ export interface operations {
                     "*/*": components["schemas"]["ReadAllResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -19977,7 +19977,7 @@ export interface operations {
                     "*/*": components["schemas"]["UnreadCountResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20008,7 +20008,7 @@ export interface operations {
                     "*/*": components["schemas"]["NotificationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20037,7 +20037,7 @@ export interface operations {
                     "*/*": components["schemas"]["OrgSummaryResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20066,7 +20066,7 @@ export interface operations {
                     "*/*": components["schemas"]["OsImageResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20095,7 +20095,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestPeriodResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20130,7 +20130,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseRequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20163,7 +20163,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20194,7 +20194,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20225,7 +20225,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20261,7 +20261,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestRecipientCancellationReceipt"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20293,7 +20293,7 @@ export interface operations {
                     "*/*": components["schemas"]["RequestRecipientCancellationImpactResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20327,7 +20327,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseResourceSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20358,7 +20358,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyPresetView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20387,7 +20387,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmFlavorResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20420,7 +20420,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseVmSummaryResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20451,7 +20451,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20482,7 +20482,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmDeletionResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20513,7 +20513,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessListResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20548,7 +20548,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20583,7 +20583,7 @@ export interface operations {
                     "*/*": components["schemas"]["ActorAccessImpact"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20613,7 +20613,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20649,7 +20649,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResourceAccessGrantView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20680,7 +20680,7 @@ export interface operations {
                     "*/*": components["schemas"]["CampusIpRequestView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20715,7 +20715,7 @@ export interface operations {
                     "*/*": components["schemas"]["CampusIpRequestView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20745,7 +20745,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20780,7 +20780,7 @@ export interface operations {
                     "*/*": components["schemas"]["PublicationView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20814,7 +20814,7 @@ export interface operations {
                     "*/*": components["schemas"]["PageResponseVmEventResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20845,7 +20845,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20859,7 +20859,7 @@ export interface operations {
     getVmMetrics: {
         parameters: {
             query?: {
-                /** @description 조회 구간 — HOUR/DAY/WEEK/MONTH/YEAR (해상도는 구간에 따라 거칠어짐) */
+                /** @description 조회 구간: HOUR/DAY/WEEK/MONTH/YEAR (해상도는 구간에 따라 거칠어짐) */
                 timeframe?: components["schemas"]["RrdTimeframe"];
             };
             header?: never;
@@ -20879,7 +20879,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmMetricsResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20910,7 +20910,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmNetworkPolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20945,7 +20945,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmNetworkPolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -20976,7 +20976,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmPasswordResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21007,7 +21007,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmPasswordResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21038,7 +21038,7 @@ export interface operations {
                     "*/*": components["schemas"]["PortForwardingView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21073,7 +21073,7 @@ export interface operations {
                     "*/*": components["schemas"]["PortForwardingView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21105,7 +21105,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21137,7 +21137,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21173,7 +21173,7 @@ export interface operations {
                     "*/*": components["schemas"]["SourcePolicyView"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21204,7 +21204,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21235,7 +21235,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmSettingView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21270,7 +21270,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmSettingView"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21301,7 +21301,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21332,7 +21332,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmSshKeyStatus"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21363,7 +21363,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmSshKeyIssueResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21392,7 +21392,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21423,7 +21423,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmSshKeyIssueResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21454,7 +21454,7 @@ export interface operations {
                     "*/*": components["schemas"]["VmSshKeyIssueResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21485,7 +21485,7 @@ export interface operations {
                     "*/*": components["schemas"]["MessageResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21516,7 +21516,7 @@ export interface operations {
                     "*/*": components["schemas"]["TerminalTicketResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21545,7 +21545,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceSummaryResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21578,7 +21578,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21609,7 +21609,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21642,7 +21642,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21677,7 +21677,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceDetailResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21708,7 +21708,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceInvitationResponse"][];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21743,7 +21743,7 @@ export interface operations {
                     "*/*": components["schemas"]["InviteWorkspaceMembersResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21777,7 +21777,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21813,7 +21813,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceTerminationImpactResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21843,7 +21843,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21879,7 +21879,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceMemberResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21914,7 +21914,7 @@ export interface operations {
                     "*/*": components["schemas"]["ResolveRosterResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;
@@ -21949,7 +21949,7 @@ export interface operations {
                     "*/*": components["schemas"]["WorkspaceTerminationImpactResponse"];
                 };
             };
-            /** @description 오류 — 상태 코드와 무관하게 Problem 형태 */
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
             default: {
                 headers: {
                     [name: string]: unknown;

@@ -20,6 +20,7 @@ import { useListUrl } from '../lib/use-list-url'
 import { isUuid } from '../lib/validation'
 import { useActiveResult } from '../lib/use-active-result'
 import { gpuPreviewEnabled } from '../lib/gpu-preview'
+import { requestKind } from './request-kind'
 
 const resourceName = (type: ResourceType) => RESOURCE_TYPES[type].label
 
@@ -176,7 +177,9 @@ export function UserSupportRelationships({ userId }: { userId: string }) {
             {request.resourceId && <ResourceDetailLink resourceType={request.type} id={request.resourceId} orgId={request.orgId} label={request.type === 'DOMAIN' ? '도메인 상세' : '실제 자원 보기'} />}
             {request.reason && <p className="mt-1 text-xs text-neutral-500">{request.reason}</p>}
           </TD>
-          <TD>{request.grantedEndDate ?? (request.status === 'APPROVED' ? '무기한' : '부여 전')}</TD>
+          <TD>{request.grantedEndDate ?? (request.status === 'APPROVED'
+            ? requestKind(request.type)?.hiddenCommonFields?.includes('period') ? '별도 기한' : '무기한'
+            : '부여 전')}</TD>
         </TR>)}</TBody>
       </DataTable>}
     </Card>

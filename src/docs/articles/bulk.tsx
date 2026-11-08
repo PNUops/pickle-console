@@ -89,10 +89,10 @@ export const bulkRequestArticles: GuideArticle[] = [
             </p>
             <GuideFigure
               src={rosterImage}
-              alt="학번 명단을 붙여넣은 뒤 새 초대와 중복 줄을 구분하는 미리보기"
+              alt="학번 명단을 붙여넣은 뒤 새 초대와 대상에서 제외할 이메일 줄을 구분하는 미리보기"
               caption="학번 명단의 미리보기와 대상자 추가"
               width={726}
-              height={539}
+              height={540}
             />
           </>
         ),
@@ -131,8 +131,8 @@ export const bulkRequestArticles: GuideArticle[] = [
               src={recipientsImage}
               alt="하나의 승인된 신청에서 생성됨, 가입 대기와 실패가 함께 표시되는 대상자 표"
               caption="대상자별 처리 결과와 사유"
-              width={992}
-              height={306}
+              width={1104}
+              height={307}
             />
             <ul>
               <li><strong>승인 대기:</strong> 승인 전에는 리소스 생성이 시작되지 않아요.</li>

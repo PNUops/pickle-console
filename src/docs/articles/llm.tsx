@@ -1,9 +1,9 @@
 import { GuideFigure } from '../GuideFigure'
 import { GuideVideo } from '../GuideVideo'
 import llmRequestImage from '../../assets/docs/llm-request.jpg'
-import llmConnectionImage from '../../assets/docs/llm-connection.png'
-import llmPermissionsImage from '../../assets/docs/llm-permissions.png'
-import llmUsageImage from '../../assets/docs/llm-usage.png'
+import llmConnectionImage from '../../assets/docs/llm-connection.jpg'
+import llmPermissionsImage from '../../assets/docs/llm-permissions.jpg'
+import llmUsageImage from '../../assets/docs/llm-usage.jpg'
 import llmKeyIssueVideo from '../../assets/docs/llm-key-issue.mp4'
 import llmKeyIssuePoster from '../../assets/docs/llm-key-issue.jpg'
 import llmKeyIssueCaptions from '../../assets/docs/llm-key-issue.ko.vtt?url&no-inline'
@@ -348,8 +348,8 @@ export const llmArticles: GuideArticle[] = [
             src={llmRequestImage}
             alt="LLM API 키 신청의 Chat, 웹 검색, PDF OCR, 이미지 생성과 임베딩 기능 선택"
             caption="유료 모델의 기능 선택 화면(합성 데이터)"
-            width={726}
-            height={372}
+            width={742}
+            height={612}
           />
         </>,
       },
@@ -640,7 +640,7 @@ export const llmArticles: GuideArticle[] = [
             alt="LLM API 키 정보에 표시된 유료 모델 허용 목록과 차단 목록 및 기능 권한"
             caption="키의 유료 모델과 기능 권한"
             width={1104}
-            height={347}
+            height={348}
           />
         </>,
       },
@@ -815,10 +815,10 @@ export const llmArticles: GuideArticle[] = [
           <p>첫 호출 후 정상 응답과 사용량이 반영되면 확인이 끝나요. 계속 0이면 발급 전 키를 보고 있는지, 코드가 같은 키와 base URL을 쓰는지 확인하세요. 요청별 프롬프트와 응답이 필요하면 <GuideLink slug="llm/manage" anchor="recording">본문 기록</GuideLink>의 보관 범위와 공유 범위를 먼저 읽으세요.</p>
           <GuideFigure
             src={llmUsageImage}
-            alt="LLM API 키 사용량 탭의 기간 선택과 요청, 토큰, 금액 사용 현황"
-            caption="조회 기간별 요청과 토큰, 금액 사용 현황"
+            alt="LLM API 키 사용량의 조회 기간과 요청, 토큰, 응답 시간 요약"
+            caption="조회 기간별 요청과 토큰 사용량 요약"
             width={1104}
-            height={420}
+            height={438}
           />
         </>,
       },

@@ -1,6 +1,6 @@
 import { GuideFigure } from '../GuideFigure'
-import vmRequestImage from '../../assets/docs/vm-request.png'
-import vmConnectionImage from '../../assets/docs/vm-connection.png'
+import vmRequestImage from '../../assets/docs/vm-request.jpg'
+import vmConnectionImage from '../../assets/docs/vm-connection.jpg'
 import vmMonitoringImage from '../../assets/docs/vm-monitoring.png'
 import { CodeBlock } from '../../components/CodeBlock'
 import { GuideAction, GuideLink } from '../links'
@@ -73,8 +73,8 @@ export const vmArticles: GuideArticle[] = [
               src={vmRequestImage}
               alt="가상머신 신청의 리소스 구성 단계에 있는 운영체제와 사양 선택"
               caption="가상머신의 운영체제와 사양 선택"
-              width={1600}
-              height={1812}
+              width={768}
+              height={735}
             />
           </>
         ),
