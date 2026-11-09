@@ -273,7 +273,7 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     code: 'model_not_available_on_route',
     status: 400,
     meaning:
-      '자체 서빙 모델은 아직 /v1/messages, /v1/responses, /v1/completions에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
+      '자체 서빙 모델은 /v1/responses, /v1/completions에서 쓸 수 없습니다. 유료 모델 이름을 지정하거나 /v1/chat/completions를 사용합니다.',
   },
   {
     code: 'model_not_allowed',
@@ -336,7 +336,16 @@ export const LLM_ERROR_CODES: LlmErrorEntry[] = [
     status: 429,
     meaning: `${LLM_REQUEST_BODY_MIB.largeAbove} MiB를 넘는 요청을 처리할 자리가 지금은 없습니다. Retry-After 뒤에 다시 보내거나, 파일과 이미지를 URL로 보내 요청을 줄입니다.`,
   },
-  { code: 'input_too_long', status: 400, meaning: '입력이 모델의 최대 입력 길이를 넘었습니다.' },
+  {
+    code: 'input_too_long',
+    status: 400,
+    meaning: '입력이 모델의 최대 입력 길이를 넘었습니다. Claude Code에서는 /compact로 대화를 압축하거나 새 대화를 시작합니다.',
+  },
+  {
+    code: 'agent_busy',
+    status: 429,
+    meaning: '자체 서빙 모델에서 긴 요청을 처리하는 자리가 모두 차 있습니다. Retry-After 후 다시 시도합니다.',
+  },
   { code: 'output_limit_exceeded', status: 400, meaning: '요청한 최대 출력 길이가 허용치를 넘었습니다.' },
   {
     code: 'unknown_endpoint',

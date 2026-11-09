@@ -27,7 +27,6 @@ import {
   LLM_MESSAGES_EXAMPLE_MODEL,
   LLM_PAID_ONLY_PARAMS,
   LLM_PASSTHROUGH_ROUTES,
-  LLM_REASONING_EFFORTS,
   LLM_REASONING_PARAM,
   LLM_RELAYED_RESPONSE_HEADERS,
   LLM_REQUEST_BODY_MIB,
@@ -205,7 +204,7 @@ const OPENCODE_EXAMPLE = `{
       "models": {
         "${LLM_DEFAULT_MODEL}": {
           "name": "Pickle General",
-          "limit": { "context": 65536, "output": 8192 }
+          "limit": { "context": 131072, "output": 8192 }
         }
       }
     }
@@ -249,7 +248,7 @@ const OPENCODE_V2_SELF_SERVED_EXAMPLE = `{
         "${LLM_DEFAULT_MODEL}": {
           "name": "Pickle General",
           "capabilities": { "input": ["text"], "output": ["text"], "tools": true },
-          "limit": { "context": 65536, "output": 8192 }
+          "limit": { "context": 131072, "output": 8192 }
         }
       }
     }
@@ -261,16 +260,20 @@ const CLAUDE_CODE_EXAMPLE = `export ANTHROPIC_BASE_URL="${LLM_ANTHROPIC_BASE_URL
 export ANTHROPIC_AUTH_TOKEN="$PICKLE_API_KEY"
 unset ANTHROPIC_API_KEY
 unset CLAUDE_CODE_OAUTH_TOKEN
-export ANTHROPIC_MODEL="${LLM_MESSAGES_EXAMPLE_MODEL}"
-export ANTHROPIC_DEFAULT_HAIKU_MODEL="${LLM_MESSAGES_EXAMPLE_MODEL}"
+export ANTHROPIC_MODEL="${LLM_DEFAULT_MODEL}"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="${LLM_DEFAULT_MODEL}"
+export CLAUDE_CODE_MAX_CONTEXT_TOKENS=65536
+export ENABLE_TOOL_SEARCH=false
 claude`
 
 const CLAUDE_CODE_CMD_EXAMPLE = `set "ANTHROPIC_BASE_URL=${LLM_ANTHROPIC_BASE_URL}"
 set "ANTHROPIC_AUTH_TOKEN=%PICKLE_API_KEY%"
 set "ANTHROPIC_API_KEY="
 set "CLAUDE_CODE_OAUTH_TOKEN="
-set "ANTHROPIC_MODEL=${LLM_MESSAGES_EXAMPLE_MODEL}"
-set "ANTHROPIC_DEFAULT_HAIKU_MODEL=${LLM_MESSAGES_EXAMPLE_MODEL}"
+set "ANTHROPIC_MODEL=${LLM_DEFAULT_MODEL}"
+set "ANTHROPIC_DEFAULT_HAIKU_MODEL=${LLM_DEFAULT_MODEL}"
+set "CLAUDE_CODE_MAX_CONTEXT_TOKENS=65536"
+set "ENABLE_TOOL_SEARCH=false"
 claude`
 
 const ANTHROPIC_PYTHON_EXAMPLE = `import os
@@ -512,7 +515,7 @@ export const llmArticles: GuideArticle[] = [
             <p>일일 토큰 한도가 0이 아니고 Chat 권한이 있는 키는 이 예제를 사용할 수 있습니다.</p>
             <CodeBlock label="OpenCode 2: 자체 서빙 opencode.json" code={OPENCODE_V2_SELF_SERVED_EXAMPLE} />
           </details>
-          <p><code>limit.context</code>는 모델의 대화 창 크기이고 일일 토큰 한도가 아닙니다. 자체 서빙 모델은 입출력 합계 65,536토큰입니다. <code>output</code>의 8,192는 답변에 남겨 두는 예제 값이며, 플랫폼의 모든 응답에 적용되는 한도가 아닙니다.</p>
+          <p><code>limit.context</code>는 모델의 대화 창 크기이고 일일 토큰 한도가 아닙니다. 자체 서빙 모델은 입출력 합계 131,072토큰입니다. <code>output</code>의 8,192는 답변에 남겨 두는 예제 값이며, 플랫폼의 모든 응답에 적용되는 한도가 아닙니다.</p>
           <h3 className="font-medium">4. 키 설정과 실행</h3>
           <p>프로젝트 폴더로 이동한 같은 터미널에서 운영체제에 맞는 명령만 실행합니다. Windows는 <code>발급받은 키</code>를 실제 값으로 바꿉니다. macOS 기본 zsh는 안내가 나오면 키를 붙여넣고 Enter를 누릅니다. 입력 중 키 문자가 보이지 않아도 정상입니다. 키가 표시된 화면은 공유하거나 촬영하지 않습니다.</p>
           <CodeBlock label="Windows 명령 프롬프트" code={'set "PICKLE_API_KEY=발급받은 키"\nopencode --standalone'} />
@@ -548,24 +551,33 @@ export const llmArticles: GuideArticle[] = [
         id: 'claude-code',
         title: 'Claude Code와 Anthropic SDK 연결',
         body: <>
-          <p>Claude Code와 Anthropic SDK는 Anthropic Messages API(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/messages</code>)로 연결합니다. 이 경로는 <strong>유료 모델만</strong> 지원하므로 금액 한도가 부여된 키가 필요합니다. 자체 서빙 모델 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>을 지정하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">model_not_available_on_route</code>로 거절됩니다. 호출은 Chat 권한에 속합니다.</p>
+          <p>Claude Code와 Anthropic SDK는 Anthropic Messages API(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/messages</code>)로 연결합니다. 자체 서빙 모델 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>과 키에 부여된 유료 모델을 모두 사용할 수 있고, 호출은 Chat 권한에 속합니다.</p>
           <p>Anthropic 클라이언트는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/messages</code>를 스스로 붙이므로 base URL에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1</code>을 적지 않습니다. OpenAI 호환 base URL을 그대로 넣으면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/v1/messages</code>로 요청이 가서 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unknown_endpoint</code>가 납니다.</p>
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_ANTHROPIC_BASE_URL}</code>
             <CopyButton value={LLM_ANTHROPIC_BASE_URL} label="Anthropic base URL 복사" />
           </div>
           <p>먼저 <code>claude --version</code>으로 설치를 확인합니다. 명령을 찾지 못하면 <a target="_blank" rel="noreferrer" className="font-medium text-primary-700 underline underline-offset-2 hover:text-primary-800" href="https://code.claude.com/docs/en/setup">Claude Code 공식 설치 안내</a>에서 운영체제에 맞게 설치하고 터미널을 새로 엽니다.</p>
-          <p>프로젝트 폴더를 열고 <GuideLink slug="llm/connect" anchor="prepare">연결 준비</GuideLink>의 명령으로 <code>PICKLE_API_KEY</code>를 설정한 뒤 같은 터미널에서 아래 명령을 실행합니다. 예제는 Claude Haiku 5.5이며 키의 허용 모델에 포함돼 있어야 합니다. 주 모델과 제목 생성 등의 보조 모델을 함께 지정합니다.</p>
+          <p>프로젝트 폴더를 열고 <GuideLink slug="llm/connect" anchor="prepare">연결 준비</GuideLink>의 명령으로 <code>PICKLE_API_KEY</code>를 설정한 뒤 같은 터미널에서 아래 명령을 실행합니다. 예제는 자체 서빙 모델이며 주 모델과 제목 생성 등의 보조 모델을 함께 지정합니다. 유료 모델을 쓰려면 두 값을 키 정보의 <strong>쓸 수 있는 유료 모델</strong> 이름(예: <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_MESSAGES_EXAMPLE_MODEL}</code>)으로 바꾸고 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">CLAUDE_CODE_MAX_CONTEXT_TOKENS</code>, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">ENABLE_TOOL_SEARCH</code> 두 줄을 지웁니다.</p>
           <CodeBlock label="Windows 명령 프롬프트" code={CLAUDE_CODE_CMD_EXAMPLE} />
           <CodeBlock label="macOS / Linux" code={CLAUDE_CODE_EXAMPLE} />
           <p>기존 <code>ANTHROPIC_API_KEY</code>와 <code>CLAUDE_CODE_OAUTH_TOKEN</code>은 현재 터미널에서 비워 인증 방식의 중복을 정리합니다. 저장된 로그인이나 다른 프로젝트 설정은 삭제하지 않습니다. 실행 후 <code>/status</code>에서 모델과 API 연결 정보를 확인하고 <code>한 문장으로 인사해 주세요.</code>를 입력해 첫 답변을 확인합니다.</p>
           <p>저장된 로그인과의 인증 충돌 경고가 계속되면 Pickle 인증을 사용할 때만 <code>/logout</code>으로 기존 로그인을 해제한 뒤 같은 터미널에서 <code>claude</code>를 다시 실행합니다. 이 경우 기존 계정으로 돌아가려면 나중에 다시 로그인해야 합니다.</p>
           <p>예전 주소나 모델로 연결되면 사용자 또는 프로젝트의 <code>.claude/settings.json</code>에 있는 <code>env</code> 설정도 확인합니다. 설정 파일의 값이 셸 설정을 덮어쓸 수 있습니다. 오류가 계속되면 <code>error.code</code>와 요청 시각을 확인해 <GuideLink slug="llm/errors">오류 해결</GuideLink>을 참고합니다. 문의 화면에 키 원문을 포함하지 마세요.</p>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">ANTHROPIC_MODEL</code>에는 키 정보의 <strong>쓸 수 있는 유료 모델</strong>에 맞는 모델 이름을 넣습니다. 키는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Authorization: Bearer</code> 헤더와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">x-api-key</code> 헤더 중 어느 쪽으로 보내도 됩니다. Claude Code를 실행해 짧은 질문에 답변이 돌아오면 연결된 것입니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">ANTHROPIC_MODEL</code>에는 키로 쓸 수 있는 모델 이름을 넣습니다. 키는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">Authorization: Bearer</code> 헤더와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">x-api-key</code> 헤더 중 어느 쪽으로 보내도 됩니다. Claude Code를 실행해 짧은 질문에 답변이 돌아오면 연결된 것입니다.</p>
+          <h3 className="font-medium">자체 서빙 모델로 사용할 때</h3>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>한 요청의 입력은 65,536토큰까지입니다. 예제의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">CLAUDE_CODE_MAX_CONTEXT_TOKENS</code>는 Claude Code가 이 크기에 맞춰 대화를 자동으로 압축하게 합니다. 그래도 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_too_long</code>이 나오면 <code>/compact</code>로 대화를 압축하거나 <code>/clear</code>로 새 대화를 시작합니다.</li>
+            <li>예제의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">ENABLE_TOOL_SEARCH</code>는 자체 서빙 모델이 지원하지 않는 도구 검색을 끕니다. 이 줄이 없어도 동작하지만 대화마다 첫 요청이 몇 번 거절된 뒤 진행됩니다.</li>
+            <li>여러 사용자가 한 서버를 함께 씁니다. 긴 요청을 처리하는 자리가 모두 차 있으면 최대 1분 기다린 뒤 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">agent_busy</code>(429)로 거절됩니다. 잠시 뒤 다시 입력합니다.</li>
+            <li>매 요청에 이전 대화가 함께 가므로 대화가 길수록 한 번에 많은 토큰을 씁니다. 사용량은 일일 토큰 한도에서 차감됩니다.</li>
+            <li>추론(thinking) 없이 바로 답합니다. Claude Code의 추론 설정은 적용되지 않습니다.</li>
+            <li>웹 검색처럼 모델 서버가 실행하는 도구는 쓸 수 없습니다. 파일 읽기와 편집, 명령 실행처럼 Claude Code가 내 컴퓨터에서 실행하는 도구는 그대로 씁니다.</li>
+          </ul>
           <p>Anthropic Python SDK는 공식 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">anthropic</code> 패키지를 설치한 뒤 같은 base URL과 Pickle 키를 넣습니다.</p>
           <CodeBlock label="패키지 설치" code="python -m pip install anthropic" />
           <CodeBlock label="Python" code={ANTHROPIC_PYTHON_EXAMPLE} />
-          <p>토큰 수 계산(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/messages/count_tokens</code>)은 지원하지 않습니다. 오류는 Anthropic 형식(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{'{"type": "error", "error": {...}}'}</code>)으로 돌아오며, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>에 <GuideLink slug="llm/errors">오류 해결</GuideLink>의 표와 같은 코드가 들어 있습니다.</p>
+          <p>토큰 수 계산(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">/v1/messages/count_tokens</code>)은 자체 서빙 모델에서만 지원합니다. 오류는 Anthropic 형식(<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{'{"type": "error", "error": {...}}'}</code>)으로 돌아오며, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>에 <GuideLink slug="llm/errors">오류 해결</GuideLink>의 표와 같은 코드가 들어 있습니다.</p>
         </>,
       },
       {
@@ -604,7 +616,7 @@ export const llmArticles: GuideArticle[] = [
         id: 'compatibility',
         title: '연결 범위와 다음 행동',
         body: <>
-          <p>OpenAI 호환 클라이언트는 Chat Completions나 Responses API로, Anthropic 클라이언트는 Messages API로 연결합니다. Messages API와 Responses API는 유료 모델만 지원하며, 자체 서빙 모델은 Chat Completions로 호출합니다.</p>
+          <p>OpenAI 호환 클라이언트는 Chat Completions나 Responses API로, Anthropic 클라이언트는 Messages API로 연결합니다. 자체 서빙 모델은 Chat Completions와 Messages API로 호출하고, Responses API는 유료 모델만 지원합니다.</p>
           <p>첫 호출 이후에는 <GuideLink slug="llm/features" anchor="streaming">스트리밍과 도구 호출</GuideLink>을 적용하고, <GuideLink slug="llm/limits" anchor="usage">사용량 확인</GuideLink>으로 요청이 기록되는지 확인하세요.</p>
         </>,
       },
@@ -726,8 +738,8 @@ export const llmArticles: GuideArticle[] = [
           <p>채팅 요청 본문은 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. {LLM_REQUEST_BODY_MIB.largeAbove} MiB를 넘는 요청은 동시에 처리하는 수가 정해져 있어, 몰리면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>(429)로 거절됩니다. base64로 넣는 파일과 이미지는 가능하면 URL로 보냅니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">verbosity</code>를 자체 서빙 모델에 보내면 거절됩니다. 사용하는 도구가 필드를 자동으로 붙인다면 자체 서빙 모델을 호출할 때 해당 설정을 끕니다.</p>
           <h3 className="font-medium">추론 조절</h3>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_REASONING_PARAM}</code>로 답하기 전에 추론하는 정도를 고릅니다. 자체 서빙 모델이 받는 값은 {LLM_REASONING_EFFORTS.map((effort, i) => <span key={effort}>{i > 0 ? ', ' : ''}<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{effort}</code></span>)}이고 그 밖의 값은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">invalid_parameter_value</code>로 거절됩니다. 유료 모델에는 값을 그대로 전달합니다. 보내지 않으면 모델의 기본값을 따릅니다.</p>
-          <p>추론에 쓴 토큰은 출력 토큰에 포함되어 일일 토큰 한도에서 차감됩니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">max_completion_tokens</code>는 추론과 답을 합친 상한이라, 작게 주면 추론만 하다 빈 답으로 끝날 수 있습니다. 짧은 답만 필요하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">none</code>으로 추론을 끕니다. 추론이 긴 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code>을 켜서 받습니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_REASONING_PARAM}</code>는 유료 모델에서 답하기 전에 추론하는 정도를 고릅니다. 값은 공급자에게 그대로 전달하고, 보내지 않으면 모델의 기본값을 따릅니다. 자체 서빙 모델 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>은 추론 없이 바로 답하며, 이 필드를 보내면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>로 거절됩니다.</p>
+          <p>추론에 쓴 토큰은 출력 토큰에 포함되어 금액 한도에서 차감됩니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">max_completion_tokens</code>는 추론과 답을 합친 상한이라, 작게 주면 추론만 하다 빈 답으로 끝날 수 있습니다. 짧은 답만 필요하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">none</code>으로 추론을 끕니다. 추론이 긴 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code>을 켜서 받습니다.</p>
           <Alert variant="info" title="자체 서빙 모델은 목록에 없는 필드를 거부합니다">
             모르는 필드를 무시하고 전달하지 않고 요청 전체를 HTTP 400으로 되돌립니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>이며 메시지에 해당 필드가 나옵니다. 유료 모델은 공급자가 받는 요청을 그대로 보내므로 위 목록이 거부의 기준이 아닙니다.
           </Alert>
