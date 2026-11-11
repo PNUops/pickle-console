@@ -89,6 +89,11 @@ export const LLM_TRANSCRIPTION_EXAMPLE_MODEL = 'openai/whisper-large-v3-turbo'
  * when the request names no format. `/v1/audio/transcriptions` takes JSON or
  * the OpenAI SDK's multipart form. Speech and transcription models are also
  * missing from the key's model list.
+ *
+ * Batches come in two shapes: `/v1/messages/batches` is what the Anthropic
+ * SDK's `messages.batches` calls, `/v1/batches` the vendor's own shape for
+ * the other target endpoints. `/v1/videos` is the vendor's shape; no OpenAI or
+ * Anthropic video API exists to match.
  */
 export const LLM_PASSTHROUGH_ROUTES = [
   { capability: 'chat', method: 'POST', path: '/v1/chat/completions', summary: 'Chat' },
@@ -107,6 +112,14 @@ export const LLM_PASSTHROUGH_ROUTES = [
   { capability: 'rerank', method: 'POST', path: '/v1/rerank', summary: '리랭크' },
   { capability: 'speech', method: 'POST', path: '/v1/audio/speech', summary: 'TTS' },
   { capability: 'transcriptions', method: 'POST', path: '/v1/audio/transcriptions', summary: 'STT' },
+  {
+    capability: 'batches',
+    method: 'POST',
+    path: '/v1/messages/batches',
+    summary: '배치(Anthropic SDK 형식)',
+  },
+  { capability: 'batches', method: 'POST', path: '/v1/batches', summary: '배치(OpenRouter 형식)' },
+  { capability: 'videos', method: 'POST', path: '/v1/videos', summary: '동영상 생성' },
 ] as const
 
 /**

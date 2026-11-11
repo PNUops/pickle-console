@@ -157,6 +157,56 @@ with open("speech.mp3", "rb") as audio:
     )
 print(result.text)`
 
+const BATCH_PYTHON_EXAMPLE = `import os
+import time
+from anthropic import Anthropic
+
+client = Anthropic(
+    base_url="${LLM_ANTHROPIC_BASE_URL}",
+    api_key=os.environ["PICKLE_API_KEY"],
+)
+
+batch = client.messages.batches.create(
+    requests=[
+        {
+            "custom_id": "q-1",
+            "params": {
+                "model": "${LLM_MESSAGES_EXAMPLE_MODEL}",
+                "max_tokens": 256,
+                "messages": [{"role": "user", "content": "부산의 대표 음식은?"}],
+            },
+        },
+        {
+            "custom_id": "q-2",
+            "params": {
+                "model": "${LLM_MESSAGES_EXAMPLE_MODEL}",
+                "max_tokens": 256,
+                "messages": [{"role": "user", "content": "부산의 대표 관광지는?"}],
+            },
+        },
+    ]
+)
+while batch.processing_status != "ended":
+    time.sleep(60)
+    batch = client.messages.batches.retrieve(batch.id)
+
+for item in client.messages.batches.results(batch.id):
+    if item.result.type == "succeeded":
+        print(item.custom_id, item.result.message.content[0].text)
+    else:
+        print(item.custom_id, item.result.type)`
+
+const VIDEO_EXAMPLE = `curl ${LLM_API_BASE_URL}/videos \\
+  -H "Authorization: Bearer $PICKLE_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model": "동영상 모델 ID", "prompt": "바다 위로 해가 뜨는 장면", "duration": 4}'
+
+# 응답의 id로 상태를 확인하고, status가 completed가 되면 영상을 받아요.
+curl ${LLM_API_BASE_URL}/videos/작업_ID \\
+  -H "Authorization: Bearer $PICKLE_API_KEY"
+curl ${LLM_API_BASE_URL}/videos/작업_ID/content \\
+  -H "Authorization: Bearer $PICKLE_API_KEY" --output video.mp4`
+
 const COMPLETIONS_PYTHON_EXAMPLE = `import os
 from openai import OpenAI
 
@@ -627,8 +677,8 @@ export const llmArticles: GuideArticle[] = [
     slug: 'llm/features',
     title: '모델과 지원 기능',
     group: 'LLM API',
-    summary: '모델과 가격을 찾고 이미지, 임베딩, 리랭크, TTS와 STT, 레거시 Completions, 웹 검색과 PDF OCR의 호출 방법을 확인해요.',
-    keywords: ['모델', '허용', '차단', '가격', '이미지', '임베딩', '리랭크', 'rerank', 'TTS', 'STT', '음성', 'audio.speech', 'transcriptions', 'completions', '자동 선택', '웹 검색', 'PDF OCR', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기', '헤더', 'x-session-id', '프롬프트 캐시', 'X-Generation-Id'],
+    summary: '모델과 가격을 찾고 이미지, 임베딩, 리랭크, TTS와 STT, 배치와 동영상, 레거시 Completions, 웹 검색과 PDF OCR의 호출 방법을 확인해요.',
+    keywords: ['모델', '허용', '차단', '가격', '이미지', '임베딩', '리랭크', 'rerank', 'TTS', 'STT', '음성', 'audio.speech', 'transcriptions', '배치', 'batches', '동영상', 'videos', 'completions', '자동 선택', '웹 검색', 'PDF OCR', '스트리밍', '도구 호출', '파라미터', 'images.generate', '요청 크기', '헤더', 'x-session-id', '프롬프트 캐시', 'X-Generation-Id'],
     sections: [
       {
         id: 'models',
@@ -704,6 +754,19 @@ export const llmArticles: GuideArticle[] = [
           <CodeBlock label="STT Python" code={TRANSCRIPTION_PYTHON_EXAMPLE} />
           <p>JSON 본문의 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">input_audio</code>에 base64 데이터를 넣어 보낼 수도 있어요. 음성 주소(URL)를 넘기는 방식은 모델이 거절하는 경우가 많으므로 파일 내용을 직접 보내요. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">response_format</code>은 <code>json</code>과 <code>verbose_json</code>만 받고, 자막이 필요하면 <code>verbose_json</code>의 <code>segments</code>로 만들어요. 스트리밍은 지원하지 않아요.</p>
           <p>요청 본문은 {LLM_REQUEST_BODY_MIB.max} MiB까지 받아요. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>가 나오면 Retry-After에 표시된 시간 후 다시 보내 주세요.</p>
+        </>,
+      },
+      {
+        id: 'batches-videos',
+        title: '배치와 동영상 생성',
+        body: <>
+          <p>배치는 여러 요청을 한 번에 제출하고 결과를 나중에 받는 기능이에요. 배치 권한과, 배치로 보낼 요청의 권한(Messages라면 Chat)이 함께 있어야 해요. 결과는 보통 24시간 안에 나오고, 제출 뒤 30일이 지나면 지워져요.</p>
+          <p>Anthropic SDK의 <code>messages.batches</code>를 그대로 쓸 수 있어요. 한 배치의 요청은 모두 같은 모델을 써야 하고, <code>custom_id</code>는 영문, 숫자, <code>-</code>, <code>_</code>로 64자까지 써요. 진행 중인 배치를 취소하는 <code>cancel</code>은 지원하지 않아요.</p>
+          <CodeBlock label="배치 Python" code={BATCH_PYTHON_EXAMPLE} />
+          <p>Chat Completions나 임베딩 요청을 배치로 보내려면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">POST /v1/batches</code>를 써요. OpenRouter 배치 형식(<code>endpoint</code>, <code>model</code>, <code>requests</code>의 <code>custom_id</code>와 <code>body</code>)이고, 결과는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">GET /v1/batches/&#123;id&#125;</code> 응답의 <code>results</code>에 담겨 와요. OpenAI SDK의 <code>batches.create</code>는 파일 업로드를 쓰므로 지원하지 않아요.</p>
+          <p>동영상 생성은 동영상 생성 권한이 필요하고 요청당 비용이 커요. OpenAI와 Anthropic에는 지금 동영상 API가 없어서 OpenRouter 형식으로 호출해요. 제출하면 작업 id가 오고, 상태를 확인한 뒤 끝난 영상을 받아요. 모델 목록은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">GET /v1/videos/models</code>에서 볼 수 있어요.</p>
+          <CodeBlock label="동영상 curl" code={VIDEO_EXAMPLE} />
+          <p>배치와 동영상 작업은 만든 키로만 조회할 수 있어요. 다른 키로 조회하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">object_not_found</code>가 나와요. 요금은 작업이 끝난 뒤 키의 사용 금액에 반영돼요. 사용량 기록의 금액은 끝난 작업의 상태를 조회할 때 남아요.</p>
         </>,
       },
       {

@@ -169,6 +169,9 @@ describe('LLM API 사실 사본', () => {
       'POST /v1/rerank',
       'POST /v1/audio/speech',
       'POST /v1/audio/transcriptions',
+      'POST /v1/messages/batches',
+      'POST /v1/batches',
+      'POST /v1/videos',
     ])
   })
 
