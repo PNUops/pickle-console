@@ -4943,7 +4943,7 @@ export interface components {
              * @description 일일 토큰 한도예요. 생략하면 유지하고 null이면 무제한이며 0이면 토큰 축을 닫아요.
              */
             dailyTokens?: number | null;
-            /** @description 기능 권한 목록에 적용할 변경이며 생략하면 유지해요. 현재 변경 요청에는 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions, batches를 지정할 수 있어요. 결과 목록에 web_search나 pdf_ocr가 있으면 chat도, batches가 있으면 chat이나 embeddings도 함께 있어야 해요. */
+            /** @description 기능 권한 목록에 적용할 변경이며 생략하면 유지해요. 현재 변경 요청에는 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions, videos, batches를 지정할 수 있어요. 결과 목록에 web_search나 pdf_ocr가 있으면 chat도, batches가 있으면 chat이나 embeddings도 함께 있어야 해요. */
             passthroughEndpoints?: components["schemas"]["AdminBulkListChange"] | null;
             /**
              * Format: int32
@@ -5287,7 +5287,7 @@ export interface components {
              * @description 유료 모델을 결제할 사업 계정이며 생략하거나 null이면 기존 연결을 유지해요.
              */
             openrouterAccountId?: string | null;
-            /** @description 이 키에 부여할 기능 권한이에요. 생략하면 유지하고 빈 배열이나 null이면 chat을 포함한 모든 기능을 닫아요. 기능은 이 목록에 추가해야 열려요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions, batches예요. web_search나 pdf_ocr를 부여하려면 chat도 함께 있어야 하고, batches는 chat이나 embeddings와 함께 있어야 해요. 모델 조회는 이 값의 영향을 받지 않아요. */
+            /** @description 이 키에 부여할 기능 권한이에요. 생략하면 유지하고 빈 배열이나 null이면 chat을 포함한 모든 기능을 닫아요. 기능은 이 목록에 추가해야 열려요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions, videos, batches예요. web_search나 pdf_ocr를 부여하려면 chat도 함께 있어야 하고, batches는 chat이나 embeddings와 함께 있어야 해요. 모델 조회는 이 값의 영향을 받지 않아요. */
             passthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
@@ -6162,7 +6162,7 @@ export interface components {
              * @description 부여할 일일 토큰 수예요. 생략하거나 null이면 일일 한도가 없고, 0이면 자체 서빙(토큰) 축을 쓸 수 없어요.
              */
             grantedDailyTokens?: number | null;
-            /** @description 이 키에 부여할 기능 권한이에요. 생략하거나 null이면 신청 목록(reqPassthroughEndpoints)으로 승인하며, 빈 배열이면 chat을 포함해 어떤 기능도 쓸 수 없어요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions, batches이며, web_search나 pdf_ocr를 포함하면 chat도 함께 부여해야 하고, batches는 chat이나 embeddings와 함께 부여해야 해요. 모델 조회에는 이 목록을 적용하지 않아요. */
+            /** @description 이 키에 부여할 기능 권한이에요. 생략하거나 null이면 신청 목록(reqPassthroughEndpoints)으로 승인하며, 빈 배열이면 chat을 포함해 어떤 기능도 쓸 수 없어요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions, videos, batches이며, web_search나 pdf_ocr를 포함하면 chat도 함께 부여해야 하고, batches는 chat이나 embeddings와 함께 부여해야 해요. 모델 조회에는 이 목록을 적용하지 않아요. */
             grantedPassthroughEndpoints?: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[] | null;
             /**
              * Format: int32
@@ -6554,7 +6554,7 @@ export interface components {
              * @description 희망 일일 토큰 수이며, 생략하면 서비스 기본값을 요청해요.
              */
             reqDailyTokens?: number | null;
-            /** @description 신청자가 요청한 기능 권한이며 필수값이지만 빈 배열도 보낼 수 있어요. 승인 화면의 초깃값이며, 부여할 목록은 승인자가 정해요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions, batches이며, 나머지는 422로 거절해요. web_search나 pdf_ocr를 선택하면 chat도 함께 선택해야 하고, batches는 chat이나 embeddings와 함께 선택해야 해요. */
+            /** @description 신청자가 요청한 기능 권한이며 필수값이지만 빈 배열도 보낼 수 있어요. 승인 화면의 초깃값이며, 부여할 목록은 승인자가 정해요. 현재 부여할 수 있는 값은 chat, web_search, pdf_ocr, images, embeddings, rerank, speech, transcriptions, videos, batches이며, 나머지는 422로 거절해요. web_search나 pdf_ocr를 선택하면 chat도 함께 선택해야 하고, batches는 chat이나 embeddings와 함께 선택해야 해요. */
             reqPassthroughEndpoints: ("chat" | "web_search" | "pdf_ocr" | "containers" | "images" | "embeddings" | "rerank" | "speech" | "transcriptions" | "videos" | "batches" | "files")[];
             /**
              * Format: int32
@@ -8710,7 +8710,7 @@ export interface components {
             unpricedAvgLatencyMs?: number | null;
         };
         LlmUsagePassthroughGrantResponse: {
-            /** @description 기능 권한 값이며 chat, images, embeddings, rerank, speech, transcriptions, batches 중 하나예요. 요청 본문으로 판정하는 기능(web_search, pdf_ocr)은 사용량 이벤트가 경로만 기록해 사용을 셀 수 없으므로 행을 제공하지 않아요. */
+            /** @description 기능 권한 값이며 chat, images, embeddings, rerank, speech, transcriptions, videos, batches 중 하나예요. 요청 본문으로 판정하는 기능(web_search, pdf_ocr)은 사용량 이벤트가 경로만 기록해 사용을 셀 수 없으므로 행을 제공하지 않아요. */
             capability: string;
             /**
              * Format: int64

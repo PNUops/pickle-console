@@ -20,6 +20,7 @@ describe('feature grants', () => {
       'rerank',
       'speech',
       'transcriptions',
+      'videos',
       'batches',
     ])
   })

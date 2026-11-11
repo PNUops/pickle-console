@@ -77,7 +77,7 @@ const CAPABILITIES: Record<PassthroughEndpoint, Capability> = {
   },
   videos: {
     label: '동영상 생성',
-    description: '텍스트나 이미지로 짧은 영상을 생성해요',
+    description: '텍스트나 이미지로 짧은 영상을 생성해요. 요청당 비용이 커요',
   },
   batches: {
     label: '배치',
@@ -108,6 +108,7 @@ const GRANTABLE: ReadonlySet<PassthroughEndpoint> = new Set([
   'rerank',
   'speech',
   'transcriptions',
+  'videos',
   'batches',
 ])
 

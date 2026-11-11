@@ -25,6 +25,10 @@ const LABELS: Record<string, string> = {
   batches: '배치',
   batches_read: '배치 조회',
   batches_cost: '배치 금액',
+  videos: '동영상 생성',
+  videos_read: '동영상 조회',
+  videos_cost: '동영상 금액',
+  videos_models: '동영상 모델 목록',
 }
 
 /**
