@@ -69,14 +69,14 @@ describe('사용 가이드', () => {
     expect(within(paidChips).queryByText('reasoning_effort')).not.toBeInTheDocument()
     const reasoning = screen.getByText('추론 조절').parentElement!
     const reasoningText = reasoning.textContent ?? ''
-    expect(reasoningText).toContain('reasoning_effort로 답하기 전에 추론하는 정도를 고릅니다.')
+    expect(reasoningText).toContain('reasoning_effort로 답하기 전에 추론하는 정도를 골라요.')
     expect(reasoningText).toContain('자체 서빙 모델 pickle-general이 받는 값은 none, minimal, low, medium, high, xhigh이고')
-    expect(reasoningText).toContain('none을 보내거나 필드를 생략하면 추론 없이 바로 답합니다.')
-    expect(reasoningText).toContain('minimal과 low는 추론에 1,024토큰, medium은 4,096토큰, high와 xhigh는 8,192토큰까지 씁니다.')
-    expect(reasoningText).toContain('Messages API로 호출하면 이 설정과 관계없이 추론하지 않습니다.')
-    expect(reasoningText).toContain('자체 서빙 모델은 일일 토큰 한도에서 차감됩니다.')
-    expect(reasoningText).toContain('2분 가까이 걸릴 수 있습니다.')
-    expect(reasoningText).not.toContain('unsupported_parameter로 거절됩니다')
+    expect(reasoningText).toContain('none을 보내거나 필드를 생략하면 추론 없이 바로 답해요.')
+    expect(reasoningText).toContain('minimal과 low는 추론에 1,024토큰, medium은 4,096토큰, high와 xhigh는 8,192토큰까지 써요.')
+    expect(reasoningText).toContain('Messages API로 호출하면 이 설정과 관계없이 추론하지 않아요.')
+    expect(reasoningText).toContain('자체 서빙 모델은 일일 토큰 한도에서 차감돼요.')
+    expect(reasoningText).toContain('2분 가까이 걸릴 수 있어요.')
+    expect(reasoningText).not.toContain('unsupported_parameter로 거절돼요')
     // 거부는 자체 서빙 쪽 사실이다. 유료 축에는 허용 목록이 아예 없어 목록 밖 필드가
     // 그대로 전달되므로, 제목이 축을 말하지 않으면 화면이 두 축 모두에 거부를 약속한다.
     expect(
