@@ -27,6 +27,7 @@ import {
   LLM_MESSAGES_EXAMPLE_MODEL,
   LLM_PAID_ONLY_PARAMS,
   LLM_PASSTHROUGH_ROUTES,
+  LLM_REASONING_EFFORTS,
   LLM_REASONING_PARAM,
   LLM_RELAYED_RESPONSE_HEADERS,
   LLM_REQUEST_BODY_MIB,
@@ -738,8 +739,14 @@ export const llmArticles: GuideArticle[] = [
           <p>채팅 요청 본문은 {LLM_REQUEST_BODY_MIB.max} MiB까지 받습니다. {LLM_REQUEST_BODY_MIB.largeAbove} MiB를 넘는 요청은 동시에 처리하는 수가 정해져 있어, 몰리면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">large_request_busy</code>(429)로 거절됩니다. base64로 넣는 파일과 이미지는 가능하면 URL로 보냅니다.</p>
           <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">verbosity</code>를 자체 서빙 모델에 보내면 거절됩니다. 사용하는 도구가 필드를 자동으로 붙인다면 자체 서빙 모델을 호출할 때 해당 설정을 끕니다.</p>
           <h3 className="font-medium">추론 조절</h3>
-          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_REASONING_PARAM}</code>는 유료 모델에서 답하기 전에 추론하는 정도를 고릅니다. 값은 공급자에게 그대로 전달하고, 보내지 않으면 모델의 기본값을 따릅니다. 자체 서빙 모델 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>은 추론 없이 바로 답하며, 이 필드를 보내면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>로 거절됩니다.</p>
-          <p>추론에 쓴 토큰은 출력 토큰에 포함되어 금액 한도에서 차감됩니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">max_completion_tokens</code>는 추론과 답을 합친 상한이라, 작게 주면 추론만 하다 빈 답으로 끝날 수 있습니다. 짧은 답만 필요하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">none</code>으로 추론을 끕니다. 추론이 긴 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code>을 켜서 받습니다.</p>
+          <p><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_REASONING_PARAM}</code>로 답하기 전에 추론하는 정도를 고릅니다. 유료 모델에는 값을 그대로 전달하고, 보내지 않으면 모델의 기본값을 따릅니다. 자체 서빙 모델 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{LLM_DEFAULT_MODEL}</code>이 받는 값은 {LLM_REASONING_EFFORTS.map((effort, i) => <span key={effort}>{i > 0 ? ', ' : ''}<code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">{effort}</code></span>)}이고 그 밖의 값은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">invalid_parameter_value</code>로 거절됩니다.</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">none</code>을 보내거나 필드를 생략하면 추론 없이 바로 답합니다.</li>
+            <li><code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">minimal</code>과 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">low</code>는 추론에 1,024토큰, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">medium</code>은 4,096토큰, <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">high</code>와 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">xhigh</code>는 8,192토큰까지 씁니다. 이 상한에 닿으면 추론을 멈추고 답을 씁니다.</li>
+            <li>Claude Code처럼 Messages API로 호출하면 이 설정과 관계없이 추론하지 않습니다.</li>
+          </ul>
+          <p>추론에 쓴 토큰은 출력 토큰에 포함되어 유료 모델은 금액 한도에서, 자체 서빙 모델은 일일 토큰 한도에서 차감됩니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">max_completion_tokens</code>는 추론과 답을 합친 상한이라, 작게 주면 추론만 하다 빈 답으로 끝날 수 있습니다. 자체 서빙 모델에서는 고른 값의 추론 상한보다 크게 줍니다.</p>
+          <p>추론할수록 답이 늦어집니다. 자체 서빙 모델에서 어려운 문제에 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">high</code>를 주면 답까지 2분 가까이 걸릴 수 있습니다. 짧은 답만 필요하면 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">none</code>으로 추론을 끄고, 추론이 긴 요청은 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">stream</code>을 켜서 받습니다.</p>
           <Alert variant="info" title="자체 서빙 모델은 목록에 없는 필드를 거부합니다">
             모르는 필드를 무시하고 전달하지 않고 요청 전체를 HTTP 400으로 되돌립니다. <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">error.code</code>는 <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-[0.85em] break-words text-neutral-800">unsupported_parameter</code>이며 메시지에 해당 필드가 나옵니다. 유료 모델은 공급자가 받는 요청을 그대로 보내므로 위 목록이 거부의 기준이 아닙니다.
           </Alert>
