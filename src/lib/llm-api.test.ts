@@ -80,8 +80,8 @@ describe('LLM API 사실 사본', () => {
     })
   })
 
-  test('에러 표는 사용자에게 도달하는 39개이고 상태 코드가 함께 고정된다', () => {
-    expect(LLM_ERROR_CODES).toHaveLength(39)
+  test('에러 표는 사용자에게 도달하는 40개이고 상태 코드가 함께 고정된다', () => {
+    expect(LLM_ERROR_CODES).toHaveLength(40)
     const byCode = Object.fromEntries(LLM_ERROR_CODES.map((e) => [e.code, e.status]))
     expect(byCode).toEqual({
       missing_api_key: 401,
@@ -111,6 +111,7 @@ describe('LLM API 사실 사본', () => {
       request_body_incomplete: 400,
       large_request_busy: 429,
       input_too_long: 400,
+      agent_busy: 429,
       output_limit_exceeded: 400,
       unknown_endpoint: 404,
       method_not_allowed: 405,
