@@ -46,7 +46,7 @@ describe('공지사항 관리', () => {
     await user.upload(within(drawer).getByLabelText('이미지 추가'), oversized)
 
     expect(
-      await screen.findByText('이미지 한 장의 크기는 2MB를 넘을 수 없습니다.'),
+      await screen.findByText('이미지 한 장은 2MB 이하여야 해요.'),
     ).toBeInTheDocument()
   })
 
@@ -65,7 +65,7 @@ describe('공지사항 관리', () => {
     await user.upload(within(drawer).getByLabelText('이미지 추가'), wrongType)
 
     expect(
-      await screen.findByText('PNG·JPEG·WebP·GIF 이미지만 첨부할 수 있습니다.'),
+      await screen.findByText('PNG와 JPEG, WebP, GIF 이미지만 첨부할 수 있어요.'),
     ).toBeInTheDocument()
   })
 
@@ -79,7 +79,7 @@ describe('공지사항 관리', () => {
 
     // 등록 전에는 이미지를 붙일 수 없다 — 업로드가 두 번째 호출이기 때문이다.
     expect(
-      within(drawer).getByText('공지를 먼저 등록하면 이미지를 첨부할 수 있습니다.'),
+      within(drawer).getByText('공지를 먼저 등록한 뒤 이미지를 첨부해요.'),
     ).toBeInTheDocument()
 
     await user.type(within(drawer).getByLabelText('제목'), '스토리지 증설 안내')
@@ -87,7 +87,7 @@ describe('공지사항 관리', () => {
     await user.click(within(drawer).getByRole('button', { name: '등록' }))
 
     expect(
-      await screen.findByText('공지를 등록했습니다. 이어서 이미지를 첨부할 수 있습니다.'),
+      await screen.findByText('공지를 등록했어요.'),
     ).toBeInTheDocument()
     await screen.findByRole('heading', { name: '공지 수정', level: 1 })
     expect(await screen.findByDisplayValue('스토리지 증설 안내')).toBeInTheDocument()
@@ -287,7 +287,7 @@ describe('공지사항 관리', () => {
     await user.type(within(drawer).getByLabelText('제목'), '점검 일정이 바뀌었습니다')
     await user.click(within(drawer).getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('공지를 수정했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('공지를 수정했어요.')).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: '목록으로 돌아가기' }))
     expect(await screen.findByRole('button', { name: '점검 일정이 바뀌었습니다' })).toBeInTheDocument()
   })
@@ -306,7 +306,7 @@ describe('공지사항 관리', () => {
     const confirm = await screen.findByRole('dialog', { name: '공지 삭제' })
     await user.click(within(confirm).getByRole('button', { name: '삭제' }))
 
-    expect(await screen.findByText('공지를 삭제했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('공지를 삭제했어요.')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('button', { name: '지난 점검 공지' })).not.toBeInTheDocument())
   })
 })

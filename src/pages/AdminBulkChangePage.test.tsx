@@ -142,12 +142,12 @@ describe('AdminBulkChangePage', () => {
     await user.click(screen.getByRole('button', { name: '이전' }))
     await user.selectOptions(screen.getByRole('combobox', { name: '유료 모델 목록 변경 방식' }), 'REPLACE')
     expect(
-      screen.getByText('선택한 모든 키의 유료 모델 차단 목록이 비워집니다.'),
+      screen.getByText('변경이 적용되는 키의 유료 모델 차단 목록을 비워요.'),
     ).toBeInTheDocument()
     await user.clear(screen.getByRole('textbox', { name: '유료 모델 허용·차단' }))
     await user.type(screen.getByRole('textbox', { name: '유료 모델 허용·차단' }), '-*/*-pro')
     expect(
-      screen.getByText('선택한 모든 키의 유료 모델 허용 목록이 비워집니다.'),
+      screen.getByText('변경이 적용되는 키의 유료 모델 허용 목록을 비워요.'),
     ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '미리보기' }))
     await screen.findByRole('table', { name: '일괄 변경 미리보기' })
@@ -160,12 +160,12 @@ describe('AdminBulkChangePage', () => {
     await user.click(screen.getByRole('button', { name: '이전' }))
     await user.clear(screen.getByRole('textbox', { name: '유료 모델 허용·차단' }))
     expect(
-      screen.getByText('선택한 모든 키의 유료 모델 허용·차단 목록이 비워집니다.'),
+      screen.getByText('변경이 적용되는 키의 유료 모델 허용 목록과 차단 목록을 모두 비워요.'),
     ).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: '기능 권한' }))
     await user.selectOptions(screen.getByRole('combobox', { name: '기능 권한 변경 방식' }), 'REPLACE')
     await user.click(screen.getByRole('checkbox', { name: /임베딩/ }))
-    expect(screen.getByText('모든 기능 권한이 회수됩니다')).toBeInTheDocument()
+    expect(screen.getByText('모든 기능 권한을 회수해요')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '미리보기' }))
     await screen.findByRole('table', { name: '일괄 변경 미리보기' })
     expect(bulkPreviewBodies[3].change.llmKeyLimits).toEqual({
@@ -183,9 +183,9 @@ describe('AdminBulkChangePage', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: '기능 권한 변경 방식' }), 'REPLACE')
     await user.click(screen.getByRole('checkbox', { name: /^Chat/ }))
     await user.click(screen.getByRole('checkbox', { name: /이미지 생성/ }))
-    expect(screen.queryByText('새 목록에 Chat이 없습니다')).not.toBeInTheDocument()
+    expect(screen.queryByText('새 목록에 Chat이 없어요')).not.toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /^Chat/ }))
-    expect(screen.getByText('새 목록에 Chat이 없습니다')).toBeInTheDocument()
+    expect(screen.getByText('새 목록에 Chat이 없어요')).toBeInTheDocument()
   })
 
   // A bulk add or remove lists names to apply to each key; the api checks the
@@ -259,7 +259,7 @@ describe('AdminBulkChangePage', () => {
     await chooseKind(user, '상태')
     await user.click(screen.getByRole('radio', { name: '폐기' }))
     await user.click(screen.getByRole('button', { name: '미리보기' }))
-    expect(await screen.findByText('되돌릴 수 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('되돌릴 수 없어요')).toBeInTheDocument()
     expect(bulkPreviewBodies[0].change).toEqual({
       kind: 'LLM_KEY_STATUS',
       llmKeyStatus: { action: 'REVOKE', reason: null },
@@ -310,7 +310,7 @@ describe('AdminBulkChangePage', () => {
     adminLlmKeyStore.find((key) => key.id === uuid(171))!.expiresAt = '2029-12-31T15:00:00Z'
     await openBulk(user, 'access-sys-admin', sysAdminUser, ['active-admin-key', 'pending-admin-key'])
     await chooseKind(user, '만료일')
-    expect(screen.getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있어요.')).toBeInTheDocument()
     await user.type(screen.getByLabelText(/새 만료일/), '2030-06-01')
     await user.click(screen.getByRole('button', { name: '미리보기' }))
     const preview = await screen.findByRole('table', { name: '일괄 변경 미리보기' })
@@ -389,7 +389,7 @@ describe('AdminBulkChangePage', () => {
     await chooseKind(user, '접근 권한')
     const search = screen.getByRole('searchbox', { name: /대상 사용자/ })
     await user.type(search, '정외부')
-    expect(await screen.findByText('찾은 사용자가 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('찾은 사용자가 없어요.')).toBeInTheDocument()
     expect(bulkPreviewBodies).toHaveLength(0)
     await user.clear(search)
     await user.type(screen.getByRole('searchbox', { name: /대상 사용자/ }), '홍길동')
@@ -592,9 +592,9 @@ describe('AdminBulkChangePage on domains', () => {
     expect(within(preview).getByRole('row', { name: /myblog\.pusan\.dev/ })).toHaveTextContent(
       '상태 연결됨 → 해제됨',
     )
-    expect(screen.getByText('되돌릴 수 없습니다')).toBeInTheDocument()
+    expect(screen.getByText('되돌릴 수 없어요')).toBeInTheDocument()
     expect(
-      screen.getByText('이름이 즉시 회수되어 다른 사용자가 사용할 수 있게 됩니다.'),
+      screen.getByText('이름을 즉시 반환해 다른 사용자가 새로 신청할 수 있어요. 연결된 라우트와 플랫폼이 관리하는 DNS 레코드는 비동기로 내려가요. 라우트 변경은 반영된 뒤 새 연결부터 적용돼요.'),
     ).toBeInTheDocument()
 
     const apply = screen.getByRole('button', { name: '2개에 적용' })
@@ -609,7 +609,7 @@ describe('AdminBulkChangePage on domains', () => {
 
     const result = await screen.findByRole('table', { name: '일괄 변경 결과' })
     expect(bulkApplyBodies).toHaveLength(1)
-    await screen.findByText('적용 결과가 저장됐습니다')
+    await screen.findByText('적용 결과를 저장했어요')
     for (const id of bulkApplyBodies[0].targetIds) {
       expect(within(result).getByRole('row', { name: new RegExp(id) })).toHaveTextContent('적용됨')
     }

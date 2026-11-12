@@ -20,7 +20,7 @@ export function ResourceShowcase() {
             지금 신청할 수 있는 리소스
           </h2>
           <p className="mt-4 text-base leading-relaxed text-neutral-300 sm:text-lg">
-            가상머신, LLM API 키, 도메인을 한 콘솔에서 신청하고 관리합니다.
+            가상머신과 LLM API 키, 도메인을 한곳에서 신청하고 관리해요.
           </p>
         </div>
 

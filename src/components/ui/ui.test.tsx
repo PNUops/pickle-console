@@ -522,7 +522,7 @@ describe('ErrorBoundary', () => {
     )
 
     expect(
-      screen.getByText(/할당 추이 화면을 불러오지 못했습니다/),
+      screen.getByText(/할당 추이 화면을 불러오지 못했어요/),
     ).toBeInTheDocument()
     expect(screen.getByText('나머지 화면')).toBeInTheDocument()
     logged.mockRestore()
@@ -550,13 +550,13 @@ describe('ErrorBoundary', () => {
         <Link to="/vms/57">다음 VM</Link>
       </MemoryRouter>,
     )
-    expect(screen.getByText(/사용량 화면을 불러오지 못했습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/사용량 화면을 불러오지 못했어요/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('link', { name: '다음 VM' }))
 
     expect(screen.getByText('멀쩡한 패널')).toBeInTheDocument()
     expect(
-      screen.queryByText(/사용량 화면을 불러오지 못했습니다/),
+      screen.queryByText(/사용량 화면을 불러오지 못했어요/),
     ).not.toBeInTheDocument()
     logged.mockRestore()
   })
@@ -573,7 +573,7 @@ describe('ErrorBoundary', () => {
 
     expect(screen.getByText('정적 폴백')).toBeInTheDocument()
     expect(
-      screen.queryByText(/히어로 3D 화면을 불러오지 못했습니다/),
+      screen.queryByText(/히어로 3D 화면을 불러오지 못했어요/),
     ).not.toBeInTheDocument()
     logged.mockRestore()
   })

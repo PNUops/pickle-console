@@ -56,7 +56,7 @@ export function AdminWorkspacesPage() {
 
 function AdminWorkspacesPageContent() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrg } = useAdminScope()
+  const { activeOrgId } = useAdminScope()
   const [searchParams, change, normalize] = useListUrl()
   const state = workspaceListState(searchParams)
   const { selectedId } = state
@@ -89,10 +89,6 @@ function AdminWorkspacesPageContent() {
     <div className="space-y-6 [overflow-wrap:anywhere]">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">워크스페이스 관리</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {activeOrg?.name ?? '플랫폼 전체'} 워크스페이스와 구성원을 조회합니다.
-          허용된 역할에서는 정보와 구성원, 소유자와 접근 권한을 지원합니다.
-        </p>
       </div>
 
       <div role="search" aria-label="워크스페이스 조회 조건" className="flex flex-wrap items-end gap-3">
@@ -129,7 +125,7 @@ function AdminWorkspacesPageContent() {
       {workspaces.isError && <Alert variant="danger">{workspaces.error.message}</Alert>}
       {workspaces.isSuccess && filtered.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          {workspaces.data.length === 0 ? '표시할 워크스페이스가 없습니다.' : '조회 조건에 맞는 워크스페이스가 없습니다.'}
+          {workspaces.data.length === 0 ? '표시할 워크스페이스가 없어요.' : '조건에 맞는 워크스페이스가 없어요.'}
         </Card>
       )}
       {workspaces.isSuccess && filtered.length > 0 && (
@@ -191,7 +187,7 @@ function AdminWorkspacesPageContent() {
                 onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} onDeleted={close} />
               : workspaces.isPending ? <Spinner label="관리 범위의 대상 확인 중" />
               : workspaces.isError ? <Alert variant="danger">{workspaces.error.message}</Alert>
-                : !selectedInScope ? <Alert variant="danger">현재 관리 범위의 목록에 이 워크스페이스가 없습니다.</Alert>
+                : !selectedInScope ? <Alert variant="danger">현재 관리 범위의 목록에 이 워크스페이스가 없어요.</Alert>
                   : <WorkspaceDetailBody key={selectedId} workspaceId={selectedId} tab={state.tab}
                     onTab={(tab) => change({ tab: tab === 'overview' ? undefined : tab }, false, true)} onDeleted={close} />
         )}
@@ -238,7 +234,7 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
         <h3 className="min-w-0 text-lg font-semibold text-neutral-900">{workspace.name}</h3>
         <div className="flex gap-2"><Badge>{workspace.canUpdateInfo || workspace.canManageMembers || workspace.canManageOwners || workspace.canInviteMembers ? '지원 편집 가능' : '조회 전용'}</Badge><WorkspaceKindBadge kind={workspace.kind} /></div>
       </div>
-      <p className="text-sm text-neutral-500">구성원은 전체 워크스페이스 기준이며 자원과 신청은 현재 관리 기관에서 조회합니다.</p>
+      <p className="text-sm text-neutral-500">구성원: 이 워크스페이스 전체 / 자원과 신청: 현재 관리 기관</p>
       <Tabs aria-label="워크스페이스 상세 탭" idPrefix="workspace-detail-" value={tab} onChange={onTab}
         tabs={[{ id: 'overview', label: '개요' }, { id: 'members', label: '구성원' }, { id: 'resources', label: '자원과 신청' }, ...(canReadInvitations ? [{ id: 'invitations', label: '대기 초대' }] : [])]} />
       <TabPanel id="overview" idPrefix="workspace-detail-" active={tab === 'overview'}>
@@ -263,8 +259,8 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
       </TabPanel>
 
       <TabPanel id="members" idPrefix="workspace-detail-" active={tab === 'members'} className="space-y-2">
-        {workspace.members == null ? <p className="text-sm text-neutral-500">구성원 관계는 현재 업무로 제공되지 않습니다.</p> : workspace.members.length === 0 ? (
-          <p className="text-sm text-neutral-500">구성원이 없습니다.</p>
+        {workspace.members == null ? <p className="text-sm text-neutral-500">구성원 정보를 조회할 권한이 없어요.</p> : workspace.members.length === 0 ? (
+          <p className="text-sm text-neutral-500">구성원이 없어요.</p>
         ) : (
           <Table className="min-w-[38rem] sm:min-w-0">
             <THead>
@@ -306,7 +302,7 @@ function WorkspaceDetailBody({ workspaceId, tab, onTab, onDeleted }: { workspace
         <WorkspaceResources workspaceId={workspaceId} />
       </TabPanel>
       <TabPanel id="invitations" idPrefix="workspace-detail-" active={tab === 'invitations'}>
-        {canReadInvitations ? <AdminWorkspacePendingInvitations key={`${workspace.id}:${workspace.canInviteMembers}`} workspace={workspace} /> : <Alert>이 역할에서는 대기 초대 정보를 조회할 수 없습니다.</Alert>}
+        {canReadInvitations ? <AdminWorkspacePendingInvitations key={`${workspace.id}:${workspace.canInviteMembers}`} workspace={workspace} /> : <Alert>대기 초대 정보를 조회할 권한이 없어요.</Alert>}
       </TabPanel>
     </div>
   )
@@ -337,11 +333,10 @@ function WorkspaceResources({ workspaceId }: { workspaceId: string }) {
   })
   const counts = useQueries({ queries: kinds.map((kind, index) => ({ queryKey: ['admin', 'workspace-resources', workspaceId, activeOrgId ?? null, kind.type, requestReaderKey(user)], queryFn: kind.read, enabled: readable[index] })) })
   return <div className="space-y-3 text-sm">
-    <p className="text-neutral-500">자원과 신청은 현재 관리 기관의 범위에서 조회합니다.</p>
-    <p className="text-neutral-500">개수는 연결된 목록의 조회 조건을 따릅니다. 종료 이력을 포함한 개수와 다를 수 있습니다.</p>
+    <p className="text-neutral-500">목록 기준</p>
     <ul className="space-y-2">{kinds.map((kind, index) => <li key={kind.type} className="flex flex-wrap items-center gap-2">
       {kind.to && readable[index] ? <Link to={kind.to} className="text-primary-700 hover:underline">{kind.label} 목록</Link> : <span>{kind.label}</span>}
-      {!readable[index] ? <span>제공되지 않음</span> : counts[index].isPending ? <Spinner label={`${kind.label} 수 확인 중`} /> : counts[index].isError ? <span className="text-danger-700">개수를 확인하지 못했습니다.</span> : <span>조회 범위 {counts[index].data}개</span>}
+      {!readable[index] ? <span>제공되지 않음</span> : counts[index].isPending ? <Spinner label={`${kind.label} 수 확인 중`} /> : counts[index].isError ? <span className="text-danger-700">개수를 확인하지 못했어요.</span> : <span>조회 범위 {counts[index].data}개</span>}
     </li>)}</ul>
     {canQueryWork(user, REQUEST_READ_WORK, { orgId: activeOrgId, workspaceId }, SYS_READERS) && <Link to={adminPaths.requests(activeOrgId, workspaceId)} className="inline-flex text-primary-700 hover:underline">이 워크스페이스의 신청 보기</Link>}
   </div>

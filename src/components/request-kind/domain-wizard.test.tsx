@@ -63,7 +63,7 @@ describe('domain request wizard', () => {
     await fillTheForm(user)
     await user.click(await screen.findByRole('button', { name: '신청 제출' }))
 
-    expect(await screen.findByText('신청이 승인되었습니다')).toBeInTheDocument()
+    expect(await screen.findByText('신청이 승인됐어요')).toBeInTheDocument()
     expect(screen.queryByText(/관리자가 검토한 뒤/)).not.toBeInTheDocument()
     // 이름만으로는 아직 아무 곳도 가리키지 않는다 — 그 말을 하지 않으면
     // 침묵이 고장으로 읽힌다.
@@ -81,7 +81,7 @@ describe('domain request wizard', () => {
     await fillTheForm(user)
     await user.click(await screen.findByRole('button', { name: '신청 제출' }))
 
-    expect(await screen.findByText('신청이 접수되었습니다')).toBeInTheDocument()
+    expect(await screen.findByText('신청이 접수됐어요')).toBeInTheDocument()
     expect(screen.getByText(/관리자가 검토한 뒤/)).toBeInTheDocument()
   })
 
@@ -93,7 +93,7 @@ describe('domain request wizard', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     expect(
-      await screen.findByText(/소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요/),
+      await screen.findByText(/소문자와 숫자, 하이픈만 사용해 3~40자로 입력해 주세요/),
     ).toBeInTheDocument()
     expect(createdRequestBodies).toHaveLength(0)
   })

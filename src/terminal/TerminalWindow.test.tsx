@@ -169,7 +169,7 @@ describe('TerminalWindow — 실패와 재연결', () => {
       message: '서버 상세 메시지',
     })
     expect(
-      await screen.findByText('웹 터미널 기능이 현재 비활성화되어 있습니다.'),
+      await screen.findByText('웹 터미널이 비활성화되어 있어요.'),
     ).toBeInTheDocument()
     expect(StubWebSocket.instances).toHaveLength(0)
   })
@@ -198,7 +198,7 @@ describe('TerminalWindow — 실패와 재연결', () => {
     const ws = StubWebSocket.last()
     act(() => ws.simulateOpen())
     act(() => ws.simulateServerClose(4002))
-    expect(await screen.findByText('관리자가 세션을 종료했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('관리자가 세션을 종료했어요.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '다시 연결' })).not.toBeInTheDocument()
   })
 })
@@ -207,7 +207,7 @@ describe('TerminalWindow — opener 없음 / 종료 통지', () => {
   test('opener가 없으면 요청도 접속도 하지 않고 안내만 띄운다', async () => {
     setOpener(null)
     render(<TerminalWindow vmId={VM_ID} />)
-    expect(await screen.findByText('콘솔에서 열어 주세요')).toBeInTheDocument()
+    expect(await screen.findByText('터미널을 연결할 수 없어요')).toBeInTheDocument()
     expect(postSpy).not.toHaveBeenCalled()
     expect(StubWebSocket.instances).toHaveLength(0)
   })
@@ -225,7 +225,7 @@ describe('TerminalWindow — opener 없음 / 종료 통지', () => {
       v: TERMINAL_MESSAGE_VERSION,
       type: 'shutdown',
     })
-    expect(await screen.findByText('세션이 종료되었습니다')).toBeInTheDocument()
+    expect(await screen.findByText('세션이 종료됐어요')).toBeInTheDocument()
     expect(ws.closedByClient?.code).toBe(1000)
     expect(screen.queryByRole('button', { name: '다시 연결' })).not.toBeInTheDocument()
   })
@@ -253,7 +253,7 @@ describe('TerminalWindow — 세션 종료 브로드캐스트', () => {
     })
     channel.close()
 
-    expect(await screen.findByText('세션이 종료되었습니다')).toBeInTheDocument()
+    expect(await screen.findByText('세션이 종료됐어요')).toBeInTheDocument()
     expect(ws.closedByClient?.code).toBe(1000)
   })
 })
@@ -272,7 +272,7 @@ describe('TerminalWindow — 답하지 않는 opener', () => {
         await vi.advanceTimersByTimeAsync(9000)
       })
 
-      expect(screen.getByText('콘솔에서 열어 주세요')).toBeInTheDocument()
+      expect(screen.getByText('터미널을 연결할 수 없어요')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: '다시 연결' })).not.toBeInTheDocument()
       expect(StubWebSocket.instances).toHaveLength(0)
     } finally {

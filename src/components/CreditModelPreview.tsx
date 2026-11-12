@@ -58,14 +58,14 @@ export function CreditModelPreview({
   if (invalid) {
     return (
       <p className="text-sm text-neutral-500">
-        목록에 고칠 것이 있어 미리보기를 멈췄습니다. 틀린 항목을 빼고 세면 허용은 넓게,
-        차단은 좁게 잘못 나옵니다.
+        입력 오류를 고치면 미리보기를 볼 수 있어요. 잘못된 항목을 빼고 계산하면 허용
+        범위가 넓어지거나 차단 범위가 좁아질 수 있어요.
       </p>
     )
   }
 
   if (catalogue.models.length === 0 && catalogue.lastSuccessAt == null) {
-    return <p className="text-sm text-foreground-muted">공급자 목록의 성공 기록이 없어 패턴 후보를 확인할 수 없습니다. 올바른 모델 패턴은 직접 입력할 수 있습니다.</p>
+    return <p className="text-sm text-foreground-muted">모델 목록을 아직 불러오지 못해 패턴 후보를 확인할 수 없어요. 모델 패턴은 직접 입력할 수 있어요.</p>
   }
 
   const total = catalogue.models.length
@@ -75,18 +75,17 @@ export function CreditModelPreview({
   return (
     <div className="space-y-1 rounded border border-neutral-200 bg-neutral-50 p-3 text-sm">
       <p className="font-medium text-neutral-800">
-        패턴 조건을 통과하는 후보 {usable.length}개. 저장된 카탈로그 {total}개 기준입니다.
+        패턴 조건을 통과하는 후보 {usable.length}개. 저장된 카탈로그 {total}개 기준이에요.
       </p>
-      {unrestricted && <p>허용 목록과 차단 목록이 모두 비어 있어 모델 패턴으로 제한하지 않습니다.</p>}
-      {failed && <p className="text-amber-700">새 조회가 실패해 마지막으로 조회한 목록으로 비교합니다.</p>}
+      {unrestricted && <p>허용 목록과 차단 목록이 모두 비어 있어 모델 패턴으로 제한하지 않아요.</p>}
+      {failed && <p className="text-amber-700">새 조회가 실패해 마지막으로 조회한 목록으로 비교해요.</p>}
       <p className="text-neutral-600">
         {dearest
-          ? `기본 출력 단가가 알려진 후보 중 최대는 ${dearest.id}, 백만 토큰당 출력 $${dearest.completionPricePerMillion?.toLocaleString('ko-KR')}입니다.`
+          ? `기본 출력 단가가 알려진 후보 중 최대는 ${dearest.id}, 백만 토큰당 출력 $${dearest.completionPricePerMillion?.toLocaleString('ko-KR')}이에요.`
           : usable.length > 0
-            ? '기본 출력 단가를 아는 후보가 없어 단가 최댓값을 확인할 수 없습니다.'
-            : '현재 카탈로그에는 패턴 조건을 통과하는 후보가 없습니다. 직접 입력한 모델이 목록에 아직 없을 수도 있습니다.'}
+            ? '기본 출력 단가를 아는 후보가 없어 단가 최댓값을 확인할 수 없어요.'
+            : '현재 카탈로그에는 패턴 조건을 통과하는 후보가 없어요. 직접 입력한 모델이 목록에 아직 없을 수도 있어요.'}
       </p>
-      <p className="text-xs text-foreground-muted">기능 권한, 예산과 자격증명 연결, 키 상태와 공급자 지원 등은 별도 호출 조건입니다. 이 후보 수는 호출 허가나 성공을 보장하지 않습니다. 다른 가격 축과 조건별 단가는 가격 상세에서 확인해 주세요.</p>
       {denied.length > 0 ? (
         <p className="text-neutral-600">
           {blocked.length > 0
@@ -94,7 +93,7 @@ export function CreditModelPreview({
                 .slice(0, HEAD)
                 .map((model) => model.id)
                 .join(', ')}${blocked.length > HEAD ? ' 외' : ''}`
-            : '차단 목록이 지금 카탈로그에서 걷어낸 모델은 없습니다.'}
+            : '차단 목록이 지금 카탈로그에서 걷어낸 모델은 없어요.'}
         </p>
       ) : null}
       {usable.length > 0 ? (

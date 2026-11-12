@@ -368,12 +368,12 @@ function buildLimits(limits: BulkDraft['limits']): BuildResult {
     }
   }
   if (body.rpm != null && body.tpm != null && body.tpm < body.rpm) {
-    errors[`${LIMITS}.tpm`] = 'TPM은 RPM보다 작을 수 없습니다.'
+    errors[`${LIMITS}.tpm`] = 'TPM은 RPM보다 작을 수 없어요.'
   }
   if (chosen.has('creditLimit')) {
     const credit = Number(limits.creditLimit)
     if (limits.creditLimit.trim() === '' || !Number.isFinite(credit) || credit < 0) {
-      errors[`${LIMITS}.creditLimit`] = '금액 한도는 0 이상의 숫자여야 합니다.'
+      errors[`${LIMITS}.creditLimit`] = '금액 한도는 0 이상의 숫자여야 해요.'
     } else {
       body.creditLimit = credit
     }

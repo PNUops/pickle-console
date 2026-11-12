@@ -129,7 +129,7 @@ describe('관리자 VM 상세', () => {
     await user.click(screen.getByRole('button', { name: '종료 옵션' }))
     await user.click(screen.getByRole('menuitem', { name: '강제 종료' }))
     const dialog = await screen.findByRole('dialog', { name: 'VM 강제 종료' })
-    expect(within(dialog).getByText(/저장되지 않은 데이터는 유실될 수 있습니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/저장하지 않은 데이터는 유실될 수 있어요/)).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: '강제 종료' })).toBeEnabled()
   })
 
@@ -140,7 +140,7 @@ describe('관리자 VM 상세', () => {
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.click(screen.getByRole('button', { name: '종료' }))
     const dialog = await screen.findByRole('dialog', { name: 'VM 종료' })
-    expect(within(dialog).getByText(/정지 보호 설정과 무관하게/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/중지 보호 설정이 켜져 있어도 요청할 수 있어요/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '종료' }))
 
     expect(
@@ -162,7 +162,7 @@ describe('관리자 VM 상세', () => {
     renderAsSysAdmin(`/admin/vms/${uuid(61)}?org=${uuid(1)}`)
 
     expect(
-      await screen.findByText('선택한 관리 범위의 가상머신이 아닙니다'),
+      await screen.findByText('선택한 관리 범위의 가상머신이 아니에요'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'ai-train' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '종료' })).not.toBeInTheDocument()
@@ -285,7 +285,7 @@ describe('VM detail deletion capabilities', () => {
     await screen.findByRole('heading', { name: 'algo-judge' })
     await user.type(screen.getByLabelText('삭제 사유'), '기존 범위의 입력')
     await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
-    expect(await screen.findByText('선택한 관리 범위의 가상머신이 아닙니다')).toBeInTheDocument()
+    expect(await screen.findByText('선택한 관리 범위의 가상머신이 아니에요')).toBeInTheDocument()
     expect(screen.queryByLabelText('삭제 사유')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()

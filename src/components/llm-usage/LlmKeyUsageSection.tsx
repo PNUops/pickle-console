@@ -145,8 +145,8 @@ export default function LlmKeyUsageSection({
       </CardHeader>
       <CardContent className="space-y-4">
         {unissued && (
-          <Alert variant="info" title="아직 발급되지 않은 키입니다">
-            발급 전에는 이 키로 인증되는 요청이 없으므로 사용 기록도 없습니다.{' '}
+          <Alert variant="info" title="아직 발급되지 않은 키예요">
+            발급 전에는 이 키로 인증되는 요청이 없으므로 사용 기록도 없어요.{' '}
             {copy.unissuedHint}
           </Alert>
         )}
@@ -155,7 +155,7 @@ export default function LlmKeyUsageSection({
           <>
             {status === 'REVOKED' && (
               <p className="text-sm text-neutral-600">
-                폐기된 키입니다. 아래는 폐기되기 전까지 남은 기록입니다.
+                폐기된 키의 사용 기록이에요.
               </p>
             )}
 
@@ -167,7 +167,7 @@ export default function LlmKeyUsageSection({
             {usage.isError && !data && <Alert variant="danger">{usage.error.message}</Alert>}
             {usage.isError && data && (
               <Alert variant="warning">
-                사용량을 일시적으로 불러오지 못했습니다. 이전에 받은 값을 표시합니다.
+                사용량을 일시적으로 불러오지 못했어요. 이전에 받은 값을 표시해요.
               </Alert>
             )}
 
@@ -178,7 +178,7 @@ export default function LlmKeyUsageSection({
                 <p className="text-xs text-neutral-500">
                   {data.from} ~ {data.to}
                 </p>
-                {admin && owned?.fetchedAt && <p className="text-xs text-neutral-500">콘솔 마지막 GET 성공 <ObservationMoment value={owned.fetchedAt} /></p>}
+                {admin && owned?.fetchedAt && <p className="text-xs text-neutral-500">최근 조회 <ObservationMoment value={owned.fetchedAt} /></p>}
 
                 {/* 합계는 타일이, 가장 많이 쓴 날은 위 문장이 말한다. 추정 비율은
                     합계 카드에 붙여 둔다: 가장 먼저 읽히는 숫자가 실측인 척하면 안 된다. */}
@@ -218,9 +218,9 @@ export default function LlmKeyUsageSection({
                 {/* 한도에 걸린 요청만은 사용자가 할 수 있는 일이 있는 실패다 —
                     다른 실패와 같은 자리에 묻지 않고 먼저 꺼내 말한다. */}
                 {totals.rateLimited > 0 && (
-                  <Alert variant="warning" title="한도에 걸려 거부된 요청이 있습니다">
+                  <Alert variant="warning" title="한도에 걸려 거부된 요청이 있어요">
                     {data.from} ~ {data.to} 사이에 {formatRequests(totals.rateLimited)}가 한도에
-                    걸려 거부됐습니다. {copy.rateLimitedAction}
+                    걸려 거부됐어요. {copy.rateLimitedAction}
                   </Alert>
                 )}
 
@@ -358,7 +358,7 @@ export default function LlmKeyUsageSection({
                   </section>
                 )}
 
-                </> : <Alert>토큰·모델·오류·지연 관측은 현재 업무로 제공되지 않습니다.</Alert>}
+                </> : <Alert>토큰과 모델, 오류, 지연 관측은 현재 업무로 제공되지 않아요.</Alert>}
                 <BudgetSection budget={data.budget} />
                 {/* 여기부터는 관리자만 본다. 키 소유자는 모델별 금액까지만 보고
                     일별 금액도 경로별 분해도 보지 않는다 — 그 경계가 응답 모양에
@@ -496,19 +496,7 @@ function StatTile({
   )
 }
 
-/**
- * The two budget axes.
- *
- * One is counted here and the other is enforced by the vendor. Only the money
- * gauge carries an observation time, because the token side's batching delay
- * is stated once by the report moment in the card header; putting two numbers
- * side by side and saying nothing makes them read as the same moment.
- *
- * The vendor is not named on this screen. An administrator has to find that
- * account and revoke a key in it, so their screens say who it is; a student
- * cannot act on the name and it is not theirs to know. The comment keeps the
- * fact that the code needs and the screen does not.
- */
+/** Keep daily token progress separate from cumulative reported money. */
 function BudgetSection({ budget }: { budget: LlmKeyBudget | AdminLlmKeyUsage['trend']['budget'] }) {
   const tokenLimit = budget.dailyTokens
   const creditLimit = budget.creditLimit == null ? null : Number(budget.creditLimit)
@@ -523,25 +511,23 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget | AdminLlmKeyUsage['tr
         ratio={tokenLimit != null && tokenLimit > 0 && isExactTokenCount(tokenLimit) && isExactTokenCount(budget.todayTokens) ? budget.todayTokens / tokenLimit : null}
         note={
           tokenLimit == null
-            ? '일일 토큰 한도가 없습니다.'
+            ? '일일 토큰 한도가 없어요.'
             : tokenLimit === 0
-              ? '토큰 한도가 0이라 자체 서빙 모델을 쓸 수 없습니다.'
+              ? '토큰 한도가 0이라 자체 서빙 모델을 쓸 수 없어요.'
               : budget.quotaExhausted
-                ? '오늘 한도에 도달해 자체 서빙 모델 요청이 거절되고 있습니다. 자정(KST)에 초기화됩니다.'
+                ? '오늘 한도에 도달해 자체 서빙 모델 요청이 거절되고 있어요. 자정(KST)에 초기화돼요.'
                 : undefined
         }
-      /> : <p className="text-sm text-neutral-500">토큰 예산 정보를 제공할 수 없습니다.</p>}
+      /> : <p className="text-sm text-neutral-500">토큰 예산 정보를 제공할 수 없어요.</p>}
       {creditLimit != null ? <BudgetGauge
-        label="금액 사용"
+        label="누적 금액 사용"
         usedLabel={creditUsage == null ? null : formatUsd(creditUsage)}
-        limitLabel={creditLimit > 0 ? formatUsd(creditLimit) : null}
-        ratio={creditUsage != null && creditLimit > 0 ? creditUsage / creditLimit : null}
+        limitLabel={null}
+        ratio={null}
         note={
           creditLimit === 0
-            ? '금액 한도가 없어 유료 모델을 쓸 수 없습니다.'
-            : budget.creditDepletionForecast
-              ? `이 속도면 ${budget.creditDepletionForecast}에 한도에 도달합니다.`
-              : undefined
+            ? '금액 한도가 없어 유료 모델을 쓸 수 없어요.'
+            : undefined
         }
         freshness={
           budget.creditUsageAt ? (
@@ -550,7 +536,7 @@ function BudgetSection({ budget }: { budget: LlmKeyBudget | AdminLlmKeyUsage['tr
             </>
           ) : undefined
         }
-      /> : <p className="text-sm text-neutral-500">금액 정보를 제공할 수 없습니다.</p>}
+      /> : <p className="text-sm text-neutral-500">금액 정보를 제공할 수 없어요.</p>}
     </section>
   )
 }

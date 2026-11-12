@@ -55,12 +55,10 @@ function AdminExpiryContent() {
   const rows = useQuery({ queryKey: [...ADMIN_DEADLINE_QUERY_KEY, { ...query, reader: `${user?.id ?? 'none'}:${permissions.fingerprint}` }],
     queryFn: () => fetchAdminResourceDeadlines(query), enabled: !state.invalid && scope.ready && canRead })
   const outsidePage = rows.isSuccess && rows.data.page > 0 && rows.data.page >= rows.data.totalPages
-  if (!canRead) return <Alert variant="danger">선택한 종류의 자원 기한을 조회할 권한이 없습니다.</Alert>
+  if (!canRead) return <Alert variant="danger">선택한 종류의 자원 기한을 조회할 권한이 없어요.</Alert>
   return <div className="space-y-6">
     <div>
       <h1 className="text-2xl font-bold text-neutral-900">만료 관리</h1>
-      <p className="mt-1 text-sm text-neutral-500">{scope.activeOrg?.name ?? '플랫폼 전체'} 자원의 주 기한을 자원당 하나씩 조회합니다. 관련 날짜와 관측 상태는 별도로 확인합니다.</p>
-      <p className="mt-1 text-sm text-neutral-500">기한 경과는 실제 중지·회수·해제 완료를 뜻하지 않습니다. 상세 화면에서 현재 상태와 변경 조건을 확인해 주세요.</p>
     </div>
     <FilterBar tabs={TABS} status={state.window} onStatus={(window) => change({ window: window === 'D7' ? undefined : window }, true)} showOrgFilter={false} orgId={scope.activeOrgId} onOrg={() => {}} orgs={[]}>
       <FormField label="자원 종류"><Select value={state.type ?? ''} onChange={(event) => change({ type: event.target.value || undefined, deadlineKind: undefined }, true)}>
@@ -88,8 +86,8 @@ function AdminExpiryContent() {
       </div>
       {rows.isPending && <Spinner label="자원 기한 불러오는 중" />}
       {rows.isError && <Alert variant="danger">{rows.error.message}</Alert>}
-      {outsidePage ? <Card className="space-y-3 p-6"><p>요청한 페이지가 조회 범위를 벗어났습니다.</p><Button variant="secondary" onClick={() => change({ page: undefined })}>첫 페이지 보기</Button></Card>
-        : rows.isSuccess && rows.data.content.length === 0 ? <Card className="p-8 text-center text-sm text-neutral-500">조건에 해당하는 자원 기한이 없습니다.</Card>
+      {outsidePage ? <Card className="space-y-3 p-6"><p>요청한 페이지가 조회 범위를 벗어났어요.</p><Button variant="secondary" onClick={() => change({ page: undefined })}>첫 페이지 보기</Button></Card>
+        : rows.isSuccess && rows.data.content.length === 0 ? <Card className="p-8 text-center text-sm text-neutral-500">조건에 맞는 자원 기한이 없어요.</Card>
         : rows.isSuccess && <DataTable caption="자원 기한 목록" className="min-w-[64rem]">
           <THead><TR><TH>자원</TH><TH>주 기한</TH><TH>관측 상태</TH><TH>관측 시각</TH><TH>상세</TH></TR></THead>
           <TBody>{rows.data.content.map((row) => <DeadlineRow key={`${row.type}:${row.id}`} row={row} />)}</TBody>

@@ -47,7 +47,7 @@ export function VmPolicyForm({
     setValidation(undefined)
     setRuleErrors({})
     if (value.length > MAX_USER_RULES) {
-      setValidation(`규칙은 ${MAX_USER_RULES}개까지 추가할 수 있습니다.`)
+      setValidation(`규칙은 ${MAX_USER_RULES}개까지 추가할 수 있어요.`)
       return
     }
     const next: VmRuleValue[] = []
@@ -70,14 +70,14 @@ export function VmPolicyForm({
         { term: '기본 수신', description: '차단' },
         { term: '기본 송신', description: '허용' },
       ]} />
-      <p className="text-xs text-foreground-muted">같은 워크스페이스의 VM도 수신 허용 규칙이 필요합니다.</p>
+      <p className="text-xs text-foreground-muted">같은 워크스페이스의 VM도 수신 허용 규칙이 필요해요.</p>
       <NetworkSystemRules rules={systemRules} />
       {error && <Alert variant="danger">{error}</Alert>}
       {validation && <Alert variant="danger">{validation}</Alert>}
       {value.length === 0 ? (
-        <p className="text-sm text-foreground-muted">추가한 규칙이 없습니다.</p>
+        <p className="text-sm text-foreground-muted">추가한 규칙이 없어요.</p>
       ) : (
-        <p className="text-xs text-foreground-muted">위에서부터 먼저 일치하는 규칙을 따릅니다.</p>
+        <p className="text-xs text-foreground-muted">위에서부터 먼저 일치하는 규칙을 따라요.</p>
       )}
       <div className="space-y-3">
         {value.map((rule, index) => readOnlyAdmin ? (
@@ -140,11 +140,11 @@ export function VmPolicyForm({
           }}>규칙 추가</Button>
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" loading={busy} disabled={submitBlocked}>통신 정책 저장</Button>
-            <p className="text-xs text-foreground-muted">저장 후 설정 반영을 기다립니다.</p>
+            <p className="text-xs text-foreground-muted">저장 후 설정 반영을 기다려요.</p>
           </div>
         </div>
       ) : surface === 'user' ? (
-        <PermissionNotice>소유자와 편집자만 변경할 수 있습니다.</PermissionNotice>
+        <PermissionNotice>소유자와 편집자만 변경할 수 있어요.</PermissionNotice>
       ) : null}
     </form>
   )

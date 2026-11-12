@@ -27,7 +27,7 @@ describe('약관 재동의 게이트', () => {
 
     renderApp('/console')
     expect(
-      await screen.findByRole('heading', { name: '약관 재동의가 필요합니다' }),
+      await screen.findByRole('heading', { name: '변경된 내용을 확인해 주세요' }),
     ).toBeInTheDocument()
 
     const boxes = await screen.findAllByRole('checkbox')
@@ -78,7 +78,7 @@ describe('약관 재동의 게이트', () => {
 
     renderApp('/console')
     expect(
-      await screen.findByRole('heading', { name: '약관 재동의가 필요합니다' }),
+      await screen.findByRole('heading', { name: '변경된 내용을 확인해 주세요' }),
     ).toBeInTheDocument()
 
     // first submit → 409 → the gate refetches the profile (new versions), not a loop
@@ -86,7 +86,7 @@ describe('약관 재동의 게이트', () => {
     for (const box of boxes) await user.click(box)
     await user.click(screen.getByRole('button', { name: '동의하고 계속하기' }))
     expect(
-      await screen.findByText('약관이 갱신되었습니다. 새 내용을 확인한 뒤 다시 동의해 주세요.'),
+      await screen.findByText('약관이 바뀌었어요. 새 내용을 확인하고 다시 동의해 주세요.'),
     ).toBeInTheDocument()
 
     // re-agree to the revised documents → second submit succeeds → dashboard

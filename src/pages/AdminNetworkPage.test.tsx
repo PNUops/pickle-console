@@ -59,17 +59,17 @@ describe('네트워크 — 릴레이 탭', () => {
 
     const confirm = await screen.findByRole('dialog', { name: '토큰 재발급' })
     expect(
-      within(confirm).getByText(/재발급 즉시 이전 토큰이 무효화됩니다/),
+      within(confirm).getByText(/이전 토큰으로는 새 동기화를 인증할 수 없어요/),
     ).toBeInTheDocument()
     await user.click(within(confirm).getByRole('button', { name: '토큰 재발급' }))
 
     const result = await screen.findByRole('dialog', { name: '릴레이 토큰 발급 완료' })
-    expect(within(result).getByText('이 토큰은 다시 볼 수 없습니다')).toBeInTheDocument()
+    expect(within(result).getByText('이 토큰은 다시 볼 수 없어요')).toBeInTheDocument()
     expect(within(result).getByText(RELAY_TOKEN_PLAINTEXT)).toBeInTheDocument()
     expect(within(result).getByRole('button', { name: '복사' })).toBeInTheDocument()
 
     // 닫으면 평문은 화면에서 사라진다 (다시 볼 수 없음).
-    await user.click(within(result).getByRole('button', { name: '확인했습니다' }))
+    await user.click(within(result).getByRole('button', { name: '확인했어요' }))
     await waitFor(() =>
       expect(screen.queryByText(RELAY_TOKEN_PLAINTEXT)).not.toBeInTheDocument(),
     )
@@ -95,7 +95,7 @@ describe('네트워크 — 포트포워딩 탭', () => {
     expect(within(removingRow).getByText('삭제 진행 중')).toBeInTheDocument()
     await user.click(within(pendingRow).getByRole('button', { name: 'web-lab' }))
     const drawer = await screen.findByRole('dialog', { name: '포트 매핑 상세' })
-    expect(within(drawer).getByText(/relay 설정 확인을 기다리고 있습니다/)).toBeInTheDocument()
+    expect(within(drawer).getByText(/릴레이 설정 확인을 기다리고 있어요/)).toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: '정지' })).not.toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: '재개' })).not.toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
@@ -117,7 +117,7 @@ describe('네트워크 — 포트포워딩 탭', () => {
     await user.click(submit)
 
     // 성공 피드백은 토스트 — 상태 필터로 행이 빠져 드로어가 닫혀도 남는다.
-    expect(await screen.findByText(/포트 매핑 정지 설정을 저장했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/포트 매핑 정지 설정을 저장했어요/)).toBeInTheDocument()
     // 목록 재조회로 드로어의 상태 배지도 정지됨으로 바뀐다.
     expect(await within(drawer).findByText('정지됨')).toBeInTheDocument()
     // 정지된 매핑은 재개 버튼을 노출한다.
@@ -175,7 +175,7 @@ describe('네트워크 — 포트포워딩 탭', () => {
     await user.type(editor.getByLabelText('동시 연결 상한'), '2048')
     await user.type(editor.getByLabelText('출발지별 초당 신규'), '0')
     await user.click(editor.getByRole('button', { name: '가드 저장' }))
-    expect(await screen.findByText(/연결 가드가 저장되었습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/연결 가드를 저장했어요/)).toBeInTheDocument()
     expect(captured).toEqual({
       ctMax: 2048,
       newConnRate: null,
@@ -205,7 +205,7 @@ describe('네트워크 — 캠퍼스 IP 탭', () => {
 
     // REQUESTED → 승인
     await user.click(within(drawer).getByRole('button', { name: '승인' }))
-    expect(await screen.findByText(/'승인됨' 처리 기록을 저장했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/'승인됨' 처리 기록을 저장했어요/)).toBeInTheDocument()
 
     // APPROVED → 할당: 주소 없이 누르면 클라이언트 검증이 막는다.
     const grant = await within(drawer).findByRole('button', { name: '할당' })
@@ -219,13 +219,13 @@ describe('네트워크 — 캠퍼스 IP 탭', () => {
     await user.type(address, '203.0.113.9')
     await user.click(grant)
     expect(
-      await within(drawer).findByText('교내 IP는 10.0.0.0/8 대역의 주소여야 합니다.'),
+      await within(drawer).findByText('교내 IP는 10.0.0.0/8 대역의 주소를 입력해 주세요.'),
     ).toBeInTheDocument()
 
     await user.clear(address)
     await user.type(address, '10.20.30.40')
     await user.click(grant)
-    expect(await screen.findByText(/'할당됨' 처리 기록을 저장했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/'할당됨' 처리 기록을 저장했어요/)).toBeInTheDocument()
     expect(await within(drawer).findByText('10.20.30.40')).toBeInTheDocument()
     // GRANTED → 회수만 가능하다.
     expect(await within(drawer).findByRole('button', { name: '회수' })).toBeInTheDocument()

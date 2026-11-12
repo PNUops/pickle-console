@@ -126,39 +126,26 @@ export function AccountUsageSection({ accountId, orgId }: { accountId: string; o
         <option value="REPORTED_COST_DESC">보고 금액 많은 순</option><option value="REQUESTS_DESC">요청 많은 순</option><option value="TOKENS_DESC">토큰 많은 순</option>
       </Select>
       <Button variant="secondary" onClick={() => change({ sort: undefined, page: undefined, size: undefined })}>소비 키 정렬·페이지 초기화</Button>
-      {invalidSize && <MessageBar variant="danger">페이지 크기는 1~100이어야 합니다.</MessageBar>}
-      {invalidSort && <MessageBar variant="danger">소비 키 정렬 조건이 올바르지 않습니다.</MessageBar>}
-      {invalidDays && <MessageBar variant="danger">조회 일수는 1~90일이어야 합니다. 기간을 다시 선택해 주세요.</MessageBar>}
+      {invalidSize && <MessageBar variant="danger">페이지 크기는 1~100이어야 해요.</MessageBar>}
+      {invalidSort && <MessageBar variant="danger">소비 키 정렬 조건이 올바르지 않아요.</MessageBar>}
+      {invalidDays && <MessageBar variant="danger">조회 일수는 1~90일이어야 해요. 기간을 다시 선택해 주세요.</MessageBar>}
 
       {usage.isPending && !data && <LoadingBlock label="계정 사용량 불러오는 중" />}
-      {usage.isFetching && data && <MessageBar>새 조회 결과를 기다리고 있습니다. 마지막 성공 응답의 기간을 표시합니다.</MessageBar>}
+      {usage.isFetching && data && <MessageBar>이전 조회 값이에요. 새 결과를 확인 중이에요.</MessageBar>}
       {usage.isError && <MessageBar variant="danger">
         <p>{usage.error.message}</p>
-        <p>{data ? '마지막 성공 결과는 아래에 표시한 응답 기간의 값입니다.' : '성공한 조회 결과가 없습니다.'}</p>
+        <p>{data ? '이전 조회 값이에요.' : '성공한 조회 결과가 없어요.'}</p>
       </MessageBar>}
 
       {data && (
         <>
-          {previousWindow && <MessageBar variant="warning">이전 조회 결과입니다. 선택한 기간의 새 결과로 해석하지 마세요.</MessageBar>}
+          {previousWindow && <MessageBar variant="warning">이전 조회 기간의 값이에요.</MessageBar>}
           <DescriptionList columns={2} items={[
             { term: '실제 응답 기간', description: `${data.from} ~ ${data.to} (KST, 양 끝 날짜 포함)` },
-            { term: '요청한 기간', description: `${days}일` },
-            { term: '콘솔 마지막 GET 성공', description: result?.fetchedAt ? formatDateTimeSeconds(result.fetchedAt) : '기록 없음' },
-            { term: '응답 생성', description: data.generatedAt ? formatDateTimeSeconds(data.generatedAt) : '미보고' },
-            { term: '집계 기준', description: data.source === 'DAILY_ROLLUP_ATTRIBUTION_CURRENT_ACCOUNT_BINDING' ? '현재 연결된 키의 일별 귀속 기록' : '집계 기준 미확인' },
+            { term: '최근 조회', description: result?.fetchedAt ? formatDateTimeSeconds(result.fetchedAt) : '기록 없음' },
+            { term: '집계 기준', description: data.source === 'DAILY_ROLLUP_ATTRIBUTION_CURRENT_ACCOUNT_BINDING' ? '현재 연결된 키의 일별 사용량' : '집계 기준 미확인' },
             { term: '소비 키 전체 / 응답 페이지', description: `${count(data.totalKeyElements, '개')} / ${count(data.page + 1)} (${CONSUMER_SORT_LABELS[data.sort] ?? '정렬 미확인'})` },
           ]} />
-          {/* 이 카드가 말하는 금액이 무엇이 아닌지를 먼저 말한다. 위 구역의
-              잔액과 나란히 서 있으므로, 말하지 않으면 두 숫자가 같은 것을
-              뜻한다고 읽힌다. **쓴 것이 없으면 말하지 않는다** — 구별할 숫자가
-              아직 없는데 구별을 설명하는 문장이 서면 그것도 되풀이다. */}
-          {data.requests > 0 && (
-          <MessageBar>
-            공급자가 청구한 금액이 아니라 <strong>요청마다 알려 준 금액을 이 계정의 키로
-            귀속한 값</strong>입니다. 키가 확인되지 않은 요청은 어느 계정에도 속하지 않고,
-            금액이 보고되지 않은 요청은 합계에서 빠집니다.
-          </MessageBar>
-          )}
 
           {/* 쓴 것이 없으면 **타일 줄까지 접는다.** 0으로 채운 타일 셋은
               「요청 0건」과 「금액이 붙은 요청 없음」과 「쓰인 키 0개」로 같은
@@ -172,8 +159,8 @@ export function AccountUsageSection({ accountId, orgId }: { accountId: string; o
             <EmptyState
               title={
                 data.keysLinked === 0
-                  ? '이 계정에 연결된 키가 없습니다'
-                  : '고른 기간에 이 계정으로 호출한 기록이 없습니다'
+                  ? '이 계정에 연결된 키가 없어요'
+                  : '고른 기간에 이 계정으로 호출한 기록이 없어요'
               }
               className="min-h-40"
             />
@@ -232,7 +219,7 @@ export function AccountUsageSection({ accountId, orgId }: { accountId: string; o
                     <TH>키</TH>
                     <TH>요청</TH>
                     <TH>토큰</TH>
-                    <TH>금액</TH>
+                    <TH>요청별 보고 금액</TH>
                   </TR>
                 </THead>
                 <TBody>

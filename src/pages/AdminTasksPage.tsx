@@ -82,12 +82,8 @@ function AdminTasksContent() {
       {requestReturn && <Link className="text-sm text-primary-700 hover:underline" to={requestReturn}>← 신청 상세</Link>}
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">작업 큐</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          VM 비동기 작업(생성·삭제·재설치) 현황입니다. 재시도가 소진된 작업(관리자 확인
-          필요)은 원인 해결 후 재시도할 수 있습니다.
-        </p>
       </div>
-      {vmId && <p className="break-all text-sm text-neutral-600">현재 VM의 작업만 조회합니다. <Link className="text-primary-700 hover:underline" to={adminPaths.vmDetail(vmId, params.get('org') ?? undefined)}>VM 상세 보기</Link></p>}
+      {vmId && <p className="break-all text-sm text-neutral-600">이 VM의 작업만 보여요. <Link className="text-primary-700 hover:underline" to={adminPaths.vmDetail(vmId, params.get('org') ?? undefined)}>VM 상세 보기</Link></p>}
 
       <FilterBar
         tabs={STATUS_TABS}
@@ -111,7 +107,7 @@ function AdminTasksContent() {
       )}
       {tasks.isError && <Alert variant="danger">{tasks.error.message}</Alert>}
       {tasks.isSuccess && tasks.data.content.length === 0 && (
-        <Card className="p-8 text-center text-sm text-neutral-500">작업이 없습니다.</Card>
+        <Card className="p-8 text-center text-sm text-neutral-500">표시할 작업이 없어요.</Card>
       )}
       {tasks.isSuccess && tasks.data.content.length > 0 && (
         <>
@@ -230,7 +226,7 @@ function RetryConfirmModal({
       onDone(data.message)
     },
     onError: (err) =>
-      setError(toApiError(err, '작업 재시도를 접수하지 못했습니다.').message),
+      setError(toApiError(err, '작업 재시도를 접수하지 못했어요.').message),
   })
 
   return (
@@ -253,7 +249,7 @@ function RetryConfirmModal({
         <p className="text-sm text-neutral-600">
           <strong>{task.vmName ?? '이름 미상 VM'}</strong>의{' '}
           {PROVISIONING_KIND_LABELS[task.kind]} 작업을 실패한 단계(
-          {task.stepLabel})부터 다시 시도합니다. 원인을 해결한 뒤 실행해 주세요.
+          {task.stepLabel})부터 다시 시도해요. 원인을 해결한 뒤 실행해 주세요.
         </p>
         {task.lastError && (
           <p className="rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600">

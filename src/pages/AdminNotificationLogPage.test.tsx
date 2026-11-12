@@ -102,7 +102,7 @@ describe('Unified mail delivery access and queue meaning', () => {
     expect(within(await deliveryRow('VM 삭제 완료')).getByText('발송 생략')).toBeInTheDocument()
     expect(within(await deliveryRow('비밀번호 재설정')).getByText('결과 확인 필요')).toBeInTheDocument()
     expect(within(await deliveryRow('VM 생성 완료')).getByText('SMTP 인계')).toBeInTheDocument()
-    expect(screen.getByText(/SMTP 인계는 메일함 도착이나 열람을 확인한 결과가 아닙니다/)).toBeInTheDocument()
+    expect(screen.getByText(/SMTP 인계는 메일함 도착을 뜻하지 않아요/)).toBeInTheDocument()
   })
 
   test('an unconfirmed account process preserves its stored state without promising execution', async () => {
@@ -135,7 +135,7 @@ describe('Mail delivery URL filtering and detail navigation', () => {
     await user.selectOptions(screen.getByLabelText('전달 상태'), 'FAILED')
     expect(currentPath()).not.toContain('selected=')
     expect(currentPath()).not.toContain('page=')
-    expect(await screen.findByText('조건에 맞는 발송 이력이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('조건에 맞는 발송 이력이 없어요.')).toBeInTheDocument()
   })
 
   test('server pagination includes the hundredth row and selection is restored by direct URL', async () => {
@@ -153,7 +153,7 @@ describe('Mail delivery URL filtering and detail navigation', () => {
     system('/admin/notification-log?email=old.admin%40pusan.ac.kr')
     await deliveryRow('새 VM 신청')
     fireEvent.change(screen.getByLabelText('수신 이메일'), { target: { value: 'admin.kim@pusan.ac.kr' } })
-    expect(await screen.findByText('조건에 맞는 발송 이력이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('조건에 맞는 발송 이력이 없어요.')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('수신 이메일'), { target: { value: 'old.admin@pusan.ac.kr' } })
     await user.click(await screen.findByRole('button', { name: '새 VM 신청' }))
     const drawer = screen.getByRole('dialog')
@@ -167,8 +167,8 @@ describe('Mail delivery URL filtering and detail navigation', () => {
     let listCalls = 0
     server.use(http.get('*/api/v1/admin/mail-deliveries/:deliveryId', () => { detailCalls += 1 }), http.get('*/api/v1/admin/mail-deliveries', () => { listCalls += 1 }))
     system('/admin/notification-log?selected=broken&requestId=not-an-id')
-    await screen.findByText('신청·발송건·기관 ID는 올바른 UUID여야 합니다. 조회 조건을 수정해 주세요.')
-    expect(screen.getByText('발송 상세 ID가 올바르지 않습니다.')).toBeInTheDocument()
+    await screen.findByText('신청과 발송건, 기관 ID는 UUID 형식으로 입력해 주세요.')
+    expect(screen.getByText('발송 상세 ID가 올바르지 않아요.')).toBeInTheDocument()
     expect(detailCalls).toBe(0)
     expect(listCalls).toBe(0)
   })
@@ -192,8 +192,8 @@ describe('Mail delivery URL filtering and detail navigation', () => {
     system(`/admin/notification-log?selected=${uuid(410)}`)
     const drawer = await screen.findByRole('dialog')
     await within(drawer).findByRole('heading', { name: '접수 당시 기관 알림 선정' })
-    expect(within(drawer).getByText(/정책 버전 3/)).toBeInTheDocument()
     const staff = within(drawer).getByRole('link', { name: '기관 승인자' }).closest('tr')!
+    expect(within(staff).getByText('활성 / 기관 운영자')).toBeInTheDocument()
     expect(within(staff).getByText('선정')).toBeInTheDocument()
     expect(within(staff).getByText('제외')).toBeInTheDocument()
     expect(within(drawer).getByRole('link', { name: '관련 신청' })).toHaveAttribute('href', `/admin/requests/${uuid(201)}?org=${uuid(1)}`)
@@ -208,7 +208,7 @@ describe('Mail delivery URL filtering and detail navigation', () => {
     mailDeliveryStore.find((row) => row.id === uuid(414))!.linkPath = 'https://example.test/console/vms/unknown'
     system(`/admin/notification-log?selected=${uuid(414)}`)
     const drawer = await screen.findByRole('dialog')
-    await within(drawer).findByText(/이 기존 기록에는 당시 주소가 없습니다/)
+    await within(drawer).findByText(/발송 당시 수신 주소가 기록되지 않았어요/)
     expect(within(drawer).queryByRole('link', { name: '관련 리소스 상세' })).not.toBeInTheDocument()
     expect(within(drawer).queryByRole('button', { name: '재발송' })).not.toBeInTheDocument()
   })
@@ -286,7 +286,7 @@ describe('Resend, failed reads and delayed response boundaries', () => {
     await user.selectOptions(screen.getByLabelText('메일 종류'), 'ACCOUNT')
     expect(screen.queryByRole('button', { name: 'VM 만료 7일 전' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '재발송' })).not.toBeInTheDocument()
-    expect(await screen.findByText('조건에 맞는 발송 이력이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('조건에 맞는 발송 이력이 없어요.')).toBeInTheDocument()
   })
 
   test('read and detail errors preserve explicit retry paths', async () => {
@@ -297,7 +297,7 @@ describe('Resend, failed reads and delayed response boundaries', () => {
     await screen.findByText('이력 조회 권한 없음')
     await user.click(screen.getByRole('button', { name: '발송 이력 다시 조회' }))
     await waitFor(() => expect(calls).toBe(2))
-    expect(screen.queryByText('조건에 맞는 발송 이력이 없습니다.')).not.toBeInTheDocument()
+    expect(screen.queryByText('조건에 맞는 발송 이력이 없어요.')).not.toBeInTheDocument()
   })
 
   test('a failed permission refresh hides stale rows and resend controls', async () => {
@@ -331,14 +331,14 @@ describe('Request selection snapshots', () => {
   test('zero recipients remain visible and do not reconstruct the current institution roster', async () => {
     requestMailSelectionStore[uuid(201)]!.staff = []
     system(`/admin/requests/${uuid(201)}?org=${uuid(1)}`)
-    expect(await screen.findByText('접수 당시 기관 메일 수신자가 0명입니다. 신청자의 본인 확인 메일과는 별개입니다.')).toBeInTheDocument()
+    expect(await screen.findByText('접수 당시 기관 메일 수신자가 없었어요.')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '신청 알림 발송 이력' })).toBeInTheDocument()
   })
 
   test('legacy requests explicitly report the absent selection snapshot', async () => {
     requestMailSelectionStore[uuid(201)] = null
     system(`/admin/requests/${uuid(201)}?org=${uuid(1)}`)
-    expect(await screen.findByText(/이 신청의 접수 당시 기관 알림 선정 명단은 기록되지 않았습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/이 신청에는 접수 당시 기관 알림 선정 기록이 없어요/)).toBeInTheDocument()
   })
 
   test('institution roles never request the system-only selection data', async () => {

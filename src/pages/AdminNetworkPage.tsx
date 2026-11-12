@@ -92,7 +92,7 @@ export function AdminNetworkPage() {
           <Badge>전체 플랫폼</Badge>
         </div>
         <p className="mt-1 text-sm text-neutral-500">
-          릴레이 상태는 에이전트의 자기 보고에서 파생된 값입니다.
+          릴레이 상태는 에이전트 보고를 기준으로 표시해요.
         </p>
       </div>
 
@@ -156,7 +156,7 @@ function RelaysTab({ isSysAdmin }: { isSysAdmin: boolean }) {
   if (relays.data.length === 0) {
     return (
       <Card className="p-8 text-center text-sm text-neutral-500">
-        등록된 릴레이가 없습니다.
+        등록된 릴레이가 없어요.
       </Card>
     )
   }
@@ -253,7 +253,7 @@ function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
     },
     onError: (err) => {
       setConfirming(false)
-      setError(toApiError(err, '릴레이 토큰을 발급하지 못했습니다.').message)
+      setError(toApiError(err, '릴레이 토큰 발급 결과를 확인하지 못했어요.').message)
     },
   })
 
@@ -261,7 +261,7 @@ function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
     <section className="space-y-2 border-t border-neutral-100 pt-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-neutral-500">
-          동기화 토큰은 릴레이 에이전트 인증에 쓰입니다.
+          동기화 토큰은 릴레이 에이전트 인증에 사용해요.
         </p>
         <Button
           variant="secondary"
@@ -295,12 +295,11 @@ function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
         <div className="space-y-3">
           {relay.tokenIssued && (
             <Alert variant="danger">
-              재발급 즉시 이전 토큰이 무효화됩니다. 릴레이 쪽 환경 변수를 교체하기
-              전까지 이 릴레이의 동기화가 끊깁니다 (마지막 적용 상태로 고정).
+              이전 토큰으로는 새 동기화를 인증할 수 없어요. 릴레이에 새 토큰을 반영하고 에이전트를 다시 시작해 주세요. 실행 중인 릴레이의 마지막 적용 규칙은 인증 실패만으로 지워지지 않아요.
             </Alert>
           )}
           <p className="text-sm text-neutral-600">
-            새 토큰의 평문은 발급 직후 한 번만 확인할 수 있습니다.
+            새 토큰의 평문은 발급 직후 한 번만 볼 수 있어요.
           </p>
         </div>
       </Modal>
@@ -312,13 +311,13 @@ function RelayTokenSection({ relay }: { relay: AdminRelayView }) {
         title="릴레이 토큰 발급 완료"
         footer={
           <Button variant="secondary" onClick={() => issue.reset()}>
-            확인했습니다
+            확인했어요
           </Button>
         }
       >
         {issue.data && (
           <div className="space-y-3">
-            <Alert variant="warning" title="이 토큰은 다시 볼 수 없습니다">
+            <Alert variant="warning" title="이 토큰은 다시 볼 수 없어요">
               릴레이 에이전트 설정에 바로 반영해 주세요.
             </Alert>
             <div className="flex items-center justify-between gap-3">
@@ -389,7 +388,7 @@ function ForwardingsTab({
       {mappings.isError && <Alert variant="danger">{mappings.error.message}</Alert>}
       {mappings.isSuccess && mappings.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          조건에 맞는 포트 매핑이 없습니다.
+          조건에 맞는 포트 매핑이 없어요.
         </Card>
       )}
       {mappings.isSuccess && mappings.data.content.length > 0 && (
@@ -508,13 +507,13 @@ function MappingDrawerContent({
     // 성공 피드백은 토스트로 — 상태 필터 활성 시 행이 목록에서 빠지면 드로어가
     // 닫혀 드로어 내부 알림은 소실되기 때문이다.
     onSuccess: async () => {
-      if (active.current) toast.success('정지 해제 설정을 저장했습니다. 릴레이 반영 보고를 확인해 주세요.')
+      if (active.current) toast.success('정지 해제 설정을 저장했어요. 릴레이 반영 보고를 확인해 주세요.')
       await invalidate()
     },
     onError: async (err) => {
       setNotice({
         variant: 'danger',
-        text: toApiError(err, '포트 매핑 정지를 해제하지 못했습니다.').message,
+        text: toApiError(err, '포트 매핑 정지 해제 결과를 확인하지 못했어요.').message,
       })
       // 409(정지 상태 아님) 등은 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
       await invalidate()
@@ -534,10 +533,9 @@ function MappingDrawerContent({
       </div>
       {notice && <Alert variant={notice.variant}>{notice.text}</Alert>}
       <OperationResult stage="reported" variant={mapping.applyState === 'FAILED' ? 'danger' : 'info'}>
-        {mapping.applyState === 'ACTIVE' ? '릴레이가 매핑 설정의 반영을 보고했습니다.'
-          : mapping.applyState === 'FAILED' ? '릴레이가 매핑 설정의 반영 실패를 보고했습니다.'
-            : '릴레이의 매핑 설정 반영 보고를 기다리고 있습니다.'}
-        {' '}이 보고는 실제 서비스 접속 성공이나 새로 저장한 연결 가드의 반영 완료를 보장하지 않습니다.
+        {mapping.applyState === 'ACTIVE' ? '릴레이가 매핑 설정 반영을 보고했어요.'
+          : mapping.applyState === 'FAILED' ? '릴레이가 매핑 설정 반영 실패를 보고했어요.'
+            : '릴레이의 매핑 설정 반영 보고를 기다리고 있어요.'}
       </OperationResult>
 
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
@@ -559,13 +557,13 @@ function MappingDrawerContent({
       </dl>
 
       {mapping.status === 'SUSPENDED' && (
-        <Alert variant="warning" title="정지된 매핑입니다">
-          {mapping.suspendedReason ?? '사유가 기록되지 않았습니다.'}
+        <Alert variant="warning" title="정지된 매핑이에요">
+          {mapping.suspendedReason ?? '기록된 사유가 없어요.'}
           {suspendedNote(mapping)}
         </Alert>
       )}
-      {mapping.status === 'PENDING' && <Alert variant="info">relay 설정 확인을 기다리고 있습니다.</Alert>}
-      {mapping.status === 'REMOVING' && <Alert variant="info">기존 연결 정리와 relay 확인을 기다리고 있습니다. 작업을 다시 요청할 수 없습니다.</Alert>}
+      {mapping.status === 'PENDING' && <Alert variant="info">릴레이 설정 확인을 기다리고 있어요.</Alert>}
+      {mapping.status === 'REMOVING' && <Alert variant="info">기존 연결 정리와 릴레이 확인을 기다리고 있어요. 작업을 다시 요청할 수 없어요.</Alert>}
 
       <SourcePolicyPanel
         queryKey={['admin', 'port-mappings', mapping.id, 'source-policy']}
@@ -648,11 +646,11 @@ function SuspendMappingModal({
   const suspend = useMutation({
     mutationFn: () => suspendAdminPortMapping(mapping.id, reason.trim()),
     onSuccess: async () => {
-      if (active.current) onDone('포트 매핑 정지 설정을 저장했습니다. 릴레이 반영 보고를 확인해 주세요.')
+      if (active.current) onDone('포트 매핑 정지 설정을 저장했어요. 릴레이 반영 보고를 확인해 주세요.')
       else await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
     },
     onError: async (err) => {
-      const apiError = toApiError(err, '포트 매핑을 정지하지 못했습니다.')
+      const apiError = toApiError(err, '포트 매핑 정지 결과를 확인하지 못했어요.')
       setError(apiError.message)
       // 409(이미 정지됨)는 화면이 뒤처진 것 — 목록을 다시 불러온다.
       if (apiError.problem?.status === 409) {
@@ -684,8 +682,7 @@ function SuspendMappingModal({
     >
       <div className="space-y-3">
         <p className="text-sm text-neutral-600">
-          다음 릴레이 동기화에서 공인 포트 {mapping.publicPort}이(가) 닫힙니다. 매핑은
-          유지되며 해제하면 같은 포트로 복원됩니다.
+          다음 릴레이 동기화에서 공인 포트 {mapping.publicPort} 매핑의 정지 설정을 전달해요. 매핑과 포트 번호는 유지되고, 재개 설정도 릴레이에 반영되어야 해요.
         </p>
         {error && <Alert variant="danger">{error}</Alert>}
         <label className="block space-y-1">
@@ -695,7 +692,7 @@ function SuspendMappingModal({
             value={reason}
             maxLength={500}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="감사 기록과 소유 워크스페이스 알림에 포함됩니다."
+            placeholder="감사 기록과 VM에 직접 소유자나 편집자로 등록된 사용자와 워크스페이스 소유자 중 활성 계정의 알림에 포함돼요."
           />
         </label>
       </div>
@@ -718,11 +715,11 @@ function DeleteMappingModal({
   const remove = useMutation({
     mutationFn: () => deleteAdminPortMapping(mapping.id),
     onSuccess: async () => {
-      if (active.current) onDone('포트 매핑 삭제가 접수되었습니다. 이 응답만으로 실제 연결 정리 완료를 확인할 수 없습니다.')
+      if (active.current) onDone('포트 매핑 삭제 요청을 접수했어요. 응답만으로 실제 연결 정리 완료를 확인할 수는 없어요.')
       else await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
     },
     onError: async (err) => {
-      const apiError = toApiError(err, '포트 매핑 삭제를 접수하지 못했습니다.')
+      const apiError = toApiError(err, '포트 매핑 삭제 결과를 확인하지 못했어요.')
       setError(apiError.message)
       // 이미 사라진 매핑(404)이면 목록을 다시 불러와 낡은 행을 정리한다.
       if (apiError.problem?.status === 404) {
@@ -748,9 +745,8 @@ function DeleteMappingModal({
       }
     >
       <div className="space-y-3">
-        <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
-          매핑이 제거되고 공인 포트 {mapping.publicPort}이(가) 재할당 풀로 돌아갑니다.
-          감사 기록과 소유 워크스페이스 알림이 남습니다.
+        <Alert variant="danger" title="되돌릴 수 없어요">
+          매핑 삭제와 공인 포트 {mapping.publicPort} 반환을 요청해요. 응답만으로 실제 연결 정리가 끝났는지 확인할 수는 없어요. 감사 기록을 남기고 VM에 직접 소유자나 편집자로 등록된 사용자와 워크스페이스 소유자 중 활성 계정에 알림을 요청해요.
         </Alert>
         {error && <Alert variant="danger">{error}</Alert>}
       </div>
@@ -782,7 +778,6 @@ function GuardsSection({ mapping, canEdit }: {
       {GUARD_FIELDS.map(({ key, label }) => <Field key={key} label={label}
         value={mapping[key] == null ? '릴레이 기본값 사용' : mapping[key] === 0 ? '해제 (0)' : String(mapping[key])} />)}
     </dl>
-    <p className="text-xs text-neutral-500">기본값의 실제 숫자는 이 화면에서 확인할 수 없습니다. 저장값과 릴레이 반영 보고는 별도입니다.</p>
     {editing && canEdit && <GuardsEditor mapping={mapping} onClose={() => setEditing(false)} />}
   </section>
 }
@@ -807,7 +802,7 @@ function GuardsEditor({ mapping, onClose }: {
     // 성공은 토스트 — 상태 필터에 따라 드로어가 닫혀도 피드백이 남게 한다.
     onSuccess: async () => {
       if (active.current) {
-        toast.success('연결 가드가 저장되었습니다. 이 응답은 릴레이 반영 완료를 뜻하지 않습니다.')
+        toast.success('연결 가드를 저장했어요. 릴레이 반영 완료를 뜻하지는 않아요.')
         onClose()
       }
       await queryClient.invalidateQueries({ queryKey: ['admin', 'port-mappings'] })
@@ -840,8 +835,8 @@ function GuardsEditor({ mapping, onClose }: {
 
   return (
     <Modal open title="연결 가드 편집" onClose={() => { if (!save.isPending) onClose() }}>
-      <Alert variant="info" title="저장 후 반영 대기">저장하면 다음 릴레이 동기화에서 전달됩니다. 새 값의 외부 반영 완료는 이 화면의 매핑 보고만으로 확인할 수 없습니다.</Alert>
-      {save.isError && <Alert variant="danger">{toApiError(save.error, '연결 가드를 저장하지 못했습니다.').message}</Alert>}
+      <Alert variant="info" title="저장 후 반영 대기">저장하면 다음 릴레이 동기화에 전달해요. 이 화면의 매핑 보고만으로 새 가드 값이 실제로 반영됐는지는 확인할 수 없어요.</Alert>
+      {save.isError && <Alert variant="danger">{toApiError(save.error, '연결 가드 저장 결과를 확인하지 못했어요.').message}</Alert>}
       {fieldError && <Alert variant="danger">{fieldError}</Alert>}
       <form onSubmit={submit} className="space-y-3" noValidate>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -920,7 +915,7 @@ function CampusTab({ isSysAdmin }: { isSysAdmin: boolean }) {
       {requests.isError && <Alert variant="danger">{requests.error.message}</Alert>}
       {requests.isSuccess && requests.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          조건에 맞는 신청이 없습니다.
+          조건에 맞는 신청이 없어요.
         </Card>
       )}
       {requests.isSuccess && requests.data.content.length > 0 && (
@@ -1008,11 +1003,11 @@ function CampusDrawerContent({
       </div>
 
       <OperationResult stage="stored">
-        {request.status === 'GRANTED' ? '관리자가 교내 IP 할당과 연결을 기록한 상태입니다.'
-          : request.status === 'REVOKED' ? '관리자가 교내 IP 회수를 기록한 상태입니다.'
-            : request.status === 'APPROVED' ? '신청 수락이 저장되었습니다. 주소 할당 기록을 기다리고 있습니다.'
-              : '신청과 마지막 처리 상태가 저장되어 있습니다.'}
-        {' '}실제 외부 연결 상태를 자동으로 측정한 결과는 아닙니다.
+        {request.status === 'GRANTED' ? '관리자가 교내 IP 할당과 연결을 기록한 상태예요.'
+          : request.status === 'REVOKED' ? '관리자가 교내 IP 회수를 기록한 상태예요.'
+            : request.status === 'APPROVED' ? '신청 승인을 기록한 상태예요. 주소 할당 기록을 기다리고 있어요.'
+              : '신청과 마지막 처리 상태가 저장돼 있어요.'}
+        {' '}실제 외부 연결 상태를 자동으로 측정한 결과는 아니에요.
       </OperationResult>
 
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
@@ -1066,7 +1061,7 @@ const IPV4_RE = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/
 function grantedAddressError(raw: string): string | null {
   const address = raw.trim()
   if (!IPV4_RE.test(address)) return '올바른 IPv4 주소를 입력해 주세요.'
-  if (!address.startsWith('10.')) return '교내 IP는 10.0.0.0/8 대역의 주소여야 합니다.'
+  if (!address.startsWith('10.')) return '교내 IP는 10.0.0.0/8 대역의 주소를 입력해 주세요.'
   return null
 }
 
@@ -1113,11 +1108,11 @@ function CampusTransitionSection({
       }),
     onSuccess: async (updated) => {
       setError(null)
-      if (active.current) toast.success(`'${CAMPUS_IP_STATUS_LABELS[updated.status]}' 처리 기록을 저장했습니다. 실제 연결 상태는 별도로 확인해 주세요.`)
+      if (active.current) toast.success(`'${CAMPUS_IP_STATUS_LABELS[updated.status]}' 처리 기록을 저장했어요. 실제 연결 상태는 별도로 확인해 주세요.`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'campus-ip-requests'] })
     },
     onError: (err) => {
-      const apiError = toApiError(err, '신청 상태를 전환하지 못했습니다.')
+      const apiError = toApiError(err, '신청 상태 변경 결과를 확인하지 못했어요.')
       // 서버 422의 grantedAddress 필드 오류는 입력 옆에 그대로 보여준다.
       const fieldMessage = fieldErrorsOf(apiError.problem).grantedAddress
       if (fieldMessage) {
@@ -1148,7 +1143,7 @@ function CampusTransitionSection({
       <h3 className="text-sm font-semibold text-neutral-800">상태 전환</h3>
       {request.status === 'APPROVED' && (
         <p className="text-sm text-neutral-500">
-          정보전산원 절차가 끝나면 부여된 주소를 입력해 할당으로 전환합니다.
+          정보전산원 절차가 끝나면 부여된 주소를 입력해 할당 상태로 기록해요.
         </p>
       )}
       {error && <Alert variant="danger">{error}</Alert>}
@@ -1158,7 +1153,7 @@ function CampusTransitionSection({
           label="연결된 교내 IP"
           required
           error={addressError ?? undefined}
-          description="할당 전환에만 필요합니다. 캠퍼스 대역(10.0.0.0/8)의 IPv4 주소."
+          description="할당으로 전환할 때만 필요해요. 캠퍼스 대역(10.0.0.0/8)의 IPv4 주소를 입력해 주세요."
           className="max-w-xs"
         >
           <Input
@@ -1170,7 +1165,7 @@ function CampusTransitionSection({
       )}
       <FormField
         label="관리자 메모 (선택)"
-        description="신청 워크스페이스에 발송되는 알림에 포함됩니다."
+        description="신청자에게 보내는 알림에 포함돼요."
       >
         <Textarea
           rows={2}

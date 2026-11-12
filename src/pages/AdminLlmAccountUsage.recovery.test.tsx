@@ -92,7 +92,7 @@ test('account usage distinguishes the console GET success moment from producer o
   server.use(http.get('*/api/v1/admin/llm/accounts/:accountId/usage', () => HttpResponse.json(usage())))
   renderAccount()
   await screen.findByText(OLD_KEY)
-  expect(section().getByText('콘솔 마지막 GET 성공')).toBeInTheDocument()
+  expect(section().getByText('최근 조회')).toBeInTheDocument()
 })
 
 test('the account consumer does not reuse another reader response in the same institution', async () => {
@@ -146,7 +146,7 @@ test('a late account usage response cannot cross the actual institution guard', 
   await screen.findByRole('heading', { name: 'AI 교육 사업 A' })
   await waitFor(() => expect(requested).toBe(true))
   fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(2) } })
-  await screen.findByText('현재 관리 범위에서 이 OpenRouter 사업 계정을 찾을 수 없습니다.')
+  await screen.findByText('현재 관리 범위에서 이 OpenRouter 사업 계정을 찾을 수 없어요.')
   await act(async () => { gate.release(); await gate.promise })
   await waitFor(() => expect(completed).toBe(true))
   expect(screen.queryByText('Synthetic late institution consumer')).not.toBeInTheDocument()

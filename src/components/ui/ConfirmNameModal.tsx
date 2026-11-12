@@ -77,7 +77,7 @@ export function ConfirmNameModal({
       <div className="space-y-4">
         {children}
         <FormField
-          label={`계속하려면 이름(${expectedName})을 정확히 입력하세요`}
+          label={`계속하려면 이름(${expectedName})을 정확히 입력해 주세요`}
           required
         >
           <Input

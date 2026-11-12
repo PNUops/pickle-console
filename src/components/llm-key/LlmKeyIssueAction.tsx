@@ -69,7 +69,7 @@ export function LlmKeyIssueAction({
     },
     onError: (err) => {
       setConfirming(false)
-      setError(toApiError(err, 'LLM API 키를 발급하지 못했습니다.').message)
+      setError(toApiError(err, 'LLM API 키를 발급하지 못했어요.').message)
     },
   })
 
@@ -81,7 +81,7 @@ export function LlmKeyIssueAction({
   }
   const notice = !allowed && (
     <PermissionNotice>
-      키 발급은 이 키의 접근 목록에서 소유자 등급을 받은 사람만 할 수 있습니다.
+      키 발급은 이 키의 접근 목록에서 소유자 등급을 받은 사람만 할 수 있어요.
     </PermissionNotice>
   )
 
@@ -110,23 +110,17 @@ export function LlmKeyIssueAction({
         <div className="space-y-3">
           {rotation && (
             <Alert variant="danger">
-              재발급 즉시 이전 키 값이 무효화됩니다. 그 값을 쓰고 있는 코드·배포 설정을
-              새 값으로 바꾸기 전까지 요청이 거부됩니다.
+              변경이 게이트웨이에 반영되면 이전 키 값으로 새 요청을 보낼 수 없어요.
+              이 키를 쓰는 프로그램과 배포 설정을 새 값으로 바꿔 주세요.
             </Alert>
           )}
           <p className="text-sm text-neutral-600">
-            평문은 다음 화면에서 한 번만 볼 수 있습니다.
+            평문은 다음 화면에서 한 번만 볼 수 있어요.
           </p>
         </div>
       </Modal>
 
-      {/* 발급 결과 — 평문이 존재하는 유일한 화면.
-
-          `dismissible={false}` 가 여기 있는 이유는 이 카드가 탭 패널 안에 있기
-          때문이다. 비활성 패널은 아무것도 렌더하지 않으므로 탭을 옮기면 평문이
-          사라지고, 배경이 닫히지 않으면 그 탭에 손이 닿지도 않는다. 배경 클릭과
-          Escape 로 실수로 닫히는 것을 막는 것이 이 플래그의 본래 용도이고, 여기서는
-          이동 자체를 막는 일까지 겸한다. 나가는 길은 「확인했습니다」 하나다. */}
+      {/* Storage acknowledgment is the only exit, so changing tabs cannot discard the one-time plaintext. */}
       <Modal
         open={issue.isSuccess}
         onClose={() => issue.reset()}
@@ -134,15 +128,14 @@ export function LlmKeyIssueAction({
         title="LLM API 키 발급 완료"
         footer={
           <Button variant="secondary" onClick={() => issue.reset()}>
-            확인했습니다
+            보관했어요
           </Button>
         }
       >
         {issue.data && (
           <div className="space-y-3">
-            <Alert variant="warning" title="이 키는 다시 볼 수 없습니다">
-              창을 닫으면 평문을 다시 확인할 수 없습니다. 서버에는 해시만 저장되므로
-              지금 복사해 안전한 곳에 보관해 주세요.
+            <Alert variant="warning" title="키 값은 지금 한 번만 볼 수 있어요">
+              창을 닫으면 키 값을 다시 확인할 수 없어요. 지금 복사해 안전하게 보관해 주세요.
             </Alert>
             <div className="flex items-center justify-between gap-3">
               <code className="overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs break-all text-neutral-100">
@@ -156,7 +149,7 @@ export function LlmKeyIssueAction({
               </p>
             )}
             <p className="text-sm text-neutral-600">
-              키를 복사한 뒤 이 창을 닫고 연결 정보의 사용 가이드에서 호출 방법을 확인하세요.
+              키를 복사한 뒤 이 창을 닫고 연결 정보의 사용 가이드에서 호출 방법을 확인해 주세요.
             </p>
           </div>
         )}
@@ -174,14 +167,14 @@ export function LlmKeyIssueAction({
       <CardContent className="space-y-3">
         {error && <Alert variant="danger">{error}</Alert>}
         <SettingRow
-          label={rotation ? '이전 값이 즉시 무효화됩니다' : '평문은 발급 직후 한 번만 보입니다'}
+          label={rotation ? '이전 키 값 교체' : '발급 직후 한 번만 표시돼요'}
           // 발급 전 갈래의 설명이 그 사실의 유일한 자리다. 종전에는 이 카드 위
           // StatusNotice 가 같은 말을 해서 한 탭에 두 번 섰고, 알림을 걷을 때
           // 사실이 사라지지 않게 이쪽에 남겼다 — 누르는 이유가 여기에 있다.
           description={
             rotation
-              ? '값을 잃어버렸을 때만 재발급합니다.'
-              : '발급하기 전까지 이 키로 보낸 요청은 인증되지 않습니다.'
+              ? '분실하거나 유출된 키 값을 바꿀 수 있어요.'
+              : '발급하기 전까지 이 키로 보낸 요청은 인증되지 않아요.'
           }
           action={
             <Button

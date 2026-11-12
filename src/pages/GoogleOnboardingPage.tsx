@@ -56,7 +56,7 @@ export function GoogleOnboardingPage() {
     mounted.current = true
     const unsubscribe = onSessionExpired((expiredGeneration) => {
       if (mounted.current && pendingProfile.current === expiredGeneration) {
-        setFormError('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.')
+        setFormError('로그인 유효시간이 지났어요. 다시 로그인해 주세요.')
       }
     })
     return () => {
@@ -80,7 +80,7 @@ export function GoogleOnboardingPage() {
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     if (!allConsented(currentTerms, agreed)) {
-      setFormError('이용약관과 개인정보처리방침에 모두 동의해야 가입할 수 있습니다.')
+      setFormError('이용약관과 개인정보처리방침에 모두 동의해 주세요.')
       return
     }
 
@@ -129,13 +129,13 @@ export function GoogleOnboardingPage() {
       }
       setFormError(
         (isProblem(error) ? (error.detail ?? error.title) : null) ??
-          '가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.',
+          '가입을 마치지 못했어요. 잠시 후 다시 시도해 주세요.',
       )
     } catch (error) {
       // 네트워크가 끊기면 여기로 온다. catch 가 없으면 스피너만 멈추고 화면은 아무
       // 말도 하지 않아, 방금 쓴 가입 토큰이 살아 있는지 죽었는지 알 수 없게 된다.
       if (isCurrent()) {
-        setFormError(toApiError(error, '가입을 마치지 못했습니다. 잠시 후 다시 시도해 주세요.').message)
+        setFormError(toApiError(error, '가입을 마치지 못했어요. 잠시 후 다시 시도해 주세요.').message)
         if (receivedCredentials) {
           clearAccessToken()
           generation = getSessionGeneration()
@@ -151,7 +151,7 @@ export function GoogleOnboardingPage() {
     <div className="w-full">
       <h1 className="text-center text-2xl font-bold text-white">가입 정보 입력</h1>
       <p className="mt-2 text-center text-sm text-neutral-400">
-        <strong className="text-neutral-200">{registration.email}</strong> 계정으로 가입합니다.
+        <strong className="text-neutral-200">{registration.email}</strong> 계정으로 가입해요.
       </p>
       <AuthCard className="mt-8">
         <AuthCardContent>
@@ -175,7 +175,7 @@ export function GoogleOnboardingPage() {
               */}
               {terms.isError && (
                 <Alert variant="danger">
-                  약관을 불러오지 못했습니다.{' '}
+                  약관을 불러오지 못했어요.{' '}
                   <button
                     type="button"
                     className="underline underline-offset-2"

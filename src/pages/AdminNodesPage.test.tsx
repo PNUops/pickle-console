@@ -81,13 +81,13 @@ describe('노드/용량', () => {
     const row = (await screen.findByText('pve1')).closest('tr')!
     await user.click(within(row).getByRole('button', { name: '상태 전환' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '노드 상태 전환 — pve1' })
+    const dialog = await screen.findByRole('dialog', { name: '노드 상태 전환: pve1' })
     await user.selectOptions(within(dialog).getByLabelText('노드 상태'), 'MAINTENANCE')
-    expect(within(dialog).getByText(/신규 VM 배치가 불가능해집니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/새 VM을 배치할 수 없어요/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '전환' }))
 
     expect(
-      await screen.findByText('노드 pve1의 상태를 점검 중(으)로 전환했습니다.'),
+      await screen.findByText('노드 pve1의 상태를 점검 중으로 변경했어요.'),
     ).toBeInTheDocument()
   })
 })
@@ -174,7 +174,7 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     renderNodes()
 
     expect(
-      await screen.findByText('오프라인으로 지정된 노드여서 사용량을 수집하지 않습니다.'),
+      await screen.findByText('오프라인으로 지정되어 이 화면에서는 사용량을 조회하지 않아요.'),
     ).toBeInTheDocument()
     // 사용량 영역 자체를 띄우지 않으므로 조회 구간 스위처도, 조회도 없다.
     expect(
@@ -195,11 +195,10 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     renderNodes()
 
     const notice = await screen.findByText(
-      /하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/,
+      /하이퍼바이저 사용량을 불러오지 못했어요/,
     )
     expect(notice.closest('[role="alert"]')).toBeNull()
-    // 안내는 차분하되 조회는 이어 간다 — 문구도 그렇게 말한다.
-    expect(notice).toHaveTextContent('다시 시도하는 중입니다')
+    expect(notice).not.toHaveTextContent('다시 시도하는 중입니다')
     // 다만 정상 주기(테스트 모드 250ms)보다 촘촘해지지는 않는다: 물러선 주기는
     // 500ms라 900ms 동안 서너 번을 넘지 않는다.
     await waitFor(() => expect(metricsCalls).toBeGreaterThan(1))
@@ -223,9 +222,9 @@ describe('노드/용량 — 잴 수 없는 상태', () => {
     )
     renderNodes()
 
-    await screen.findByText(/하이퍼바이저가 응답하지 않아 사용량을 표시할 수 없습니다/)
+    await screen.findByText(/하이퍼바이저 사용량을 불러오지 못했어요/)
     // 아무 조작 없이 다음 조회 주기에 스스로 되돌아온다.
     expect(await screen.findByRole('heading', { name: 'CPU' })).toBeInTheDocument()
-    expect(screen.queryByText(/하이퍼바이저가 응답하지 않아/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/하이퍼바이저 사용량을 불러오지 못했어요/)).not.toBeInTheDocument()
   })
 })

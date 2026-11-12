@@ -66,7 +66,7 @@ test('a role downgrade discards a profile editor and an in-flight correction res
     expect(screen.queryByRole('dialog', { name: '프로필 정정' })).not.toBeInTheDocument()
     await act(async () => { release(); await pending })
     await screen.findByText('202012345')
-    expect(screen.queryByText(/프로필을 정정했습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/프로필을 정정했어요/)).not.toBeInTheDocument()
     expect(screen.queryByText('계정 변경 후 연결 결과')).not.toBeInTheDocument()
   } finally {
     ACCESS_TOKENS['access-org-manager'] = original
@@ -83,7 +83,7 @@ test('foreign domain metadata does not fetch DNS record content', async () => {
     http.get('*/api/v1/admin/domains/:domainId/records', () => { rawReads += 1; return HttpResponse.json([]) }))
   renderApp(`/admin/domains?org=${uuid(2)}&domainId=${domain.id}`)
   await screen.findByRole('heading', { name: domain.fqdn })
-  expect(await screen.findByText('레코드 원문을 조회할 권한이 없습니다.')).toBeInTheDocument()
+  expect(await screen.findByText('레코드 원문을 조회할 권한이 없어요.')).toBeInTheDocument()
   expect(rawReads).toBe(0)
   expect(screen.queryByRole('button', { name: '강제 해제' })).not.toBeInTheDocument()
 })
@@ -117,7 +117,7 @@ test('foreign served-domain support reads safe routes while withholding source C
   try {
     renderApp(`/admin/domains?org=${uuid(2)}&domainId=${uuid(36)}`)
     await screen.findByRole('heading', { name: 'api.example.org' })
-    expect(await screen.findByText('연결 정책 원문을 조회할 권한이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('연결 정책 원문을 조회할 권한이 없어요.')).toBeInTheDocument()
     expect(routeReads).toBeGreaterThan(0)
     expect(policyReads).toBe(0)
     expect(screen.queryByRole('button', { name: '재검증' })).not.toBeInTheDocument()

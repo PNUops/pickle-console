@@ -28,14 +28,14 @@ export function PermissionAssignmentEditor({ name, value, catalogue, workspaces,
   const groupScope = (group: WorkGroup) => {
     const scope = value.scopes[group]
     return <div className="space-y-3 rounded-md bg-neutral-50 p-3">
-      <FormField label={`${name} ${WORK_GROUP_LABELS[group]} 범위`} description="이 그룹에서 선택한 모든 업무가 아래 범위 하나를 함께 사용합니다.">
+      <FormField label={`${name} ${WORK_GROUP_LABELS[group]} 범위`} description="이 그룹에서 선택한 모든 업무에 같은 범위를 적용해요.">
         <Select disabled={disabled} value={scope?.mode ?? ''} onChange={(event) => onChange({ ...value, scopes: { ...value.scopes,
           [group]: { mode: event.target.value as 'ALL' | 'LISTED', workspaceIds: event.target.value === 'ALL' ? [] : scope?.workspaceIds ?? [] } } })}>
-          <option value="" disabled>범위를 선택하세요</option><option value="ALL">모든 워크스페이스 (향후 생성 포함)</option><option value="LISTED">지정한 워크스페이스만</option>
+          <option value="" disabled>범위를 선택해 주세요</option><option value="ALL">모든 워크스페이스 (향후 생성 포함)</option><option value="LISTED">지정한 워크스페이스만</option>
         </Select>
       </FormField>
       {scope?.mode === 'LISTED' && <div className="space-y-2">
-        <p className="text-sm">지정 {scope.workspaceIds.length}곳. 빈 목록은 이 그룹의 어떤 워크스페이스도 허용하지 않습니다.</p>
+        <p className="text-sm">지정 {scope.workspaceIds.length}곳. 빈 목록은 이 부여에서 해당 그룹의 워크스페이스를 하나도 허용하지 않아요.</p>
         {workspaces.filter((workspace) => `${workspace.name} ${workspace.id}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()) || scope.workspaceIds.includes(workspace.id)).map((workspace) => <Checkbox
           key={workspace.id} label={`${name} ${WORK_GROUP_LABELS[group]} 공간: ${workspace.name}`} description={workspace.id}
           aria-label={`${name} ${WORK_GROUP_LABELS[group]} 공간: ${workspace.name}`}
@@ -44,11 +44,11 @@ export function PermissionAssignmentEditor({ name, value, catalogue, workspaces,
             onChange({ ...value, scopes: { ...value.scopes, [group]: { mode: 'LISTED', workspaceIds: [...new Set(workspaceIds)].sort() } } })
           }} />)}
         {scope.workspaceIds.filter((id) => !workspaces.some((workspace) => workspace.id === id)).map((id) => <Checkbox key={id}
-          label={`${name} ${WORK_GROUP_LABELS[group]} 보관된 공간: ${id}`} description="현재 목록에 없는 ID입니다. 삭제되었거나 조회할 수 없어도 범위를 전체로 바꾸지 않고 보존합니다."
+          label={`${name} ${WORK_GROUP_LABELS[group]} 보관된 공간: ${id}`} description="현재 목록에 없는 ID예요. 삭제됐거나 조회할 수 없어도 범위를 전체로 바꾸지 않고 보존해요."
           aria-label={`${name} ${WORK_GROUP_LABELS[group]} 보관된 공간: ${id}`}
           checked disabled={disabled} onChange={() => onChange({ ...value, scopes: { ...value.scopes, [group]: { mode: 'LISTED', workspaceIds: scope.workspaceIds.filter((item) => item !== id) } } })} />)}
       </div>}
-      {scope?.mode === 'ALL' && <p className="text-xs text-neutral-600">이 그룹에 운영 업무를 더 선택하면 그 업무도 모든 워크스페이스에 적용됩니다.</p>}
+      {scope?.mode === 'ALL' && <p className="text-xs text-neutral-600">이 그룹에 업무를 더 선택하면 그 업무도 모든 워크스페이스에 적용돼요.</p>}
     </div>
   }
   return <fieldset disabled={disabled} className="min-w-0 space-y-4">
@@ -58,9 +58,9 @@ export function PermissionAssignmentEditor({ name, value, catalogue, workspaces,
       : selectedFromFull(catalogue, value.expectedRevision))}>
       <option value="FULL">전체 관리자 (FULL)</option><option value="SELECTED">선택 업무 (SELECTED)</option>
     </Select></FormField>
-    <p className="text-sm">표시 역할: {permissionRole(value, catalogue)} · 역할은 선택한 권한에서 계산되며 직접 수정하지 않습니다.</p>
-    {value.mode === 'FULL' ? <Alert variant="warning">전체 관리자는 이 기관의 등록된 전체 업무, 모든 워크스페이스와 명시된 전역 지원·기관 위임 권한을 갖습니다. 선택 업무에서 바꾸면 지정 공간 제한이 사라집니다.</Alert> : <>
-      <Alert variant="info">모든 선택 업무를 골라도 전체 관리자나 기관 위임 권한이 생기지 않습니다. 전체 관리자에서 전환하면 위임·미래 업무 자동 포함과 이 출처의 전역 개별 키 비용 읽기 예외가 사라집니다. 다른 FULL 출처의 영향은 저장 전 미리보기에서 확인하세요.</Alert>
+    <p className="text-sm">표시 역할: {permissionRole(value, catalogue)}</p>
+    {value.mode === 'FULL' ? <Alert variant="warning">이 기관의 전체 업무와 모든 공간, 전역 지원과 위임 권한을 부여해요. 기존 지정 공간 제한은 해제돼요.</Alert> : <>
+      <Alert variant="info">선택 업무를 모두 골라도 FULL은 아니에요. FULL에서 전환하면 위임과 미래 업무 자동 포함, 이 출처의 전역 키 비용 읽기 권한이 사라져요.</Alert>
       <Button type="button" variant="secondary" size="sm" className="h-auto min-h-8 max-w-full whitespace-normal py-2" disabled={disabled} onClick={() => onChange(selectedFromFull(catalogue, value.expectedRevision))}>현재 FULL의 선택 가능한 업무 모두 선택</Button>
       <FormField label={`${name} 범위 공간 검색`}><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="워크스페이스 이름 또는 ID" /></FormField>
       {[null, ...WORK_GROUPS].map((group) => <section key={group ?? 'global'} className="space-y-3">

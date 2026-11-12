@@ -25,7 +25,7 @@ export function ForgotPasswordPage() {
       setSent(true)
     } catch (err) {
       // 422(이메일 형식)·429(요청 과다) 정도만 사용자에게 안내한다.
-      setError(toApiError(err, '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.').message)
+      setError(toApiError(err, '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.').message)
     } finally {
       setSubmitting(false)
     }
@@ -35,18 +35,16 @@ export function ForgotPasswordPage() {
     <div className="w-full">
       <h1 className="text-center text-2xl font-bold text-white">비밀번호 재설정</h1>
       <p className="mt-2 text-center text-sm text-neutral-400">
-        가입한 부산대학교 이메일로 재설정 링크를 보내 드립니다.
+        가입한 부산대학교 이메일을 입력해 주세요.
       </p>
       <AuthCard className="mt-8">
         <AuthCardContent>
           <p className="mb-4 text-sm text-neutral-400">
-            구글 계정으로 가입하셨다면 비밀번호가 없습니다. 로그인 화면에서 Google 계정으로
-            로그인해 주세요.
+            구글로 가입했다면 로그인 화면에서 Google 계정으로 로그인해 주세요.
           </p>
           {sent ? (
             <Alert variant="success" title="메일을 확인해 주세요">
-              해당 주소가 등록되어 있다면 비밀번호 재설정 메일을 발송했습니다. 링크는 30분 동안만
-              유효합니다.
+              등록된 주소라면 재설정 메일을 보냈어요. 링크는 30분 동안 유효해요.
             </Alert>
           ) : (
             <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>

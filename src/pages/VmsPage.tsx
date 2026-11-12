@@ -56,8 +56,8 @@ export function VmsPage() {
               이유가 둘이고, 읽는 사람이 할 수 있는 일도 둘이다. */}
           <p>
             {scope == null
-              ? '접근 권한을 가진 가상머신이 없습니다. 워크스페이스를 고르면 그 워크스페이스의 가상머신을 볼 수 있습니다.'
-              : '이 워크스페이스에는 아직 가상머신이 없습니다. 신청이 승인되면 이곳에 표시됩니다.'}
+              ? '접근 권한을 가진 가상머신이 없어요. 워크스페이스를 고르면 그 워크스페이스의 가상머신을 볼 수 있어요.'
+              : '이 워크스페이스에 표시할 가상머신이 없어요.'}
           </p>
           <LinkButton to={consolePaths.newRequest(scope, 'VM')}>가상머신 신청</LinkButton>
         </Card>
@@ -96,9 +96,9 @@ export function VmsPage() {
                       )}
                       {vm.accessLimited && (
                         <p className="mt-0.5 text-xs text-neutral-500">
-                          접근 권한이 없습니다
+                          접근 권한이 없어요.
                           {vm.ownerNames != null && vm.ownerNames.length > 0 &&
-                            ` — ${vm.ownerNames.join(', ')} 님에게 요청하세요`}
+                            ` ${vm.ownerNames.join(', ')}님에게 요청해 주세요.`}
                           {/* 워크스페이스 소유자는 이 VM 안을 볼 수 없어도 누가 접근할지는
                               정할 수 있다. 상세로 못 들어가므로 이 행이 그 유일한
                               진입점이고, 소유자가 떠난 VM을 되살리는 길이기도 하다.

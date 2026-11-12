@@ -31,13 +31,13 @@ test('shows resource introductions, usage, sharing and the preserved process', a
     screen.getByRole('heading', { name: '지금 신청할 수 있는 리소스' }),
   ).toBeInTheDocument()
   expect(
-    screen.getByRole('heading', { name: '네 단계면 리소스가 준비됩니다' }),
+    screen.getByRole('heading', { name: '신청부터 사용까지' }),
   ).toBeInTheDocument()
   expect(
     screen.getByRole('heading', { name: '익숙한 도구 그대로' }),
   ).toBeInTheDocument()
   expect(
-    screen.getByRole('heading', { name: /워크스페이스에서.*함께 관리합니다/ }),
+    screen.getByRole('heading', { name: /워크스페이스에서.*함께 관리해요/ }),
   ).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '만료돼도 데이터는 안전' })).not.toBeInTheDocument()
 

@@ -37,9 +37,6 @@ export function AdminOrgsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">기관 관리</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            리소스를 제공하는 기관을 관리하고 기관 관리자를 지정합니다.
-          </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>기관 만들기</Button>
       </div>
@@ -52,7 +49,7 @@ export function AdminOrgsPage() {
       {orgs.isError && <Alert variant="danger">{orgs.error.message}</Alert>}
       {orgs.isSuccess && orgs.data.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          등록된 기관이 없습니다. 기관을 만들어 리소스 제공을 시작하세요.
+          등록된 기관이 없어요.
         </Card>
       )}
       {orgs.isSuccess && orgs.data.length > 0 && (
@@ -125,7 +122,7 @@ function CreateOrgModal({ open, onClose }: { open: boolean; onClose: () => void 
       onClose()
     },
     onError: (error) => {
-      const apiError = toApiError(error, '기관을 만들지 못했습니다.')
+      const apiError = toApiError(error, '기관을 만들지 못했어요.')
       const mapped = fieldErrorsOf(apiError.problem)
       if (Object.keys(mapped).length > 0) {
         setFieldErrors(mapped)
@@ -210,7 +207,7 @@ function EditOrgModal({ org, onClose }: { org: OrgDetail; onClose: () => void })
       onClose()
     },
     onError: (error) => {
-      const apiError = toApiError(error, '기관 정보를 수정하지 못했습니다.')
+      const apiError = toApiError(error, '기관 정보를 수정하지 못했어요.')
       const mapped = fieldErrorsOf(apiError.problem)
       if (Object.keys(mapped).length > 0) {
         setFieldErrors(mapped)
@@ -248,7 +245,7 @@ function EditOrgModal({ org, onClose }: { org: OrgDetail; onClose: () => void })
         </FormField>
         <FormField
           label="상태"
-          description="비활성화: 신규 VM 신청 대상에서만 제외됩니다. 로그인·기존 VM·기관 관리자 계정은 영향받지 않습니다."
+          description="비활성화하면 새 신청 대상에서 제외돼요. 기존 VM을 정지하거나 계정을 비활성화하지는 않아요."
         >
           <Select
             aria-label="기관 상태"
@@ -265,8 +262,7 @@ function EditOrgModal({ org, onClose }: { org: OrgDetail; onClose: () => void })
           onChange={(event) => setHidden(event.target.checked)}
         />
         <p className="text-sm text-neutral-500">
-          숨김: 일반 사용자의 신청 폼 기관 목록에서만 빠집니다. 관리자에게는 항상 표시되고,
-          신청 대상 지정과 기관 관리자 로그인은 그대로입니다.
+          일반 사용자의 기관 목록에서만 숨겨요. 신청과 로그인은 계속 이용할 수 있어요.
         </p>
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={update.isPending}>

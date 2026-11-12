@@ -54,9 +54,6 @@ export function RequestsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">신청 내역</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          모든 신청은 관리자 검토 후 처리됩니다.
-        </p>
       </div>
 
       {/* 필터 토글 버튼 그룹 — ARIA tabs 패턴 미구현이므로 tab 롤 미사용 (진짜 탭은 ui/Tabs) */}
@@ -93,7 +90,7 @@ export function RequestsPage() {
       {requests.isError && <Alert variant="danger">{requests.error.message}</Alert>}
       {requests.isSuccess && requests.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          표시할 신청이 없습니다.
+          표시할 신청이 없어요.
         </Card>
       )}
       {requests.isSuccess && requests.data.content.length > 0 && (

@@ -30,7 +30,7 @@ describe('계정 화면의 연동 관리', () => {
     meReturns({ identities: [] })
     renderApp('/console/account')
     await openSection(user, '연동된 계정')
-    expect(await screen.findByText(/연동된 외부 계정이 없습니다/)).toBeInTheDocument()
+    expect(await screen.findByText('Google 계정을 연동하면 비밀번호 없이 로그인할 수 있어요.')).toBeInTheDocument()
     // 붙일 방법이 함께 있어야 한다. 없으면 이 카드는 상태만 알리고 끝난다.
     expect(
       screen.getByRole('button', { name: 'Google 계정으로 계속하기' }),
@@ -56,7 +56,7 @@ describe('계정 화면의 연동 관리', () => {
     // 나가는 데까지 봐야 "해제할 수 있다"가 참이 된다.
     await user.click(screen.getByRole('button', { name: '해제' }))
     await waitFor(() => expect(unlinked).toBe('GOOGLE'))
-    expect(await screen.findByText('연동을 해제했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('연동을 해제했어요.')).toBeInTheDocument()
   })
 
   test('연동 복귀 표식은 자기 키만 지운다', async () => {
@@ -64,7 +64,7 @@ describe('계정 화면의 연동 관리', () => {
     // 그 키를 읽는 효과와 어느 쪽이 먼저 도느냐에 결과가 달라진다.
     meReturns({ identities: [GOOGLE], hasPassword: true })
     renderApp('/console/account?linked=google&sort=name')
-    expect(await screen.findByText('구글 계정을 연동했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('구글 계정을 연동했어요.')).toBeInTheDocument()
     await waitFor(() => expect(currentPath()).toBe('/console/account?sort=name'))
   })
 
@@ -79,7 +79,7 @@ describe('계정 화면의 연동 관리', () => {
     // 숨기지 않고 비활성으로 둔다. 숨기면 왜 못 하는지 알 길이 없다.
     expect(screen.getByRole('button', { name: '해제' })).toBeDisabled()
     expect(
-      screen.getByText(/유일한 로그인 수단이라 해제할 수 없습니다/),
+      screen.getByText(/유일한 로그인 수단이라 해제할 수 없어요/),
     ).toBeInTheDocument()
   })
 

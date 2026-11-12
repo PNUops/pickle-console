@@ -2,8 +2,6 @@ import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   fetchNotices,
-  fetchNotifications,
-  fetchUnreadCount,
   fetchRequests,
   fetchResources,
   fetchLlmKeys,
@@ -17,6 +15,7 @@ import {
 import { consolePaths } from '../lib/paths'
 import { useScope } from '../lib/use-scope'
 import { useAuth } from '../auth/auth-context'
+import { useNotificationList, useNotificationReader, useNotificationUnread } from '../lib/notification-reader'
 import {
   Badge,
   Card,
@@ -62,16 +61,9 @@ export function ConsoleDashboardPage() {
     queryFn: () =>
       fetchRequests({ status: 'SUBMITTED', page: 0, size: 3, workspaceId: scope ?? undefined }),
   })
-  const unread = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: fetchUnreadCount,
-    refetchInterval: 30_000,
-    staleTime: 25_000,
-  })
-  const recentNotifications = useQuery({
-    queryKey: ['notifications', { page: 0, size: 5 }],
-    queryFn: () => fetchNotifications({ page: 0, size: 5 }),
-  })
+  const notificationReader = useNotificationReader()
+  const unread = useNotificationUnread(notificationReader)
+  const recentNotifications = useNotificationList(notificationReader, { page: 0, size: 5 })
   // 게시판과 같은 첫 페이지지만 크기가 다르다 — 키를 나누지 않으면 목록으로
   // 넘어간 사람이 세 건짜리 캐시를 한 페이지로 받아 본다.
   const notices = useQuery({
@@ -125,7 +117,7 @@ export function ConsoleDashboardPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">대시보드</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {user?.name}님, 환영합니다.
+            {user?.name}님, 환영해요.
           </p>
         </div>
         <div className="flex gap-2">
@@ -155,7 +147,7 @@ export function ConsoleDashboardPage() {
         />
         <StatTile
           label="읽지 않은 알림"
-          value={unread.isPending ? '—' : `${unread.data?.unreadCount ?? 0}건`}
+          value={unread.count == null ? '—' : `${unread.count}건`}
           to={consolePaths.notifications}
         />
         <StatTile
@@ -227,12 +219,12 @@ export function ConsoleDashboardPage() {
         )}
         {resources.isError && (
           <p className="px-5 py-8 text-center text-sm text-neutral-500">
-            리소스 목록을 불러오지 못했습니다.
+            리소스 목록을 불러오지 못했어요.
           </p>
         )}
         {resources.isSuccess && activeResources.length === 0 && (
           <div className="px-5 py-10 text-center">
-            <p className="text-sm text-neutral-500">아직 사용 중인 리소스가 없습니다.</p>
+            <p className="text-sm text-neutral-500">아직 사용 중인 리소스가 없어요.</p>
             <Link
               to={consolePaths.newRequest(scope)}
               className="mt-3 inline-flex h-9 items-center rounded-lg bg-primary-600 px-4 text-sm font-medium text-white hover:bg-primary-700"
@@ -329,6 +321,7 @@ export function ConsoleDashboardPage() {
         </div>
         {/* 로딩·실패 갈래가 없으면 제목만 남은 카드가 서고, 그것이 「알림이
             없습니다」와 구별되지 않는다. 위 「리소스」 카드와 같은 두 갈래다. */}
+        {recentNotifications.showingLegacySnapshot && <p className="px-5 py-2 text-xs text-neutral-500">일부 알림은 이전 조회 결과예요.</p>}
         {recentNotifications.isPending && (
           <div className="flex justify-center py-10">
             <Spinner label="알림 불러오는 중" />
@@ -336,13 +329,13 @@ export function ConsoleDashboardPage() {
         )}
         {recentNotifications.isError && (
           <p className="px-5 py-8 text-center text-sm text-neutral-500">
-            알림을 불러오지 못했습니다.
+            알림을 불러오지 못했어요.
           </p>
         )}
-        {recentNotifications.isSuccess && recentNotifications.data.content.length === 0 && (
-          <p className="px-5 py-8 text-center text-sm text-neutral-500">알림이 없습니다.</p>
+        {recentNotifications.currentResponse && recentNotifications.data?.content.length === 0 && (
+          <p className="px-5 py-8 text-center text-sm text-neutral-500">알림이 없어요.</p>
         )}
-        {recentNotifications.isSuccess && recentNotifications.data.content.length > 0 && (
+        {recentNotifications.data && recentNotifications.data.content.length > 0 && (
           <ul className="divide-y divide-neutral-100">
             {recentNotifications.data.content.slice(0, 3).map((notification) => (
               <li key={notification.id} className="px-5 py-3">

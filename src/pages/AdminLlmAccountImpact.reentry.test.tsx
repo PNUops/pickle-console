@@ -58,7 +58,7 @@ test.each(['not-provided', 'failed'] as const)('operation reentry reads its actu
     await waitFor(() => expect(held).toBe(true))
     expect(screen.queryByText('$5.00 → $15.00')).not.toBeInTheDocument()
     await act(async () => { release(); await gate })
-    await screen.findByText(outcome === 'failed' ? /계정 영향 이력을 불러오지 못했습니다/ : /계정별 배정 영향이 제공되지 않습니다/)
+    await screen.findByText(outcome === 'failed' ? /계정 영향 이력을 불러오지 못했어요/ : /계정별 배정 영향이 제공되지 않았어요/)
     expect(screen.queryByText('same server projection')).not.toBeInTheDocument()
     expect(writes).toBe(0)
   } finally { release() }

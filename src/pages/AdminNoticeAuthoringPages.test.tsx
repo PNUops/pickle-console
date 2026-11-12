@@ -90,7 +90,7 @@ describe('Notice authoring authority and return boundaries', () => {
     let reads = 0
     server.use(http.get('*/api/v1/admin/notices/:noticeId', () => { reads += 1 }))
     system('/admin/notices/bad/edit')
-    await screen.findByText('공지 ID가 올바르지 않습니다.')
+    await screen.findByText('공지 ID가 올바르지 않아요.')
     expect(reads).toBe(0)
     expect(screen.queryByLabelText('본문')).not.toBeInTheDocument()
   })
@@ -180,6 +180,6 @@ describe('Notice authoring authority and return boundaries', () => {
     await screen.findByDisplayValue('콘솔 기능 업데이트')
     await waitFor(() => expect(done).toBe(true))
     expect(currentPath()).toContain(`/admin/notices/${uuid(202)}/edit`)
-    expect(screen.queryByText('공지를 등록했습니다. 이어서 이미지를 첨부할 수 있습니다.')).not.toBeInTheDocument()
+    expect(screen.queryByText('공지를 등록했어요.')).not.toBeInTheDocument()
   })
 })

@@ -66,7 +66,7 @@ export function parseCreditModelRules(text: string): CreditModelRules {
     }
     const list = kind === 'ALLOW' ? allowed : denied
     if (!list.has(model) && list.size >= MAX_CREDIT_MODELS) {
-      errors.push({ line, message: `${kind === 'ALLOW' ? '허용' : '차단'} 모델은 최대 ${MAX_CREDIT_MODELS}개까지 적을 수 있습니다.` })
+      errors.push({ line, message: `${kind === 'ALLOW' ? '허용' : '차단'} 모델은 최대 ${MAX_CREDIT_MODELS}개까지 적을 수 있어요.` })
       return
     }
     list.add(model)
@@ -110,30 +110,30 @@ export function creditModelsError(
   kind: CreditModelListKind,
 ): string | null {
   if (models.length > MAX_CREDIT_MODELS) {
-    return `모델은 최대 ${MAX_CREDIT_MODELS}개까지 적을 수 있습니다.`
+    return `모델은 최대 ${MAX_CREDIT_MODELS}개까지 적을 수 있어요.`
   }
   for (const model of models) {
     if (ENCODER.encode(model).length > MAX_CREDIT_MODEL_BYTES) {
-      return `모델 이름이 너무 깁니다. ${MAX_CREDIT_MODEL_BYTES}바이트까지 적을 수 있습니다.`
+      return `모델 이름은 ${MAX_CREDIT_MODEL_BYTES}바이트까지 적을 수 있어요.`
     }
     if (model === '*') {
       return kind === 'ALLOW'
-        ? "허용 범위를 제한하지 않으려면 + 항목을 모두 지워 주세요. '*' 하나만 적을 수는 없습니다."
-        : "모든 모델을 막으려면 금액 한도를 0으로 두세요. '*' 하나만 적을 수는 없습니다."
+        ? "허용 범위를 제한하지 않으려면 + 항목을 모두 지워 주세요. '*' 하나만 적을 수는 없어요."
+        : "모든 모델을 막으려면 금액 한도를 0으로 두세요. '*' 하나만 적을 수는 없어요."
     }
     const slash = model.indexOf('/')
     const provider = slash < 0 ? model : model.slice(0, slash)
     if (provider.includes('*') && provider !== '*') {
-      return "공급자는 정확한 이름 또는 '*'만 사용할 수 있습니다. 예: openai/*, */*-pro"
+      return "공급자는 정확한 이름 또는 '*'만 사용할 수 있어요. 예: openai/*, */*-pro"
     }
     // 선행 `~` 를 떼고 본다. 안 그러면 `~pickle-general` 이 한 글자 차이로
     // 이 검사를 빠져나가 자체 서빙 이름이 유료 모델 목록에 들어온다.
     const bare = model.startsWith('~') ? model.slice(1) : model
     if (RESERVED_PREFIXES.some((prefix) => bare.startsWith(prefix))) {
-      return `${model}은(는) 자체 서빙 모델이라 이 목록의 대상이 아닙니다. 유료 모델 이름을 적어 주세요.`
+      return `${model}: 이 목록에는 유료 모델 이름을 적어 주세요.`
     }
     if (!PATTERN.test(model)) {
-      return `${model}은(는) 모델 이름 또는 벤더 프리픽스(예: openai/*) 형식이 아닙니다.`
+      return `${model}: 모델 이름 또는 벤더 프리픽스(예: openai/*) 형식으로 적어 주세요.`
     }
   }
   return null

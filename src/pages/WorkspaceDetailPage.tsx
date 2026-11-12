@@ -117,9 +117,9 @@ function WorkspaceResourcesSection({ workspaceId }: { workspaceId: string }) {
             <Spinner label="워크스페이스 리소스 불러오는 중" />
           </div>
         )}
-        {resources.isError && <Alert variant="danger">리소스 목록을 불러오지 못했습니다.</Alert>}
+        {resources.isError && <Alert variant="danger">리소스 목록을 불러오지 못했어요.</Alert>}
         {resources.isSuccess && resources.data.content.length === 0 && (
-          <p className="text-sm text-neutral-500">이 워크스페이스에 리소스가 없습니다.</p>
+          <p className="text-sm text-neutral-500">이 워크스페이스에 리소스가 없어요.</p>
         )}
         {resources.isSuccess && resources.data.content.length > 0 && (
           <ul className="divide-y divide-neutral-100">
@@ -172,13 +172,13 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
         params: { path: { workspaceId: workspace.id } },
         body: { confirmation: { fingerprint, confirmed: true } },
       })
-      if (!response.ok) throw toApiError(err, '워크스페이스를 삭제하지 못했습니다.')
+      if (!response.ok) throw toApiError(err, '워크스페이스를 삭제하지 못했어요.')
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
       if (!active.current) return
       setOpen(false)
-      toast.success('워크스페이스를 삭제했습니다.')
+      toast.success('워크스페이스를 삭제했어요.')
       navigate('/console/workspaces')
     },
 
@@ -194,8 +194,7 @@ function DangerZoneSection({ workspace }: { workspace: WorkspaceDetail }) {
         <WorkspaceTerminationImpactButton workspaceId={workspace.id} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-neutral-600">
-            워크스페이스를 삭제하면 모든 목록에서 사라집니다. 남아 있는 리소스가 있으면 먼저
-            정리해야 합니다. 구성원 전원에게 알림이 발송됩니다.
+            남아 있는 리소스를 먼저 정리한 뒤 워크스페이스를 삭제할 수 있어요.
           </p>
           <Button
             variant="danger"
@@ -281,7 +280,7 @@ function MembersSection({
         params: { path: { workspaceId: workspace.id, userId: member.userId } },
         body: { role },
       })
-      if (!data) throw toApiError(error, '역할을 변경하지 못했습니다.')
+      if (!data) throw toApiError(error, '역할을 변경하지 못했어요.')
       return data
     },
     onSuccess: async (_data, { member, role }) => {
@@ -290,14 +289,14 @@ function MembersSection({
       setTransferTarget(null)
       toast.success(
         role === 'OWNER'
-          ? `${member.name} 님을 소유자로 지정했습니다.`
-          : `${member.name} 님의 역할을 변경했습니다.`,
+          ? `${member.name} 님을 소유자로 지정했어요.`
+          : `${member.name} 님의 역할을 변경했어요.`,
       )
     },
     onError: (err) => {
       if (!active.current) return
       setTransferTarget(null)
-      setActionError(toApiError(err, '역할을 변경하지 못했습니다.').message)
+      setActionError(toApiError(err, '역할을 변경하지 못했어요.').message)
     },
   })
 
@@ -306,7 +305,7 @@ function MembersSection({
       const { error, response } = await api.DELETE('/workspaces/{workspaceId}/members/{userId}', {
         params: { path: { workspaceId: workspace.id, userId: member.userId } },
       })
-      if (!response.ok) throw toApiError(error, '구성원을 제거하지 못했습니다.')
+      if (!response.ok) throw toApiError(error, '구성원을 제거하지 못했어요.')
       return member
     },
     onSuccess: (member) => {
@@ -314,16 +313,16 @@ function MembersSection({
       if (!active.current) return
       setRemoveTarget(null)
       if (member.userId === user?.id) {
-        toast.success('워크스페이스에서 나갔습니다.')
+        toast.success('워크스페이스에서 나갔어요.')
         navigate('/console/workspaces')
         return
       }
-      toast.success(`${member.name} 님을 워크스페이스에서 제거했습니다.`)
+      toast.success(`${member.name} 님을 워크스페이스에서 제거했어요.`)
     },
     onError: (err) => {
       if (!active.current) return
       setRemoveTarget(null)
-      setActionError(toApiError(err, '구성원을 제거하지 못했습니다.').message)
+      setActionError(toApiError(err, '구성원을 제거하지 못했어요.').message)
     },
   })
 
@@ -347,7 +346,7 @@ function MembersSection({
       <CardContent className="space-y-4">
         {isPersonal && (
           <Alert variant="info">
-            개인 워크스페이스는 구성원을 추가하거나 역할을 변경할 수 없습니다.
+            개인 워크스페이스는 구성원을 추가하거나 역할을 변경할 수 없어요.
           </Alert>
         )}
         {actionError && <Alert variant="danger">{actionError}</Alert>}
@@ -455,24 +454,24 @@ function LeaveWorkspaceSection({ workspace }: { workspace: WorkspaceDetail }) {
   const leave = useMutation({
     mutationFn: async () => {
       const self = workspace.members.find((m) => m.userId === user?.id)
-      if (!self) throw new Error('이 워크스페이스의 구성원이 아닙니다.')
+      if (!self) throw new Error('이 워크스페이스의 구성원이 아니에요.')
       const { error: problem, response } = await api.DELETE(
         '/workspaces/{workspaceId}/members/{userId}',
         { params: { path: { workspaceId: workspace.id, userId: self.userId } } },
       )
-      if (!response.ok) throw toApiError(problem, '워크스페이스에서 나가지 못했습니다.')
+      if (!response.ok) throw toApiError(problem, '워크스페이스에서 나가지 못했어요.')
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['workspaces'] })
       if (!active.current) return
       setOpen(false)
-      toast.success('워크스페이스에서 나갔습니다.')
+      toast.success('워크스페이스에서 나갔어요.')
       navigate('/console/workspaces')
     },
     onError: (err) => {
       if (!active.current) return
       setOpen(false)
-      setError(toApiError(err, '워크스페이스에서 나가지 못했습니다.').message)
+      setError(toApiError(err, '워크스페이스에서 나가지 못했어요.').message)
     },
   })
 
@@ -485,8 +484,8 @@ function LeaveWorkspaceSection({ workspace }: { workspace: WorkspaceDetail }) {
         {error && <Alert variant="danger">{error}</Alert>}
         {/* 되돌리는 방법은 확인 창이 말한다 — 결정 지점은 그쪽이다. */}
         <SettingRow
-          label="이 워크스페이스의 구성원에서 빠집니다"
-          description="워크스페이스가 소유한 리소스에는 더 접근할 수 없습니다."
+          label="구성원에서 나가기"
+          description="워크스페이스가 소유한 리소스에는 더 접근할 수 없어요."
           action={
             <Button
               variant="danger"
@@ -517,7 +516,7 @@ function LeaveWorkspaceSection({ workspace }: { workspace: WorkspaceDetail }) {
           </>
         }
       >
-        <p className="text-sm text-neutral-600">나간 후에는 다시 초대받아야 합니다.</p>
+        <p className="text-sm text-neutral-600">나간 후에는 다시 초대받아야 해요.</p>
       </Modal>
     </Card>
   )

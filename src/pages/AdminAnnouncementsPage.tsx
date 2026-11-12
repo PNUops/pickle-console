@@ -41,18 +41,18 @@ export function AdminAnnouncementsPage() {
     change({ selected: undefined })
     requestAnimationFrame(() => listRef.current?.querySelector<HTMLButtonElement>(`[data-announcement-id="${selected}"]`)?.focus())
   }
-  return <div className="space-y-6"><div><h1 className="text-2xl font-bold text-neutral-900">알림 보내기</h1><p className="mt-1 text-sm text-neutral-500">대상 미리보기 후 발송건과 콘솔 알림을 저장하고 이메일 큐에 접수합니다. SMTP 인계 결과는 발송 이력에서 확인합니다.</p></div>
+  return <div className="space-y-6"><div><h1 className="text-2xl font-bold text-neutral-900">알림 보내기</h1><p className="mt-1 text-sm text-neutral-500">선택한 대상에게 콘솔 알림과 이메일을 보내요.</p></div>
     {canSend && <AnnouncementEditor onSelected={(id) => change({ selected: id })} />}
     {canRead && <section className="space-y-4" ref={listRef}><h2 className="font-semibold">발송한 알림</h2>
       {recent.isPending && <Spinner label="발송 목록 불러오는 중" />}
       {recent.isError && <Alert variant="danger">{recent.error.message}<Button variant="secondary" onClick={() => void recent.refetch()}>발송 목록 다시 조회</Button></Alert>}
-      {recent.isSuccess && <><Card><Table><THead><TR><TH>제목</TH><TH>저장된 대상</TH><TH>발송 당시 인원</TH><TH>저장 시각</TH><TH>결과</TH></TR></THead><TBody>{recent.data.content.map((announcement) => <TR key={announcement.id}>
+      {recent.isSuccess && <><Card><Table><THead><TR><TH>제목</TH><TH>저장된 대상</TH><TH>접수 당시 인원</TH><TH>저장 시각</TH><TH>결과</TH></TR></THead><TBody>{recent.data.content.map((announcement) => <TR key={announcement.id}>
         <TD><button type="button" data-announcement-id={announcement.id} className="cursor-pointer text-left font-medium text-primary-700 hover:underline focus-visible:outline-2 focus-visible:outline-focus-ring" onClick={() => change({ selected: announcement.id })}>{announcement.title}</button></TD>
         <TD><AnnouncementScopeBadge scope={announcement.scope} /></TD><TD>{announcement.recipientCount}명</TD><TD className="text-xs">{formatDateTime(announcement.createdAt)}</TD>
         <TD>{user && isSysTier(user.role) && <Link className="text-primary-700 hover:underline" to={adminPaths.mailDeliveries({ announcementId: announcement.id })}>수신자별 발송 결과</Link>}</TD>
-      </TR>)}</TBody></Table>{recent.data.content.length === 0 && <p className="p-5 text-sm text-neutral-500">발송한 알림이 없습니다.</p>}</Card><Pagination page={recent.data.page} totalPages={recent.data.totalPages} onPageChange={(nextPage) => change({ page: nextPage, selected: undefined })} /></>}
+      </TR>)}</TBody></Table>{recent.data.content.length === 0 && <p className="p-5 text-sm text-neutral-500">발송한 알림이 없어요.</p>}</Card><Pagination page={recent.data.page} totalPages={recent.data.totalPages} onPageChange={(nextPage) => change({ page: nextPage, selected: undefined })} /></>}
     </section>}
-    {rawSelected && !selected && <Alert variant="danger">발송건 ID가 올바르지 않습니다.<Button variant="secondary" onClick={close}>상세 선택 지우기</Button></Alert>}
+    {rawSelected && !selected && <Alert variant="danger">발송건 ID가 올바르지 않아요.<Button variant="secondary" onClick={close}>상세 선택 지우기</Button></Alert>}
     <Drawer open={!!selected && canRead} onClose={close} title="알림 발송건 상세">{selected && canRead && <AnnouncementDetail key={selected} announcementId={selected} />}</Drawer>
   </div>
 }
@@ -86,7 +86,7 @@ function AnnouncementEditor({ onSelected }: { onSelected: (id: string) => void }
     setReviewed({ body: variables.request, preview: result }); setError(null)
   }, onError: (err, variables) => {
     if (!active.current || variables.generation !== generation.current) return
-    const problem = toApiError(err, '발송 대상을 확인하지 못했습니다.')
+    const problem = toApiError(err, '발송 대상을 확인하지 못했어요.')
     setFieldErrors(fieldErrorsOf(problem.problem)); setError(problem.message)
   } })
   const targetLabel = (request: AnnouncementCreateRequest) => request.scope === 'ALL' ? '전체 사용자' : request.scope === 'ORG' ? `기관 '${orgOptions.find((org) => org.id === request.orgId)?.name ?? request.orgId}'` : `워크스페이스 '${workspaces.data?.find((workspace) => workspace.id === request.workspaceId)?.name ?? request.workspaceId}'`
@@ -94,12 +94,12 @@ function AnnouncementEditor({ onSelected }: { onSelected: (id: string) => void }
     event.preventDefault(); setError(null); setSaved(null)
     const errors: Record<string, string> = {}
     if (!title.trim()) errors.title = '제목을 입력해 주세요.'
-    else if (title.length > 200) errors.title = '제목은 200자 이하여야 합니다.'
+    else if (title.length > 200) errors.title = '제목은 200자 이하로 입력해 주세요.'
     if (!body.trim()) errors.body = '내용을 입력해 주세요.'
-    else if (body.length > 10_000) errors.body = '본문은 10,000자 이하여야 합니다.'
+    else if (body.length > 10_000) errors.body = '본문은 10,000자 이하로 입력해 주세요.'
     if (target === 'NONE') errors.target = '발송 대상을 선택해 주세요.'
     if ((target === 'ORG' || target === 'WORKSPACE') && !orgId) errors.orgId = '대상 기관을 선택해 주세요.'
-    if (target === 'ORG' && !hasWork(user, 'institution.announcement.send', { orgId }, SYS_ADMIN)) errors.orgId = '이 기관에 알림을 보낼 권한이 없습니다.'
+    if (target === 'ORG' && !hasWork(user, 'institution.announcement.send', { orgId }, SYS_ADMIN)) errors.orgId = '이 기관에 알림을 보낼 권한이 없어요.'
     if (target === 'WORKSPACE' && (!workspaceId || !sendWorkspaces?.some((workspace) => workspace.id === workspaceId))) errors.workspaceId = '발송 권한이 있는 워크스페이스를 선택해 주세요.'
     setFieldErrors(errors)
     if (Object.keys(errors).length) return
@@ -107,11 +107,11 @@ function AnnouncementEditor({ onSelected }: { onSelected: (id: string) => void }
     preview.mutate({ request, generation: generation.current })
   }
   return <Card className="space-y-5 p-5">
-    {saved && <OperationResult stage="stored">발송건 '{saved.title}'과 {saved.recipientCount}명의 콘솔 알림을 저장하고 이메일 큐에 접수했습니다. SMTP 인계 완료를 뜻하지 않습니다. {hasAnyWork(user, ['institution.announcement.read'], SYS_READERS) && <Button size="sm" variant="secondary" onClick={() => onSelected(saved.id)}>저장한 발송건 보기</Button>}{user && isSysTier(user.role) && <Link className="ml-3 text-primary-700 underline" to={adminPaths.mailDeliveries({ announcementId: saved.id })}>수신자별 발송 결과</Link>}</OperationResult>}
+    {saved && <OperationResult stage="stored">'{saved.title}' 알림을 저장했어요. 대상은 {saved.recipientCount}명이에요. SMTP 인계 완료를 뜻하지는 않아요. {hasAnyWork(user, ['institution.announcement.read'], SYS_READERS) && <Button size="sm" variant="secondary" onClick={() => onSelected(saved.id)}>저장한 발송건 보기</Button>}{user && isSysTier(user.role) && <Link className="ml-3 text-primary-700 underline" to={adminPaths.mailDeliveries({ announcementId: saved.id })}>수신자별 발송 결과</Link>}</OperationResult>}
     {error && <Alert variant="danger">{error}</Alert>}
     <form className="space-y-4" onSubmit={submit} noValidate>
       <FormField label="제목" required error={fieldErrors.title}><Input value={title} maxLength={200} onChange={(event) => { edit(); setTitle(event.target.value) }} placeholder="예: 서비스 점검 안내" /></FormField>
-      <FormField label="내용" required error={fieldErrors.body} description="서식 없는 평문으로 콘솔 알림과 이메일에 사용됩니다."><Textarea value={body} maxLength={10_000} rows={5} onChange={(event) => { edit(); setBody(event.target.value) }} /></FormField>
+      <FormField label="내용" required error={fieldErrors.body} description="콘솔 알림과 이메일에 같은 평문을 사용해요."><Textarea value={body} maxLength={10_000} rows={5} onChange={(event) => { edit(); setBody(event.target.value) }} /></FormField>
       <fieldset className="space-y-2"><legend className="text-sm font-medium">대상</legend><div className="flex flex-wrap gap-4">
         {isSysAdmin && <label className="text-sm"><input type="radio" name="announcement-target" checked={target === 'ALL'} onChange={() => { edit(); setTarget('ALL'); setWorkspaceId('') }} /> 전체</label>}
         {canSendInstitution && <label className="text-sm"><input type="radio" name="announcement-target" checked={target === 'ORG'} onChange={() => { edit(); setTarget('ORG'); setWorkspaceId('') }} /> {isSysAdmin || orgOptions.length !== 1 ? '특정 기관' : `${orgOptions[0].name} 전체`}</label>}
@@ -122,11 +122,11 @@ function AnnouncementEditor({ onSelected }: { onSelected: (id: string) => void }
       <Button type="submit" loading={preview.isPending}>발송 대상 미리보기</Button>
     </form>
     {reviewed && <section className="space-y-3 rounded border p-4"><h2 className="font-semibold">발송 전 대상 확인</h2><p className="text-sm">{targetLabel(reviewed.body)} · 예상 {reviewed.preview.recipientCount}명 · 조회 {formatDateTime(reviewed.preview.observedAt)}</p>
-      <p className="text-xs text-neutral-600">미리보기는 현재 예상 대상입니다. 실제 발송건 저장 시 활성 명단과 주소를 다시 선정하므로 인원은 달라질 수 있습니다. 큐 접수 후에는 수신자와 주소를 유지합니다.</p>
+      <p className="text-xs text-neutral-600">미리보기와 실제 발송 인원은 다를 수 있어요. 발송을 접수할 때 활성 명단과 주소를 확정하고, 접수 뒤에는 바꾸지 않아요.</p>
       <h3 className="font-medium">{reviewed.body.title}</h3><p className="whitespace-pre-line text-sm">{reviewed.body.body}</p>
       {reviewed.preview.warnings.map((warning) => <Alert key={warning} variant="warning">{warning}</Alert>)}
       {reviewed.preview.sample.length > 0 && <Table><THead><TR><TH>예상 수신자</TH><TH>현재 이메일</TH></TR></THead><TBody>{reviewed.preview.sample.map((recipient) => <TR key={recipient.userId}><TD>{recipient.name}</TD><TD className="break-all">{recipient.email}</TD></TR>)}</TBody></Table>}
-      {reviewed.preview.truncated && <p className="text-xs">조회 가능한 수신자 일부를 표시합니다.</p>}
+      {reviewed.preview.truncated && <p className="text-xs">조회할 수 있는 수신자 일부예요.</p>}
       <Button onClick={() => setConfirming(reviewed)}>검토한 알림 발송</Button>
     </section>}
     {confirming && <AnnouncementSendConfirmation key={generation.current} reviewed={confirming} label={targetLabel(confirming.body)} onClose={() => setConfirming(null)} onStored={(created) => { setConfirming(null); setReviewed(null); setSaved(created); setTitle(''); setBody('') }} />}
@@ -140,9 +140,9 @@ function AnnouncementSendConfirmation({ reviewed, label, onClose, onStored }: { 
   const send = useMutation({ mutationFn: () => createAnnouncement(reviewed.body), onSuccess: async (created) => {
     await queryClient.invalidateQueries({ queryKey: ['admin', 'announcements'] })
     if (active.current) onStored(created)
-  }, onError: (err) => { if (active.current) setError(toApiError(err, '알림을 발송하지 못했습니다.').message) } })
+  }, onError: (err) => { if (active.current) setError(toApiError(err, '알림 발송 결과를 확인하지 못했어요.').message) } })
   return <Modal open onClose={onClose} title="알림 발송 확인" footer={<><Button variant="secondary" onClick={onClose}>취소</Button><Button loading={send.isPending} onClick={() => send.mutate()}>발송</Button></>}>
-    <div className="space-y-3"><p className="text-sm"><strong>{label}</strong>에게 <strong>{reviewed.body.title}</strong> 발송건을 저장합니다. 예상 대상 {reviewed.preview.recipientCount}명이며 실제 저장 시 인원과 주소를 확정합니다. 발송 후 이메일을 회수할 수 없습니다.</p>{error && <Alert variant="danger">{error}</Alert>}</div>
+    <div className="space-y-3"><p className="text-sm">대상: <strong>{label}</strong>, 제목: <strong>{reviewed.body.title}</strong>. 예상 대상은 {reviewed.preview.recipientCount}명이에요. 실제 인원과 주소는 발송을 접수할 때 확정해요. 보낸 이메일은 회수할 수 없어요.</p>{error && <Alert variant="danger">{error}</Alert>}</div>
   </Modal>
 }
 
@@ -159,13 +159,12 @@ function AnnouncementDetail({ announcementId }: { announcementId: string }) {
   const mayReadOrg = !!saved.orgId && hasWork(user, 'institution.staff.read', { orgId: saved.orgId }, SYS_READERS)
   const orgName = scope.options.find((org) => org.id === saved.orgId)?.name
   return <div className="space-y-5"><h3 className="text-lg font-semibold">{saved.title}</h3><AnnouncementScopeBadge scope={saved.scope} />
-    <p className="text-sm">발송 당시 수신자 {saved.recipientCount}명 · 저장 {formatDateTime(saved.createdAt)}</p>
+    <p className="text-sm">접수 당시 수신자 {saved.recipientCount}명 · 저장 {formatDateTime(saved.createdAt)}</p>
     <dl className="space-y-2 text-sm">
       {saved.orgId && <div><dt className="text-neutral-500">대상 기관</dt><dd>{orgName ?? '이름 확인 불가'}</dd></div>}
       {saved.workspaceId && <div><dt className="text-neutral-500">대상 워크스페이스</dt><dd>{!workspace.isError && workspace.data?.name ? workspace.data.name : workspace.isPending ? '이름 조회 중' : '이름 확인 불가'}</dd></div>}
     </dl>
     <p className="whitespace-pre-line text-sm leading-relaxed">{saved.body}</p>
-    <p className="text-xs text-neutral-600">저장된 발송 대상과 인원입니다. 현재 명단으로 다시 계산하지 않으며 SMTP 인계 결과는 별도 이력입니다.</p>
     <nav aria-label="발송건 관련 업무" className="flex flex-wrap gap-3 text-sm text-primary-700">
       {sys && <Link to={adminPaths.mailDeliveries({ announcementId: saved.id })}>수신자별 발송 결과</Link>}
       {mayReadOrg && <Link to={adminPaths.orgOperations(saved.orgId!)}>대상 기관 운영</Link>}

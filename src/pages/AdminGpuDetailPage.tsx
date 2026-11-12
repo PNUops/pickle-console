@@ -30,11 +30,11 @@ export function AdminGpuDetailPage() {
     refetchInterval: (result) => gpuDetailPollInterval(result.state.data),
   })
   if (!isUuid(allocationId)) return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
-  if (!canRead) return <Alert variant="danger">GPU 할당을 조회할 권한이 없습니다.</Alert>
+  if (!canRead) return <Alert variant="danger">GPU 할당을 조회할 권한이 없어요.</Alert>
   if (allocation.isPending) return <Spinner label="GPU 할당 불러오는 중" />
   if (allocation.isError) return <Alert variant="danger">{allocation.error.message}</Alert>
   const data = allocation.data
-  if (scope.activeOrgId && data.orgId !== scope.activeOrgId) return <Alert variant="danger">선택한 기관의 GPU 할당이 아닙니다.</Alert>
+  if (scope.activeOrgId && data.orgId !== scope.activeOrgId) return <Alert variant="danger">선택한 기관의 GPU 할당이 아니에요.</Alert>
   return <AdminGpuDetail key={`${data.id}:${scope.activeOrgId ?? ''}:${user?.id ?? 'none'}:${permissions.fingerprint}`} data={data} />
 }
 
@@ -63,7 +63,7 @@ function AdminGpuDetail({ data }: { data: GpuAllocation }) {
     {sysManage && data.status === 'QUEUED' && <Card><CardHeader><CardTitle>대기 순서</CardTitle></CardHeader><CardContent><Button variant="secondary" onClick={() => setAction('priority')}>우선순위 변경</Button></CardContent></Card>}
     {canExtend && data.status === 'ALLOCATED' && stable && <Card><CardHeader><CardTitle>임대 연장</CardTitle></CardHeader><CardContent><Button variant="secondary" onClick={() => setAction('extend')}>임대 연장</Button></CardContent></Card>}
     {canRecall && stable && (data.status === 'ALLOCATED' || data.status === 'QUEUED') && <Card><CardHeader><CardTitle>GPU 회수</CardTitle></CardHeader><CardContent><Button variant="danger" onClick={() => setAction('reclaim')}>회수</Button></CardContent></Card>}
-    {action && actionAllowed && <AdminGpuActionModal key={`${allocationId}-${action}`} action={action} allocation={data} onClose={() => setAction(null)} onDone={() => { setAction(null); setNotice(`${TITLES[action]} 요청을 접수했습니다.`) }} />}
+    {action && actionAllowed && <AdminGpuActionModal key={`${allocationId}-${action}`} action={action} allocation={data} onClose={() => setAction(null)} onDone={() => { setAction(null); setNotice(`${TITLES[action]} 요청을 접수했어요.`) }} />}
   </div>
 }
 
@@ -86,10 +86,10 @@ function AdminGpuActionModal({ action, allocation, onClose, onDone }: { action: 
   }, onSuccess: async () => { await Promise.all([invalidateAdminDeadlines(client), client.invalidateQueries({ queryKey: ['admin', 'gpu-allocations'] }), client.invalidateQueries({ queryKey: ['gpu-allocations'] }), client.invalidateQueries({ queryKey: ['resources'] })]); onDone() } })
   return <Modal open title={TITLES[action]} onClose={save.isPending ? () => {} : onClose}><form className="space-y-4" onSubmit={(event) => { event.preventDefault(); if (ready) save.mutate() }}>
     {save.isError && <Alert variant="danger">{save.error.message}</Alert>}
-    {action === 'priority' && <FormField label="우선순위" required description="큰 값부터 할당하며 같은 값에서는 승인 순서를 따릅니다."><Input type="number" step={1} value={priority} onChange={(event) => setPriority(event.target.value)} /></FormField>}
+    {action === 'priority' && <FormField label="우선순위" required description="큰 값부터 할당해요. 같으면 승인 순서를 따라요."><Input type="number" step={1} value={priority} onChange={(event) => setPriority(event.target.value)} /></FormField>}
     {action === 'extend' && <GpuDurationField label="추가 임대 기간" value={duration} unit={unit} onValueChange={setDuration} onUnitChange={setUnit} />}
     <FormField label="처리 사유" required><Textarea value={reason} maxLength={2000} onChange={(event) => setReason(event.target.value)} /></FormField>
-    {action === 'reclaim' && <Checkbox label="연결된 VM을 정상 종료해 GPU를 회수합니다. 정상 종료에 실패하면 회수를 보류합니다." checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />}
+    {action === 'reclaim' && <Checkbox label="연결된 VM을 정상 종료한 뒤 GPU 회수를 시도해요. 종료에 실패하면 회수를 보류해요." checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />}
     <div className="flex justify-end gap-2"><Button type="button" variant="secondary" disabled={save.isPending} onClick={onClose}>취소</Button><Button type="submit" variant={action === 'reclaim' ? 'danger' : 'primary'} disabled={!ready} loading={save.isPending}>{TITLES[action]}</Button></div>
   </form></Modal>
 }

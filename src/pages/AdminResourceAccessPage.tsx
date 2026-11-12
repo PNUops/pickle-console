@@ -34,7 +34,7 @@ export function AdminResourceAccessPage() {
   if (!type || !isUuid(resourceId)) return <Alert variant="danger">{INVALID_ID_MESSAGE}</Alert>
   return <div className="space-y-6">
     <Link to={exactResourceReturn(search.get('returnTo'), type, resourceId, scope.activeOrgId)} className="text-sm text-primary-700 hover:underline">← 자원 상세</Link>
-    <PageHeader title="접근 권한 지원" description="자원별 접근 목록을 조회하고 허용된 역할에서 부여·등급 변경·회수를 처리합니다." />
+    <PageHeader title="접근 권한 지원" description="리소스별 접근 목록을 확인하고 허용된 범위에서 권한을 부여하거나 등급을 바꾸고 회수해요." />
     <ResourceAccessSection type={type} resourceId={resourceId} support />
   </div>
 }

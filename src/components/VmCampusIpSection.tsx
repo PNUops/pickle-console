@@ -48,12 +48,12 @@ function parsePorts(raw: string): { ports: number[] } | { error: string } {
   if (tokens.length === 0) return { error: '개방이 필요한 포트를 1개 이상 입력해 주세요.' }
   const ports: number[] = []
   for (const token of tokens) {
-    if (!/^\d+$/.test(token)) return { error: `'${token}'은(는) 포트 번호가 아닙니다.` }
+    if (!/^\d+$/.test(token)) return { error: `포트 번호가 아닌 값이에요: ${token}` }
     const port = Number(token)
-    if (port < 1 || port > 65535) return { error: '포트는 1–65535 범위여야 합니다.' }
+    if (port < 1 || port > 65535) return { error: '포트는 1–65535 범위여야 해요.' }
     if (!ports.includes(port)) ports.push(port)
   }
-  if (ports.length > 32) return { error: '포트는 최대 32개까지 신청할 수 있습니다.' }
+  if (ports.length > 32) return { error: '포트는 최대 32개까지 신청할 수 있어요.' }
   return { ports }
 }
 
@@ -87,9 +87,9 @@ export function VmCampusIpSection({
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">
-          승인되면 VM이 캠퍼스 네트워크의 교내 IP(10.x)로 연결됩니다. 부여된
-          주소는 기본 차단 상태이며 신청한 포트만 개방됩니다. 공인 IP(NAT)는
-          정보전산원 포털에서 따로 신청합니다.
+          VM의 교내 IP(10.x)와 필요한 포트 개방을 신청해요. 실제 연결은 별도
+          작업이며 개방 범위는 승인된 포트로 제한해요. 공인 IP(NAT)는
+          정보전산원 포털에서 따로 신청해요.
         </p>
 
         {requests.isPending && (
@@ -109,7 +109,7 @@ export function VmCampusIpSection({
                 <RequestForm vm={vm} />
               ) : (
                 <p className="text-sm text-neutral-500">
-                  캠퍼스 IP 신청·취소는 이 VM의 소유자·편집자만 할 수 있습니다.
+                  캠퍼스 IP 신청과 취소는 이 VM의 소유자나 편집자만 할 수 있어요.
                 </p>
               )}
             </>
@@ -147,11 +147,11 @@ function ActiveRequestCard({
     mutationFn: () => cancelVmCampusIpRequest(vm.id, request.id),
     onSuccess: async () => {
       setError(null)
-      toast.success('캠퍼스 IP 신청을 취소했습니다.')
+      toast.success('캠퍼스 IP 신청을 취소했어요.')
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
     onError: async (err) => {
-      setError(toApiError(err, '캠퍼스 IP 신청을 취소하지 못했습니다.').message)
+      setError(toApiError(err, '캠퍼스 IP 신청을 취소하지 못했어요.').message)
       // 409(이미 활성 신청 존재)면 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
@@ -178,7 +178,7 @@ function ActiveRequestCard({
       {error && <Alert variant="danger">{error}</Alert>}
       {request.status === 'APPROVED' && (
         <p className="text-sm text-neutral-600">
-          연결 작업이 끝나면 부여된 교내 IP가 여기에 표시됩니다.
+          연결 작업이 끝나면 부여된 교내 IP가 여기에 표시돼요.
         </p>
       )}
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
@@ -212,7 +212,7 @@ function ClosedRequestNotice({ request }: { request: CampusIpRequestView }) {
         <CampusIpStatusBadge status={request.status} />
         <span>
           {formatDateTime(request.createdAt)} 신청이{' '}
-          {request.status === 'REJECTED' ? '반려되었습니다.' : '회수되었습니다.'}
+          {request.status === 'REJECTED' ? '반려됐어요.' : '회수됐어요.'}
           {request.adminNote && ` 사유: ${request.adminNote}`}
         </span>
       </div>
@@ -238,11 +238,11 @@ function RequestForm({ vm }: { vm: VmDetail }) {
       setFieldErrors({})
       setPurpose('')
       setPortsRaw('')
-      toast.success('캠퍼스 IP 신청을 접수했습니다. 관리자 검토 후 연결됩니다.')
+      toast.success('캠퍼스 IP 신청을 접수했어요.')
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
     onError: async (err) => {
-      const apiError = toApiError(err, '캠퍼스 IP 신청을 접수하지 못했습니다.')
+      const apiError = toApiError(err, '캠퍼스 IP 신청을 접수하지 못했어요.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       // 409(이미 활성 신청 존재)면 최신 이력을 다시 불러와 상태 카드로 전환하는데,
       // 그러면 이 폼과 함께 인라인 오류도 사라진다 — 사유가 남도록 토스트로 알린다.
@@ -284,7 +284,7 @@ function RequestForm({ vm }: { vm: VmDetail }) {
         label="신청 목적"
         required
         error={fieldErrors.purpose}
-        description="어떤 일에 쓰는지 알려 주시면 관리자가 검토 후 연결합니다."
+        description="교내 IP가 필요한 이유를 적어 주세요."
       >
         <Textarea
           rows={3}
@@ -298,7 +298,7 @@ function RequestForm({ vm }: { vm: VmDetail }) {
         label="개방 포트"
         required
         error={fieldErrors.ports}
-        description="쉼표로 구분해 입력합니다 (예: 80, 443)."
+        description="쉼표로 구분해 입력해 주세요 (예: 80, 443)."
         className="max-w-md"
       >
         <Input

@@ -85,7 +85,7 @@ export function LlmKeyInfoCard({ llmKey }: { llmKey: LlmKeyDetail }) {
               <>
                 꺼짐
                 <span className="mt-0.5 block text-xs text-neutral-500">
-                  이미 기록된 본문은 「기록된 본문」 탭에 남아 있습니다.
+                  이미 기록된 본문은 「기록된 본문」 탭에 남아 있어요.
                 </span>
               </>
             )}

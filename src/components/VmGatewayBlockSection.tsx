@@ -33,12 +33,12 @@ export function VmGatewayBlockSection({
       setOpen(false)
       setReason('')
       setError(null)
-      onDone(nextBlocked ? 'SSH·웹 터미널 접속을 차단했습니다.' : '차단을 해제했습니다.')
+      onDone(nextBlocked ? '이 VM의 접속 차단을 설정했어요.' : '차단을 해제했어요.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await invalidateResourceLists(queryClient)
     },
     onError: (err) => {
-      setError(toApiError(err, '차단 상태를 변경하지 못했습니다.').message)
+      setError(toApiError(err, '차단 상태를 변경하지 못했어요.').message)
     },
   })
 
@@ -49,8 +49,8 @@ export function VmGatewayBlockSection({
       <h3 className="text-sm font-semibold text-neutral-800">SSH·웹 터미널 차단</h3>
       <p className="text-sm text-neutral-500">
         {vm.sshGatewayBlocked
-          ? '현재 차단됨 — SSH 게이트웨이·웹 터미널 접속이 거부됩니다. 이미 열린 웹 터미널 세션은 웹 터미널 세션 화면에서 별도로 강제 종료해야 합니다.'
-          : '차단하면 SSH 게이트웨이·웹 터미널 접속이 모두 거부됩니다. 전역 차단과는 별개로 동작합니다.'}
+          ? '새 SSH 연결과 웹 터미널 생성을 차단한 상태예요. 열려 있는 웹 터미널은 다음 권한 검사(1분 간격) 때 닫혀요. 즉시 닫으려면 웹 터미널 세션 화면에서 강제 종료해 주세요.'
+          : '이 VM의 새 SSH 연결과 웹 터미널 생성을 차단해요. 열려 있는 웹 터미널도 다음 권한 검사 때 닫혀요.'}
       </p>
       {error && !open && <Alert variant="danger">{error}</Alert>}
       <Button
@@ -84,12 +84,13 @@ export function VmGatewayBlockSection({
         <div className="space-y-3">
           {nextBlocked ? (
             <Alert variant="warning">
-              차단 즉시 이 VM으로의 SSH 게이트웨이 라우팅과 웹 터미널 세션 생성이
-              거부됩니다. 워크스페이스 구성원에게 별도 통지는 발송되지 않습니다.
+              새 SSH 연결과 웹 터미널 생성이 거부돼요. 이미 열린 SSH 연결은 유지돼요.
+              열려 있는 웹 터미널은 다음 권한 검사(1분 간격) 때 닫혀요.
+              워크스페이스 구성원에게 별도 알림은 보내지 않아요.
             </Alert>
           ) : (
             <p className="text-sm text-neutral-600">
-              차단을 해제하면 SSH 게이트웨이·웹 터미널 접속이 다시 허용됩니다.
+              이 VM의 차단을 해제해요. SSH와 웹 터미널 각각의 전역 설정은 계속 적용돼요.
             </p>
           )}
           {error && <Alert variant="danger">{error}</Alert>}
@@ -100,7 +101,7 @@ export function VmGatewayBlockSection({
               value={reason}
               maxLength={200}
               onChange={(event) => setReason(event.target.value)}
-              placeholder="VM 이벤트·감사 기록에 포함됩니다."
+              placeholder="VM 이벤트와 감사 기록에 포함돼요."
             />
           </label>
         </div>

@@ -116,7 +116,7 @@ function PatternSuggestions({
   if (suggestions.length === 0) {
     return (
       <p className="px-2 pb-1 text-xs text-neutral-500">
-        이 이름에서 뽑을 계열 패턴이 없습니다.
+        이 이름에서 뽑을 계열 패턴이 없어요.
       </p>
     )
   }
@@ -176,7 +176,7 @@ export function CreditModelPicker({
   if (failed && !catalogue) {
     return (
       <p className="text-sm text-neutral-500">
-        모델 목록을 불러오지 못했습니다. 허용된 정책은 모델 이름을 직접 적어 작성할 수 있습니다.
+        모델 목록을 불러오지 못했어요. 허용된 정책은 모델 이름을 직접 적어 작성할 수 있어요.
       </p>
     )
   }
@@ -264,14 +264,13 @@ export function CreditModelPicker({
             )
           })}
           {shown.length === 0 ? (
-            <li className="px-2 py-1 text-sm text-neutral-500">검색 결과가 없습니다.</li>
+            <li className="px-2 py-1 text-sm text-neutral-500">검색 결과가 없어요.</li>
           ) : null}
         </ul>
       ) : null}
       {truncated ? (
         <p className="text-sm text-neutral-500">
-          {total}개 중 {shown.length}개를 보고 있습니다. 목록은 싼 순이라 비싼 모델은 뒤에
-          있으니, 찾는 모델이 있으면 이름으로 검색해 주세요.
+          {total}개 중 {shown.length}개를 보고 있어요. 찾는 모델은 이름으로 검색해 주세요.
         </p>
       ) : null}
     </div>

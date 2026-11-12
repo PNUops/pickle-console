@@ -33,17 +33,17 @@ export function keyListState(params: URLSearchParams) {
   const ids: Pick<AdminLlmKeysQuery, 'workspaceId' | 'requestId' | 'openrouterAccountId'> = {}
   for (const key of ['workspaceId', 'requestId', 'openrouterAccountId'] as const) {
     const value = params.get(key)
-    if (value && !isUuid(value)) error = '조회 대상 식별자가 올바르지 않습니다.'
+    if (value && !isUuid(value)) error = '조회 대상 식별자가 올바르지 않아요.'
     else if (value) ids[key] = value.toLowerCase()
   }
   const cohort = KEY_COHORTS.find((value) => value === params.get('cohort')) ?? 'ALL'
   const sort = KEY_SORTS.find((value) => value === params.get('sort')) ?? 'NEWEST'
   const status = KEY_STATUSES.find((value) => value === params.get('status'))
   const size = explorationPageSize(params.get('size'))
-  if (size == null) error = '페이지 크기는 1~100이어야 합니다.'
+  if (size == null) error = '페이지 크기는 1~100이어야 해요.'
   if (params.has('cohort') && !KEY_COHORTS.includes(params.get('cohort') as typeof cohort)
     || params.has('sort') && !KEY_SORTS.includes(params.get('sort') as typeof sort)
-    || params.get('status') && !status) error = '조회 구분이나 정렬 조건이 올바르지 않습니다.'
+    || params.get('status') && !status) error = '조회 구분이나 정렬 조건이 올바르지 않아요.'
   return { error, query: { ...ids, status, query: params.get('q') || undefined, cohort, sort,
     policyModel: params.get('policyModel') || undefined, policyFeature: params.get('policyFeature') || undefined,
     page: listPage(params.get('page')), size: size ?? 20 } satisfies AdminLlmKeysQuery }

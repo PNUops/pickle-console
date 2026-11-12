@@ -28,16 +28,16 @@ describe('드리프트', () => {
 
     await screen.findByRole('heading', { name: '드리프트' })
     const row = (await screen.findByText('vmid 100901 · pve1')).closest('tr')!
-    await user.click(within(row).getByRole('button', { name: '해결 처리' }))
+    await user.click(within(row).getByRole('button', { name: '해결로 표시' }))
 
-    const dialog = await screen.findByRole('dialog', { name: '드리프트 해결 처리' })
+    const dialog = await screen.findByRole('dialog', { name: '드리프트 해결 표시' })
     await user.type(
       within(dialog).getByLabelText(/해결 메모/),
       '잔여 게스트를 수동 정리했습니다.',
     )
-    await user.click(within(dialog).getByRole('button', { name: '해결 처리' }))
+    await user.click(within(dialog).getByRole('button', { name: '해결로 표시' }))
 
-    expect(await screen.findByText('드리프트를 해결 처리했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('드리프트를 해결한 것으로 표시했어요.')).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.queryByText('vmid 100901 · pve1')).not.toBeInTheDocument(),
     )

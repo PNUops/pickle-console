@@ -40,7 +40,7 @@ describe('알림 발송 이력', () => {
     await user.click(within(dialog).getByRole('button', { name: '재발송' }))
 
     expect(
-      await screen.findByText(/의 재발송을 접수했습니다. 큐 상태와 SMTP 인계 결과는 다시 조회해 확인합니다/),
+      await screen.findByText(/의 재발송 요청을 접수했어요. 발송 상태를 다시 조회해 주세요/),
     ).toBeInTheDocument()
     const updated = screen.getByText('younghee.park@pusan.ac.kr').closest('tr')!
     expect(within(updated).getByText('발송 대기')).toBeInTheDocument()
@@ -117,7 +117,7 @@ describe('알림 보내기', () => {
     expect(within(dialog).getByText('전체 사용자')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '발송' }))
 
-    expect(await screen.findByText(new RegExp(`${expected}명의 콘솔 알림을 저장하고 이메일 큐에 접수했습니다`))).toBeInTheDocument()
+    expect(await screen.findByText(new RegExp(`알림을 저장했어요. 대상은 ${expected}명이에요`))).toBeInTheDocument()
     // 폼이 초기화되고 최근 발송 목록에 추가된다.
     await waitFor(() =>
       expect(screen.getByText('8월 서비스 업데이트')).toBeInTheDocument(),

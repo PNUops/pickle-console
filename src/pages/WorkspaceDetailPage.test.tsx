@@ -63,7 +63,7 @@ describe('워크스페이스 상세 — 역할별 UI', () => {
     await screen.findByRole('heading', { name: '홍길동' })
 
     expect(
-      screen.getByText(/개인 워크스페이스는 구성원을 추가하거나 역할을 변경할 수 없습니다/),
+      screen.getByText(/개인 워크스페이스는 구성원을 추가하거나 역할을 변경할 수 없어요/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '구성원 초대' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /대기 중인 초대/ })).not.toBeInTheDocument()
@@ -129,7 +129,7 @@ describe('워크스페이스 상세 — 구성원 관리', () => {
     await user.selectOptions(screen.getByLabelText('김철수 역할 변경'), 'OWNER')
 
     const dialog = await screen.findByRole('dialog', { name: '소유자 지정' })
-    expect(within(dialog).getByText(/님을 소유자로 지정합니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/님을 소유자로 지정해요/)).toBeInTheDocument()
     const confirmButton = within(dialog).getByRole('button', { name: '소유자로 지정' })
     expect(confirmButton).toBeDisabled()
 
@@ -204,7 +204,7 @@ describe('workspace detail: invitations', () => {
     const rows = within(results).getAllByRole('listitem')
     expect(rows.map((row) => row.textContent)).toEqual([
       'sujin.choi@pusan.ac.kr구성원으로 추가됨',
-      'newcomer@pusan.ac.kr초대함, 가입하면 자동으로 구성원이 됩니다',
+      'newcomer@pusan.ac.kr초대함, 참여 대기',
       'cheolsu.kim@pusan.ac.kr이미 구성원',
       'jiwoo.han@pusan.ac.kr이미 초대함',
       'newcomer@pusan.ac.kr같은 입력이 두 번 있음',
@@ -274,7 +274,7 @@ describe('workspace detail: invitations', () => {
     await user.paste('1\t정보컴퓨터공학부\t202399999\t김학생\n2\t정보컴퓨터공학부\t이름만')
     await user.click(screen.getByRole('button', { name: '초대' }))
 
-    expect(await screen.findByText('2번째 줄 (2 정보컴퓨터공학부 이름만): 학번을 찾지 못했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('2번째 줄 (2 정보컴퓨터공학부 이름만): 학번을 찾지 못했어요.')).toBeInTheDocument()
     expect(calls).toBe(0)
   })
 
@@ -432,7 +432,7 @@ describe('workspace detail: invitations', () => {
     await user.paste(lines)
     await user.click(screen.getByRole('button', { name: '초대' }))
 
-    expect(await screen.findByText('구성원을 초대하지 못했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('구성원을 초대하지 못했어요.')).toBeInTheDocument()
     const results = screen.getByRole('region', { name: '초대 결과' })
     expect(within(results).getAllByRole('listitem')).toHaveLength(200)
     expect(inviteField()).toHaveValue('user200@pusan.ac.kr')
@@ -455,7 +455,7 @@ describe('workspace detail: invitations', () => {
 
     await user.click(inviteField())
     await user.paste(Array.from({ length: 500 }, (_, i) => `user${i}@pusan.ac.kr`).join('\n'))
-    const notice = '한 시간에 500명까지 초대할 수 있습니다. 나머지는 한 시간 뒤에 보내 주세요.'
+    const notice = '한 시간에 500명까지 초대할 수 있어요. 나머지는 한 시간 뒤에 보내 주세요.'
     expect(screen.queryByText(notice)).not.toBeInTheDocument()
     await user.type(inviteField(), '{Enter}late@pusan.ac.kr')
     expect(screen.getByText(notice)).toBeInTheDocument()
@@ -669,10 +669,10 @@ describe('workspace detail: invitations', () => {
     await user.click(within(row).getByRole('button', { name: 'jiwoo.han@pusan.ac.kr 초대 취소' }))
     const dialog = await screen.findByRole('dialog', { name: '초대 취소' })
     expect(within(dialog).getByText('대상 초대: jiwoo.han@pusan.ac.kr')).toBeInTheDocument()
-    await user.click(await within(dialog).findByRole('checkbox', { name: '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다' }))
+    await user.click(await within(dialog).findByRole('checkbox', { name: '종료할 항목과 변경 내용을 확인했어요' }))
     await user.click(within(dialog).getByRole('button', { name: '초대 취소' }))
 
-    expect(await screen.findByText('대기 중인 초대가 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('대기 중인 초대가 없어요.')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '대기 중인 초대 (0건)' })).toBeInTheDocument()
   })
 })
@@ -709,7 +709,7 @@ describe('워크스페이스 상세 — 워크스페이스 삭제', () => {
 
     await user.type(within(dialog).getByRole('textbox'), '캡스톤 3조')
     expect(confirm).toBeDisabled()
-    await user.click(await within(dialog).findByRole('checkbox', { name: '표시된 전체 종료 영향과 자동 정리 내용을 확인했습니다' }))
+    await user.click(await within(dialog).findByRole('checkbox', { name: '종료할 항목과 변경 내용을 확인했어요' }))
     expect(confirm).toBeEnabled()
     await user.click(confirm)
 

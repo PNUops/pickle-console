@@ -51,14 +51,14 @@ describe('구글 콜백 착지', () => {
     renderApp(callback(OUTSIDE_DOMAIN_CODE))
     // 이 라우트가 따로 있는 첫째 이유. 콘솔 홈으로 바로 보내면 비인증으로 착지해
     // 로그인 화면으로 튕기고 이유는 어디에도 남지 않는다.
-    expect(await screen.findByRole('heading', { name: '로그인하지 못했습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '로그인하지 못했어요' })).toBeInTheDocument()
     expect(screen.getByText(/@pusan\.ac\.kr/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '로그인 화면으로 돌아가기' })).toBeInTheDocument()
   })
 
   test('구글이 취소를 돌려주면 그렇게 말한다', async () => {
     renderApp('/auth/google/callback?error=access_denied')
-    expect(await screen.findByText('구글 로그인을 취소했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('구글 로그인을 취소했어요.')).toBeInTheDocument()
   })
 
   test('돌아갈 경로가 외부 주소면 무시하고 홈으로 간다', async () => {
@@ -106,7 +106,7 @@ describe('Google login completion and return path', () => {
   test('shows a profile error without a welcome or console navigation', async () => {
     failProfile()
     renderApp(callback(EXISTING_ACCOUNT_CODE))
-    await screen.findByRole('heading', { name: '로그인하지 못했습니다' })
+    await screen.findByRole('heading', { name: '로그인하지 못했어요' })
     expect(screen.getByRole('alert')).toHaveTextContent('사용자 정보를 불러올 수 없습니다.')
     expect(currentPath()).toBe(callback(EXISTING_ACCOUNT_CODE))
     expect(getAccessToken()).toBeNull()
@@ -116,8 +116,8 @@ describe('Google login completion and return path', () => {
   test('ends pending login visibly when the new session expires during profile loading', async () => {
     failProfile(401)
     renderApp(callback(EXISTING_ACCOUNT_CODE))
-    await screen.findByRole('heading', { name: '로그인하지 못했습니다' })
-    expect(screen.getByRole('alert')).toHaveTextContent('로그인 세션이 만료되었습니다.')
+    await screen.findByRole('heading', { name: '로그인하지 못했어요' })
+    expect(screen.getByRole('alert')).toHaveTextContent('로그인 유효시간이 지났어요.')
     expect(getAccessToken()).toBeNull()
     expect(sessionStorage.getItem(POST_LOGIN_OVERLAY_KEY)).toBeNull()
   })

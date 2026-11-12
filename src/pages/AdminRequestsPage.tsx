@@ -97,9 +97,6 @@ function AdminRequestsPageContent() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">신청 검토</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            제출된 리소스 신청을 검토하고 승인 또는 반려합니다.
-          </p>
         </div>
         {hasRosterWork(user) && (
           <LinkButton to={adminPaths.newRequest(activeOrgId)}>새 신청</LinkButton>
@@ -150,10 +147,9 @@ function AdminRequestsPageContent() {
         <label className="min-w-48 flex-1 text-sm">신청 검색<Input aria-label="신청 검색" type="search" maxLength={100} placeholder="신청명 / 신청자 이름·이메일 / 워크스페이스" value={state.q} onChange={(event) => change({ q: event.target.value }, true, true)} /></label>
         <label className="text-sm">희망 종료일 이후<Input aria-label="희망 종료일 이후" type="date" value={requestedEndFrom ?? ''} onChange={(event) => change({ requestedEndFrom: event.target.value, ...(event.target.value && reqIndefinite === true ? { reqIndefinite: 'false' } : {}) }, true)} /></label>
         <label className="text-sm">희망 종료일 이전<Input aria-label="희망 종료일 이전" type="date" value={requestedEndTo ?? ''} onChange={(event) => change({ requestedEndTo: event.target.value, ...(event.target.value && reqIndefinite === true ? { reqIndefinite: 'false' } : {}) }, true)} /></label>
-        <label className="text-sm">희망 기간<Select aria-label="희망 기간 종류" value={reqIndefinite == null ? 'all' : String(reqIndefinite)} onChange={(event) => change({ reqIndefinite: event.target.value === 'all' ? undefined : event.target.value, ...(event.target.value === 'true' ? { requestedEndFrom: undefined, requestedEndTo: undefined } : {}) }, true)}><option value="all">전체</option><option value="false">종료일 지정</option><option value="true">무기한 요청</option></Select></label>
+        <label className="text-sm">희망 기간<Select aria-label="희망 기간 종류" value={reqIndefinite == null ? 'all' : String(reqIndefinite)} onChange={(event) => change({ reqIndefinite: event.target.value === 'all' ? undefined : event.target.value, ...(event.target.value === 'true' ? { requestedEndFrom: undefined, requestedEndTo: undefined } : {}) }, true)}><option value="all">전체</option><option value="false">종료일 지정</option><option value="true">희망 종료일 없음</option></Select></label>
       </div>
       {dateConflict && <Alert variant="danger">희망 종료일 범위의 앞뒤 날짜를 확인해 주세요.</Alert>}
-      <p className="text-sm text-foreground-muted">최신 신청순. 기간 조건은 제출 당시 희망 종료일을 조회합니다.</p>
       {relatedUserId && <p className="text-sm text-neutral-600">관련 사용자: {relatedUser.data?.name ?? '사용자 정보 조회 불가'} <button className="text-primary-700 hover:underline" type="button" onClick={() => change({ relatedUserId: undefined }, true)}>사용자 조건 해제</button></p>}
       {workspaceId && <p className="text-sm text-neutral-600">
         워크스페이스: {workspace.isSuccess ? <Link className="text-primary-700 hover:underline" to={adminPaths.workspaceDetail(workspaceId, activeOrgId)}>{workspace.data.name}</Link> : '워크스페이스 정보 조회 불가'}{' '}
@@ -168,7 +164,7 @@ function AdminRequestsPageContent() {
       {!dateConflict && requests.isError && <Alert variant="danger">{requests.error.message}</Alert>}
       {!dateConflict && requests.isSuccess && requests.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          표시할 신청이 없습니다.
+          표시할 신청이 없어요.
         </Card>
       )}
       {!dateConflict && requests.isSuccess && requests.data.content.length > 0 && (

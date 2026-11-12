@@ -30,8 +30,8 @@ export function ApprovalConfirmation({ request, approval, comparisons = [], targ
       <p>신청자: {request.requesterName}</p>
       <p>워크스페이스: {request.workspaceName}</p>
       <p>신청 대상 {counts.total}명 / 조회된 구성원 대상 {counts.ready}명 / 가입 대기 {counts.waiting}명 / 취소·제외 {counts.excluded}명 / 조건 미확인 {counts.unknown}명</p>
-      <p className="text-foreground-muted">대상자 상태는 승인 시 서버에서 다시 확인합니다. 가입 대기 대상의 자원은 가입 조건과 부여 기간을 확인한 뒤 생성합니다.</p>
-      {beforeSubmission && <p className="text-foreground-muted">제출 전 미리보기입니다. 명단으로 고른 계정의 구성원 추가와 새 초대는 제출할 때 처리하며, 현재 구성원이나 초대가 이미 추가된 상태를 뜻하지 않습니다.</p>}
+      <p className="text-foreground-muted">대상자 상태는 승인 시 서버에서 다시 확인해요. 가입 대기 대상의 자원은 가입 조건과 부여 기간을 확인한 뒤 생성해요.</p>
+      {beforeSubmission && <p className="text-foreground-muted">제출 전 미리보기예요. 명단으로 고른 계정의 구성원 추가와 새 초대는 제출할 때 처리하며, 현재 구성원이나 초대가 이미 추가된 상태를 뜻하지 않아요.</p>}
       <details>
         <summary className="cursor-pointer text-primary-700">실제 대상 확인 ({counts.total}명)</summary>
         <ul className="mt-2 space-y-2">{recipients.length > 0 ? recipients.map((recipient) => {
@@ -53,15 +53,15 @@ export function ApprovalConfirmation({ request, approval, comparisons = [], targ
         <TD className="block pt-0 sm:table-cell sm:pt-[var(--density-row-block-padding)]"><span className="mb-1 block text-xs text-foreground-muted sm:hidden">승인 부여값</span>{row.grantedTokens != null ? <TokenLimit value={row.grantedTokens} daily={row.dailyTokenLimit} /> : row.granted}</TD>
       </TR>)}</TBody>
     </DataTable>
-    {request.periodName && <p className="text-xs text-foreground-muted">기간 이름: {request.periodName}. 신청 종료일은 제출 당시 저장된 값입니다.</p>}
+    {request.periodName && <p className="text-xs text-foreground-muted">기간 이름: {request.periodName}. 신청 종료일은 제출 당시 저장된 값이에요.</p>}
     {request.type !== 'DOMAIN' && <p>부여 사용 시작일: {approval.grantedStartDate ?? '시작일 미지정'}</p>}
-    {recipients.length > 0 && <p>생성 대상에게 동일한 1명당 부여값을 적용합니다.</p>}
+    {recipients.length > 0 && <p>생성 대상에게 동일한 1명당 부여값을 적용해요.</p>}
     {request.type === 'VM' && approval.vm && <section aria-label="VM 부여안 총량" className="space-y-2">
-      <p className="font-semibold">취소·제외를 뺀 {entitled}명 기준 부여안 합계{counts.unknown > 0 && ' (조건 미확인 포함)'}: {formatSpec(approval.vm.grantedVcpu * entitled, approval.vm.grantedMemoryMb * entitled, approval.vm.grantedDiskGb * entitled)}</p>
+      <p className="font-semibold">취소되거나 제외된 대상을 뺀 {entitled}명 기준 부여안 합계{counts.unknown > 0 && ' (조건 미확인 포함)'}: {formatSpec(approval.vm.grantedVcpu * entitled, approval.vm.grantedMemoryMb * entitled, approval.vm.grantedDiskGb * entitled)}</p>
       <p>배치: {nodeName ?? (approval.vm.nodeId ? '노드 정보 확인 필요' : '자동 배치')}</p>
-      <p className="text-foreground-muted">이 합계는 실제 생성 완료나 물리 용량 예약을 뜻하지 않습니다. 각 대상자 생성 시점에 배치와 자원 상태를 확인합니다.</p>
+      <p className="text-foreground-muted">이 합계는 실제 생성 완료나 물리 용량 예약을 뜻하지 않아요. 각 대상자 생성 시점에 배치와 자원 상태를 확인해요.</p>
     </section>}
-    {counts.excluded > 0 && <Alert variant="warning">취소·제외된 {counts.excluded}명은 부여안 합계에 포함하지 않았습니다.</Alert>}
+    {counts.excluded > 0 && <Alert variant="warning">취소되거나 제외된 {counts.excluded}명은 부여안 합계에 포함하지 않았어요.</Alert>}
     {request.workspaceId && workspaceReadable && <Link to={adminPaths.workspaceDetail(request.workspaceId, request.orgId ?? undefined)} className="inline-flex text-primary-700 hover:underline">워크스페이스 관계 보기</Link>}
     <section aria-label="종류별 승인 확인" className="space-y-3">{children}</section>
   </div>

@@ -54,27 +54,27 @@ const ACTION_COPY: Record<ConfirmAction, { title: string; label: string; success
   activate: {
     title: '대기 중인 관리용 키 활성화',
     label: '활성화',
-    success: '대기 중이던 관리용 키를 활성화했습니다.',
+    success: '대기 중이던 관리용 키를 활성화했어요.',
   },
   cancel: {
     title: '대기 중인 관리용 키 취소',
     label: '대기 취소',
-    success: '대기 중이던 관리용 키를 취소했습니다.',
+    success: '대기 중이던 관리용 키를 취소했어요.',
   },
   rollback: {
     title: '관리용 키 교체 되돌리기',
     label: '되돌리기',
-    success: '이전 관리용 키를 다시 활성화했습니다.',
+    success: '이전 관리용 키를 다시 활성화했어요.',
   },
   finalize: {
     title: '이전 관리용 키 정리',
     label: '정리',
-    success: '폐기된 이전 관리용 키를 정리했습니다.',
+    success: '폐기된 이전 관리용 키를 정리했어요.',
   },
   delete: {
     title: '쓰지 않는 관리용 키 삭제',
     label: '삭제',
-    success: '폐기된 관리용 키를 삭제했습니다.',
+    success: '폐기된 관리용 키를 삭제했어요.',
   },
 }
 
@@ -151,7 +151,7 @@ function AdminOpenRouterAccountDetailContent() {
     onSuccess: (account, variables) => applyUpdated(account, ACTION_COPY[variables.kind].success),
     onError: (failure) => {
       setConfirmAction(null)
-      setError(toApiError(failure, '관리용 키 상태를 변경하지 못했습니다.').message)
+      setError(toApiError(failure, '관리용 키 상태를 변경하지 못했어요.').message)
     },
   })
 
@@ -159,7 +159,7 @@ function AdminOpenRouterAccountDetailContent() {
   if (detail.isPending) return <LoadingBlock label="OpenRouter 사업 계정 상세 불러오는 중" />
   if (detail.isError) return <MessageBar variant="danger">{detail.error.message}</MessageBar>
   if (scope.activeOrgId != null && detail.data.orgId !== scope.activeOrgId) {
-    return <MessageBar variant="danger">현재 관리 범위에서 이 OpenRouter 사업 계정을 찾을 수 없습니다.</MessageBar>
+    return <MessageBar variant="danger">현재 관리 범위에서 이 OpenRouter 사업 계정을 찾을 수 없어요.</MessageBar>
   }
 
   const account = detail.data
@@ -187,7 +187,6 @@ function AdminOpenRouterAccountDetailContent() {
       <PageHeader
         eyebrow={account.orgName}
         title={account.name}
-        description="사업 단위 결제 계정의 정보와 관리용 키 상태입니다."
         actions={<Badge variant={account.status === 'ACTIVE' ? 'success' : 'neutral'}>{account.status === 'ACTIVE' ? '활성' : '보관됨'}</Badge>}
       />
 
@@ -225,14 +224,14 @@ function AdminOpenRouterAccountDetailContent() {
             term: '승인 기본 허용 목록',
             description:
               !account.policyReferenceVisible || account.defaultCreditAllowedModels == null ? '제공되지 않음' : account.defaultCreditAllowedModels.length === 0
-                ? '없음. 승인 폼이 비어서 열립니다'
+                ? '없음'
                 : account.defaultCreditAllowedModels.join(', '),
           },
           {
             term: '승인 기본 차단 목록',
             description:
               !account.policyReferenceVisible || account.defaultCreditDeniedModels == null ? '제공되지 않음' : account.defaultCreditDeniedModels.length === 0
-                ? '없음. 승인 폼이 비어서 열립니다'
+                ? '없음'
                 : account.defaultCreditDeniedModels.join(', '),
           },
           { term: '계정 전체 연결 키', description: account.boundKeyCount == null ? '제공되지 않음' : `${account.boundKeyCount.toLocaleString('ko-KR')}개` },
@@ -256,12 +255,9 @@ function AdminOpenRouterAccountDetailContent() {
       {('credentialVisible' in account && account.credentialVisible === true) && <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
         <div>
           <h2 className="type-section-title">관리용 키</h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            키 값과 그 일부는 저장하지도 화면에 보여 주지도 않습니다.
-          </p>
         </div>
         {!account.activeCredential && !rotation && (
-          <MessageBar>등록된 관리용 키가 없습니다.</MessageBar>
+          <MessageBar>등록된 관리용 키가 없어요.</MessageBar>
         )}
         {account.activeCredential && <CredentialStateCard title="사용 중" credential={account.activeCredential} />}
         {rotation && (
@@ -271,14 +267,13 @@ function AdminOpenRouterAccountDetailContent() {
           />
         )}
         {rotation?.retiringOverdue && (
-          <MessageBar variant="warning" title="정리 대기가 24시간을 넘었습니다">
-            OpenRouter 쪽에서 이전 키를 폐기했는지, 새 키로 대사가 성공했는지 확인한 뒤 직접
-            정리하세요.
+          <MessageBar variant="warning" title="정리 대기가 24시간을 넘었어요">
+            OpenRouter에서 이전 키를 폐기했는지, 새 키로 대사가 성공했는지 확인한 뒤 직접 정리해 주세요.
           </MessageBar>
         )}
         {rotation?.status === 'RETIRING' && !reconciledAfterActivation(account.activeCredential) && (
           <MessageBar>
-            새 키로 키 대사가 한 번 성공해야 이전 키를 정리할 수 있습니다.
+            새 키로 키 대사가 한 번 성공해야 이전 키를 정리할 수 있어요.
           </MessageBar>
         )}
       </section>}
@@ -287,7 +282,7 @@ function AdminOpenRouterAccountDetailContent() {
         <EditAccountModal
           account={account}
           onClose={() => setEditOpen(false)}
-          onSaved={(updated) => applyUpdated(updated, 'OpenRouter 사업 계정 정보를 변경했습니다.')}
+          onSaved={(updated) => applyUpdated(updated, 'OpenRouter 사업 계정 정보를 변경했어요.')}
         />
       )}
       {stageOpen && (
@@ -296,8 +291,8 @@ function AdminOpenRouterAccountDetailContent() {
           replacing={!!account.activeCredential}
           onClose={() => setStageOpen(false)}
           onSaved={(updated) => applyUpdated(updated, account.activeCredential
-            ? '관리용 키를 확인해 교체 대기로 등록했습니다.'
-            : '관리용 키를 확인해 활성화했습니다.')}
+            ? '관리용 키를 확인해 교체 대기로 등록했어요.'
+            : '관리용 키를 확인해 활성화했어요.')}
           onError={(message) => {
             setStageOpen(false)
             setError(message)
@@ -366,7 +361,7 @@ function EditAccountModal({
     mutationFn: (body: UpdateOpenRouterAccount) => updateOpenRouterAccount(account.id, body),
     onSuccess: onSaved,
     onError: (failure) => {
-      const problem = toApiError(failure, 'OpenRouter 사업 계정 정보를 변경하지 못했습니다.')
+      const problem = toApiError(failure, 'OpenRouter 사업 계정 정보를 변경하지 못했어요.')
       setError(problem.message)
       const fields = fieldErrorsOf(problem.problem)
       setModelsError(creditModelFieldErrors(fields,
@@ -406,12 +401,11 @@ function EditAccountModal({
           baselineLabel="조회한 계정 기본값"
           onChange={setDefaultRules}
           error={modelsError ?? undefined}
-        /> : <MessageBar>현재 기본 정책을 제공할 수 없어 이 변경에서 해당 정책을 보내지 않습니다.</MessageBar>}
+        /> : <MessageBar>현재 기본 정책을 확인할 수 없어 이번 변경에서는 그대로 유지해요.</MessageBar>}
         <p className="text-xs text-foreground-muted">
-          이 계정으로 승인할 때 규칙을 미리 채웁니다. 승인자가 고칠 수 있으며,
-          기본값을 바꿔도 이미 발급된 키에는 적용되지 않습니다.
+          승인 폼에 미리 채울 규칙이에요. 승인자가 고칠 수 있고, 이미 발급된 키에는 적용되지 않아요.
         </p>
-        <FormField label="상태" description="활성 또는 미만료 key가 연결되어 있으면 보관할 수 없습니다.">
+        <FormField label="상태" description="‘발급 전’, ‘활성’, ‘정지됨’ 상태인 연결 키 중 만료일이 없거나 아직 만료되지 않은 키가 있으면 보관할 수 없어요.">
           <Select value={status} onChange={(event) => setStatus(event.target.value as OpenRouterAccount['status'])}>
             <option value="ACTIVE">활성</option>
             <option value="ARCHIVED">보관됨</option>
@@ -457,7 +451,7 @@ function StageCredentialModal({
         : await registerOpenRouterCredential(account.id, oneUseKey, confirmName)
       onSaved(updated)
     } catch (failure) {
-      onError(toApiError(failure, '관리용 키를 확인하지 못했습니다.').message)
+      onError(toApiError(failure, '관리용 키를 확인하지 못했어요.').message)
     } finally {
       setPending(false)
     }
@@ -467,7 +461,7 @@ function StageCredentialModal({
     <Modal open onClose={onClose} title={replacing ? '관리용 키 교체' : '관리용 키 등록'}>
       <form className="space-y-4" onSubmit={(event) => void submit(event)} noValidate>
         <MessageBar>
-          입력한 키로 일회용 키를 하나 만들었다 지워 보면서 권한과 계정을 확인합니다. 입력값은 응답이나 화면 기록에 남기지 않습니다.
+          입력한 관리용 키로 OpenRouter에서 일회용 키를 만들었다 지워 권한과 계정을 확인해요. 입력값은 응답이나 화면 기록에 남기지 않아요.
         </MessageBar>
         <FormField label="OpenRouter 관리용 키" required error={submitted && !managementKey && !pending ? '관리용 키를 입력해 주세요.' : undefined}>
           <Input
@@ -479,9 +473,9 @@ function StageCredentialModal({
           />
         </FormField>
         <FormField
-          label={`계속하려면 이름(${account.name})을 정확히 입력하세요`}
+          label={`계속하려면 이름(${account.name})을 정확히 입력해 주세요`}
           required
-          error={submitted && confirmName !== account.name ? '사업 계정 이름과 정확히 같아야 합니다.' : undefined}
+          error={submitted && confirmName !== account.name ? '사업 계정 이름과 정확히 같아야 해요.' : undefined}
         >
           <Input value={confirmName} onChange={(event) => setConfirmName(event.target.value)} autoComplete="off" spellCheck={false} />
         </FormField>
@@ -527,17 +521,17 @@ function CredentialConfirmModal({
       }
     >
       <div className="space-y-4">
-        {action === 'activate' && <p className="text-sm text-foreground-secondary">교체 대기 중인 키를 다시 확인하고 활성화합니다. 쓰던 키가 있으면 정리 대기로 남겨 둡니다.</p>}
-        {action === 'rollback' && <p className="text-sm text-foreground-secondary">지금 쓰는 키를 교체 대기로 되돌리고 정리 대기 중이던 이전 키를 다시 활성화합니다.</p>}
+        {action === 'activate' && <p className="text-sm text-foreground-secondary">교체 대기 중인 키를 다시 확인하고 활성화해요. 쓰던 키가 있으면 정리 대기로 남겨 둬요.</p>}
+        {action === 'rollback' && <p className="text-sm text-foreground-secondary">지금 쓰는 키를 교체 대기로 되돌리고 정리 대기 중이던 이전 키를 다시 활성화해요.</p>}
         {requiresVendorRevocation && (
           <Checkbox
             checked={vendorRevoked}
             onChange={(event) => setVendorRevoked(event.target.checked)}
-            label="OpenRouter 콘솔에서 해당 관리용 키를 폐기했습니다"
-            description="Pickle이 대신 폐기하지 않습니다."
+            label="OpenRouter 콘솔에서 해당 관리용 키를 폐기했어요"
+            description="Pickle이 대신 폐기하지 않아요."
           />
         )}
-        <FormField label={`계속하려면 이름(${account.name})을 정확히 입력하세요`} required>
+        <FormField label={`계속하려면 이름(${account.name})을 정확히 입력해 주세요`} required>
           <Input value={confirmName} onChange={(event) => setConfirmName(event.target.value)} autoComplete="off" spellCheck={false} />
         </FormField>
       </div>

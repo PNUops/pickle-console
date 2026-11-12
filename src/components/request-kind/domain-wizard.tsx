@@ -43,10 +43,10 @@ function useDomainWizard(draft: unknown, _common: CommonWizardState): KindWizard
         errors['domain.label'] = '도메인 이름을 입력해 주세요.'
       } else if (!SUBDOMAIN_RE.test(label)) {
         errors['domain.label'] =
-          '이름은 소문자·숫자·하이픈만 사용해 3~40자로 입력해 주세요. (하이픈으로 시작·끝 불가)'
+          '이름은 소문자와 숫자, 하이픈만 사용해 3~40자로 입력해 주세요. 하이픈으로 시작하거나 끝낼 수는 없어요.'
       } else if (options.data?.reservedSubdomains.includes(label)) {
         // 금칙어 일부는 서버만 알고 있어 그쪽은 422로 돌아온다.
-        errors['domain.label'] = `'${label}'은(는) 예약된 이름이라 사용할 수 없습니다.`
+        errors['domain.label'] = '예약된 이름이라 사용할 수 없어요.'
       }
       if (!root) errors['domain.rootDomain'] = '루트 도메인을 선택해 주세요.'
       return errors
@@ -57,7 +57,7 @@ function useDomainWizard(draft: unknown, _common: CommonWizardState): KindWizard
           label="도메인 이름"
           required
           error={errors['domain.label']}
-          description="소문자·숫자·하이픈, 3~40자. 이 이름이 신청의 이름이 됩니다."
+          description="소문자와 숫자, 하이픈으로 3~40자를 입력해 주세요. 이 이름이 신청의 이름이 돼요."
         >
           {/* 고를 루트가 하나뿐이면 고를 것이 없으므로 칸 옆에 그대로 붙여
               둔다 — 입력한 이름이 어디에 붙는지가 칸 안에서 읽힌다. */}
@@ -81,7 +81,7 @@ function useDomainWizard(draft: unknown, _common: CommonWizardState): KindWizard
             label="루트 도메인"
             required
             error={errors['domain.rootDomain']}
-            description="이 이름이 속할 기관은 고른 루트가 정합니다."
+            description="이 이름이 속할 기관은 고른 루트가 정해요."
           >
             <Select
               value={root}
@@ -106,7 +106,7 @@ function useDomainWizard(draft: unknown, _common: CommonWizardState): KindWizard
         </p>
         {options.isError && (
           <Alert variant="warning">
-            루트 도메인 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+            루트 도메인 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
           </Alert>
         )}
       </>
@@ -116,8 +116,7 @@ function useDomainWizard(draft: unknown, _common: CommonWizardState): KindWizard
     // 있고 가리키는 곳이 없으며, 그것을 말해 주지 않으면 침묵이 고장으로 읽힌다.
     notice: (
       <p className="text-sm text-neutral-600">
-        발급받은 뒤 도메인 상세 화면에서 레코드를 넣어야 주소가 열립니다. 레코드는 플랫폼 밖
-        서버도 가리킬 수 있습니다.
+        발급 뒤 도메인 상세에서 DNS 레코드를 추가해 주세요. 플랫폼 밖 서버도 가리킬 수 있어요.
       </p>
     ),
     displayName: fqdn,
@@ -129,14 +128,14 @@ export const domainRequestKind: RequestKindModule = {
   type: 'DOMAIN',
   picker: {
     title: '도메인',
-    description: 'VM 없이 이름만 받아 원하는 곳을 가리키는 DNS 레코드를 직접 넣습니다.',
+    description: 'VM 없이 이름만 받아 원하는 곳을 가리키는 DNS 레코드를 직접 넣어요.',
   },
   copy: {
     noWorkspaceNotice: '도메인을 소유할 워크스페이스를 먼저 만들어 주세요.',
     displayNameHint: null,
     approvedNotice: (
       <>
-        이름만으로는 아직 아무 곳도 가리키지 않습니다.{' '}
+        이름만으로는 아직 아무 곳도 가리키지 않아요.{' '}
         <Link
           to={consolePaths.dnsDomains(null)}
           className="font-medium text-primary-700 hover:underline"

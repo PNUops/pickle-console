@@ -94,7 +94,7 @@ function VmNetworkPolicyPanelState({
       : false,
   })
   const policyError = policy.isError
-    ? toApiError(policy.error, 'VM 통신 정책을 불러오지 못했습니다.')
+    ? toApiError(policy.error, 'VM 통신 정책을 불러오지 못했어요.')
     : null
   const unavailable = !!policyError && UNAVAILABLE_CODES.has(policyError.code ?? '')
   const inactive = policy.data?.applyState === 'INACTIVE'
@@ -118,7 +118,7 @@ function VmNetworkPolicyPanelState({
     if (dirty) {
       if (baseRevision != null && policy.data.revision !== baseRevision) {
         setConflict(true)
-        setSaveError('편집 중 다른 변경이 저장되었습니다. 작성 중인 규칙은 보존했습니다. 최신 정책을 불러와 다시 확인해 주세요.')
+        setSaveError('편집 중 다른 변경이 저장됐어요. 작성 중인 규칙은 보존했어요. 최신 정책을 불러와 다시 확인해 주세요.')
       }
       return
     }
@@ -128,7 +128,7 @@ function VmNetworkPolicyPanelState({
 
   const save = useMutation({
     mutationFn: (rules: VmRuleValue[]) => {
-      if (baseRevision == null) throw new Error('정책 기준 revision을 불러오지 못했습니다.')
+      if (baseRevision == null) throw new Error('정책의 현재 버전을 확인하지 못했어요.')
       const body = { expectedRevision: baseRevision, rules: toRequestRules(rules) }
       return savePolicy(body)
     },
@@ -137,7 +137,7 @@ function VmNetworkPolicyPanelState({
       const current = queryClient.getQueryData<VmNetworkPolicyView>(queryKey)
       if (current && current.revision > saved.revision) {
         setConflict(true)
-        setSaveError('저장 응답보다 새로운 정책을 확인했습니다. 작성 중인 규칙은 보존했습니다. 최신 정책을 불러와 다시 확인해 주세요.')
+        setSaveError('저장 응답보다 새로운 정책을 확인했어요. 작성 중인 규칙은 보존했어요. 최신 정책을 불러와 다시 확인해 주세요.')
         return
       }
       queryClient.setQueryData(queryKey, saved)
@@ -149,10 +149,10 @@ function VmNetworkPolicyPanelState({
     },
     onError: (failure) => {
       if (activeResource.current !== resourceKey) return
-      const error = toApiError(failure, 'VM 통신 정책을 저장하지 못했습니다.')
+      const error = toApiError(failure, 'VM 통신 정책을 저장하지 못했어요.')
       if (error.code === 'VM_NETWORK_POLICY_REVISION_CONFLICT') {
         setConflict(true)
-        setSaveError('다른 변경이 먼저 저장되었습니다. 작성 중인 규칙은 보존했습니다. 최신 정책을 불러와 다시 확인해 주세요.')
+        setSaveError('다른 변경이 먼저 저장됐어요. 작성 중인 규칙은 보존했어요. 최신 정책을 불러와 다시 확인해 주세요.')
       } else {
         setSaveError(error.message)
       }
@@ -163,7 +163,7 @@ function VmNetworkPolicyPanelState({
   if (policy.isPending) return <Spinner label="VM 통신 정책 불러오는 중" />
   if (policyError) {
     return (
-      <Alert variant="danger" title="VM 통신 정책을 불러오지 못했습니다">
+      <Alert variant="danger" title="VM 통신 정책을 불러오지 못했어요">
         <p>{policyError.message}</p>
         <Button variant="secondary" size="sm" onClick={() => void policy.refetch()}>
           다시 시도
@@ -179,7 +179,7 @@ function VmNetworkPolicyPanelState({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-neutral-800">VM 통신 정책</h3>
-          <p className="text-xs text-neutral-500">규칙 순서대로 수신·송신 연결을 판정합니다.</p>
+          <p className="text-xs text-neutral-500">규칙 순서대로 수신과 송신 연결을 판정해요.</p>
         </div>
         <VmPolicyStatus policy={policyValue} />
       </div>
@@ -201,7 +201,7 @@ function VmNetworkPolicyPanelState({
               setSaveError(undefined)
             } catch (failure) {
               if (activeResource.current !== currentResource) return
-              setSaveError(toApiError(failure, '최신 VM 통신 정책을 불러오지 못했습니다.').message)
+              setSaveError(toApiError(failure, '최신 VM 통신 정책을 불러오지 못했어요.').message)
             }
           }}
         >
@@ -236,13 +236,6 @@ function VmPolicyStatus({ policy }: { policy: VmNetworkPolicyView }) {
   return (
     <div className="space-y-2 text-right" aria-live="polite">
       <Badge variant={status.variant}>{status.label}</Badge>
-      {(policy.applyState === 'APPLIED' || policy.applyState === 'FAILED_CLOSED') && (
-        <p className="max-w-sm text-xs text-foreground-muted">
-          {policy.applyState === 'FAILED_CLOSED'
-            ? '차단 설정 반영을 확인했습니다. 실제 연결은 별도로 확인해 주세요.'
-            : '설정 반영을 확인했습니다. 실제 연결은 별도로 확인해 주세요.'}
-        </p>
-      )}
       {(policy.applyState === 'FAILED' || policy.applyState === 'FAILED_CLOSED') && policy.lastError && (
         <p className="max-w-sm text-xs text-danger-600">{policy.lastError}</p>
       )}

@@ -103,11 +103,11 @@ test('a late LLM limit save cannot replace another institution view or reopen th
   await user.type(modal.getByLabelText('RPM'), '75')
   await user.click(modal.getByRole('button', { name: '저장' }))
   fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(2) } })
-  await screen.findByText('현재 관리 범위에서 이 LLM API 키를 찾을 수 없습니다.')
+  await screen.findByText('현재 관리 범위에서 이 LLM API 키를 찾을 수 없어요.')
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)) })
   expect(completed).toBe(true)
   expect(currentPath()).toContain(`org=${uuid(2)}`)
-  expect(screen.queryByText('LLM API 키 한도를 변경했습니다.')).not.toBeInTheDocument()
+  expect(screen.queryByText('LLM API 키 한도를 변경했어요.')).not.toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   fireEvent.change(screen.getByLabelText('관리 기관 선택'), { target: { value: uuid(1) } })
   await screen.findByRole('heading', { name: 'active-admin-key' })
@@ -395,7 +395,7 @@ describe('관리자 LLM API 키 역할·상태 action', () => {
 
     expect(dialog.getByText('입력값을 확인해 주세요')).toBeInTheDocument()
     expect(dialog.getAllByText('1 이상의 올바른 정수를 입력하거나 비워 주세요.')).toHaveLength(2)
-    expect(dialog.getAllByText('금액 한도는 0 이상의 숫자여야 합니다.')).toHaveLength(2)
+    expect(dialog.getAllByText('금액 한도는 0 이상의 숫자여야 해요.')).toHaveLength(2)
     await waitFor(() => expect(rpm).toHaveFocus())
   })
 
@@ -423,13 +423,13 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
       'href',
       `/admin/llm/accounts/${uuid(410)}?org=${uuid(1)}`,
     )
-    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('Limit window 사용 $2.50')
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('누적 금액 사용 $2.50')
     expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('잔여 한도 $2.50')
     expect(screen.getByText('금액 관측').closest('div')!
       .querySelector('time[datetime="2026-08-31T00:27:30+09:00"]')).not.toBeNull()
     await user.click(screen.getByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    expect(dialog.getByText('연결된 사업 계정은 바꿀 수 없습니다')).toBeInTheDocument()
+    expect(dialog.getByText('연결된 사업 계정은 바꿀 수 없어요')).toBeInTheDocument()
     expect(dialog.queryByLabelText('OpenRouter 사업 계정')).not.toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '저장' }))
     await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
@@ -446,7 +446,7 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
 
     renderDetail('access-sys-admin', sysAdminUser, uuid(177))
     await screen.findByRole('heading', { name: 'remote-connected-unbound-key' })
-    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('Limit window 사용 $0.00')
+    expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('누적 금액 사용 $0.00')
     expect(screen.getByText('금액 관측').closest('div')).toHaveTextContent('잔여 한도 $0.00')
   })
 
@@ -479,7 +479,7 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     renderDetail('access-sys-admin', sysAdminUser, keyId)
     await user.click(await screen.findByRole('button', { name: '한도 변경' }))
     const dialog = within(screen.getByRole('dialog', { name: 'LLM API 키 한도 변경' }))
-    expect(dialog.getByText('이 키는 이 화면에서 사업 계정에 연결할 수 없습니다')).toBeInTheDocument()
+    expect(dialog.getByText('이 키는 사업 계정에 연결할 수 없어요')).toBeInTheDocument()
     expect(dialog.queryByLabelText('OpenRouter 사업 계정')).not.toBeInTheDocument()
     expect(dialog.getByRole('link', { name: '새 키 신청 검토' })).toHaveAttribute(
       'href',
@@ -487,7 +487,7 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     )
     await user.click(dialog.getByRole('button', { name: '저장' }))
     if (keyId === uuid(170)) {
-      expect(dialog.getByText('현재 키의 첫 사업 계정 결합이 허용되지 않았습니다. 키 정보를 다시 조회해 주세요.')).toBeInTheDocument()
+      expect(dialog.getByText('현재 키에는 사업 계정을 처음 연결할 수 없어요. 키 정보를 다시 조회해 주세요.')).toBeInTheDocument()
       expect(adminLlmLimitBodies).toHaveLength(0)
     } else {
       await waitFor(() => expect(adminLlmLimitBodies).toHaveLength(1))
@@ -505,12 +505,12 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     expect(suspend.queryByRole('alert')).not.toBeInTheDocument()
     await user.type(suspend.getByLabelText('정지 사유'), '과도한 호출 확인')
     await user.click(suspend.getByRole('button', { name: '정지' }))
-    expect(await screen.findByText('LLM API 키를 정지했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('LLM API 키를 정지했어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '정지 해제' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '정지 해제' }))
     await user.click(within(screen.getByRole('dialog', { name: 'LLM API 키 정지 해제' })).getByRole('button', { name: '정지 해제' }))
-    expect(await screen.findByText('LLM API 키 정지를 해제했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('LLM API 키 정지를 해제했어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '키 정지' })).toBeInTheDocument()
   })
 
@@ -522,7 +522,7 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     await user.type(confirm.getByLabelText(/active-admin-key/), 'active-admin-key')
     await user.click(confirm.getByRole('button', { name: '폐기' }))
 
-    expect(await screen.findByText('LLM API 키를 폐기했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('LLM API 키를 폐기했어요.')).toBeInTheDocument()
   })
 
   test('requestId로 정확한 신청에 연결하고 다른 active org deep link는 감춘다', async () => {
@@ -535,14 +535,14 @@ describe('관리자 LLM API 키 동작·링크·scope', () => {
     exactLink.unmount()
     renderDetail('access-sys-admin', sysAdminUser, uuid(175), uuid(1))
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      '현재 관리 범위에서 이 LLM API 키를 찾을 수 없습니다.',
+      '현재 관리 범위에서 이 LLM API 키를 찾을 수 없어요.',
     )
     expect(screen.queryByText('other-org-key')).not.toBeInTheDocument()
   })
 
   test('잘못된 key id와 존재하지 않는 deep link 오류를 표시한다', async () => {
     const invalid = renderDetail('access-sys-admin', sysAdminUser, 'not-a-uuid')
-    expect(await screen.findByRole('alert')).toHaveTextContent('올바르지 않은 주소')
+    expect(await screen.findByRole('alert')).toHaveTextContent('주소가 올바르지 않아요')
 
     invalid.unmount()
     renderDetail('access-sys-admin', sysAdminUser, uuid(999))
@@ -690,7 +690,7 @@ describe('관리자 LLM API 키 사용량 탭', () => {
     // 탭이 선택됐다는 것만으로는 그 안이 섰다는 뜻이 아니다. 기본 목이 404를
     // 돌려주던 동안 이 시험은 빈 패널을 초록으로 지나갔다.
     expect(await screen.findByText('총 요청')).toBeInTheDocument()
-    expect(screen.queryByText(/불러오지 못했습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/불러오지 못(?:했습니다|했어요)/)).not.toBeInTheDocument()
     // 명령 막대는 탭 위에 남는다 — 사용량을 보고 한도를 올리려는 사람이 탭을
     // 되돌리지 않아도 되는 것이 이 배치의 이유다.
     expect(screen.getByRole('button', { name: '한도 변경' })).toBeInTheDocument()
@@ -831,7 +831,7 @@ describe('AdminLlmKeyDetailPage expiry change', () => {
     await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
     const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
     expect(
-      within(dialog).getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.'),
+      within(dialog).getByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있어요.'),
     ).toBeInTheDocument()
     await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-06-01')
     await user.click(within(dialog).getByRole('button', { name: '변경' }))
@@ -849,7 +849,7 @@ describe('AdminLlmKeyDetailPage expiry change', () => {
     const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
     await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-01-01')
     await user.click(within(dialog).getByRole('button', { name: '변경' }))
-    expect(await screen.findByText('LLM API 키 만료일을 변경했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('LLM API 키 만료일을 변경했어요.')).toBeInTheDocument()
   })
 
   test('changes an unconnected key expiry without the paid-model note', async () => {
@@ -858,11 +858,11 @@ describe('AdminLlmKeyDetailPage expiry change', () => {
     await user.click(await screen.findByRole('button', { name: '만료일 변경' }))
     const dialog = await screen.findByRole('dialog', { name: 'LLM API 키 만료일 변경' })
     expect(
-      within(dialog).queryByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.'),
+      within(dialog).queryByText('유료 모델 키는 만료일을 앞당기는 것만 할 수 있어요.'),
     ).not.toBeInTheDocument()
     await user.type(within(dialog).getByLabelText(/새 만료일/), '2030-01-01')
     await user.click(within(dialog).getByRole('button', { name: '변경' }))
-    expect(await screen.findByText('LLM API 키 만료일을 변경했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('LLM API 키 만료일을 변경했어요.')).toBeInTheDocument()
   })
 
   test('offers no expiry change on a revoked key', async () => {

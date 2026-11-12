@@ -138,7 +138,7 @@ function RequestRecipientsContent({
         <p className="text-right text-sm"><GuideLink slug="requests/bulk" anchor="status">대상자 상태 안내</GuideLink></p>
         {error && <Alert variant="danger">{error}</Alert>}
         {admin && <Alert variant="info" title="리소스 등록과 실제 완료">
-          등록됨은 리소스와 권한 기록이 만들어진 상태입니다. VM 프로비저닝 완료를 뜻하지 않습니다.
+          등록됨은 리소스와 권한 기록이 만들어진 상태예요. VM 프로비저닝 완료를 뜻하지 않아요.
           실제 진행과 실패 사유는 각 리소스의 상세 보기에서 확인해 주세요.
         </Alert>}
         <DataTable caption="대상자" className="min-w-[36rem]">

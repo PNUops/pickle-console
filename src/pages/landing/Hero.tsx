@@ -40,8 +40,7 @@ export function Hero() {
                 </span>
               </h1>
               <p className="mt-6 max-w-xl text-base leading-relaxed text-neutral-300 sm:text-lg">
-                필요한 컴퓨팅 리소스를 하나의 플랫폼에서 관리합니다.{' '}<br className="hidden sm:block" />
-                승인되면 자동으로 준비되고, 콘솔에서 바로 사용합니다.
+                필요한 컴퓨팅 리소스를 신청하고 한곳에서 관리해요.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 {status === 'loading' ? <div aria-hidden="true" className="h-12" /> : status === 'authenticated' && user ? (

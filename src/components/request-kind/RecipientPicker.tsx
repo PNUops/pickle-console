@@ -40,7 +40,7 @@ export function RecipientPicker({
       ) : error ? (
         <Alert variant="danger">{error}</Alert>
       ) : candidates.length === 0 ? (
-        <p className="text-sm text-foreground-muted">고를 수 있는 사람이 없습니다.</p>
+        <p className="text-sm text-foreground-muted">고를 수 있는 사람이 없어요.</p>
       ) : (
         <div className="space-y-2">
           <Checkbox

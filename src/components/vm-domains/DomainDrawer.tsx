@@ -158,7 +158,7 @@ export function LiveDomainBody({
         // 플랫폼 서브도메인은 여정을 접는다 — 확인·발급 축이 없다.
         <section className="space-y-2">
           <p className="text-sm text-neutral-600">
-            플랫폼 서브도메인은 소유 확인과 개별 인증서 발급이 필요 없습니다.
+            플랫폼 서브도메인은 소유 확인과 개별 인증서 발급이 필요 없어요.
           </p>
           <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-700">
             <span className="text-xs font-medium text-neutral-500">라우트</span>
@@ -179,12 +179,12 @@ export function LiveDomainBody({
       )}
 
       {pub.route?.status === 'FAILED' && pub.route.lastError && (
-        <Alert variant="danger" title="라우트 적용에 실패했습니다">
+        <Alert variant="danger" title="라우트 적용에 실패했어요">
           {pub.route.lastError}
         </Alert>
       )}
       {certificate?.status === 'FAILED' && certificate.lastError && (
-        <Alert variant="warning" title="인증서 발급·갱신에 실패했습니다">
+        <Alert variant="warning" title="인증서 발급이나 갱신에 실패했어요">
           {certificate.lastError}
         </Alert>
       )}
@@ -234,7 +234,7 @@ function DnsRecordSection({
       await queryClient.invalidateQueries({ queryKey: ['domains'] })
     },
     onError: (err) =>
-      setError(toApiError(err, '검증 재시도를 접수하지 못했습니다.').message),
+      setError(toApiError(err, '검증 재시도를 접수하지 못했어요.').message),
   })
 
   return (
@@ -242,7 +242,7 @@ function DnsRecordSection({
       <h3 className="text-sm font-semibold text-neutral-800">DNS 레코드</h3>
       <p className="text-sm text-neutral-600">
         도메인 관리 서비스(DNS)에 아래 두 레코드를 추가해 주세요. 전파에는 수
-        분~수십 분이 걸릴 수 있습니다.
+        분~수십 분이 걸릴 수 있어요.
       </p>
       <DnsRecordTable verification={verification} />
       {error && <Alert variant="danger">{error}</Alert>}
@@ -286,12 +286,12 @@ function ManageSection({
     onSuccess: async (_data, next) => {
       setPortError(null)
       onPortUsed(next)
-      toast.success('공개 포트 변경을 접수했습니다. 잠시 후 적용됩니다.')
+      toast.success('공개 포트 변경을 접수했어요.')
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
       await queryClient.invalidateQueries({ queryKey: ['domains'] })
     },
     onError: (err) =>
-      setPortError(toApiError(err, '공개 포트 변경을 접수하지 못했습니다.').message),
+      setPortError(toApiError(err, '공개 포트 변경을 접수하지 못했어요.').message),
   })
 
   const release = useMutation({
@@ -304,7 +304,7 @@ function ManageSection({
       await queryClient.invalidateQueries({ queryKey: ['domains'] })
     },
     onError: (err) => {
-      setReleaseError(toApiError(err, '도메인 해제를 접수하지 못했습니다.').message)
+      setReleaseError(toApiError(err, '도메인 해제를 접수하지 못했어요.').message)
     },
   })
 
@@ -320,7 +320,7 @@ function ManageSection({
   }
 
   const isCustom = pub.domain.kind === 'CUSTOM'
-  // 이 VM의 마지막 서빙 도메인을 해제하면 HTTP 공개가 완전히 끊긴다 — 확인을 승격.
+  // The confirmation highlights the last domain address, independent of other network paths.
   const isLast = vm.publications?.length === 1
 
   return (
@@ -331,7 +331,7 @@ function ManageSection({
           label="공개 포트"
           error={portError ?? undefined}
           description={
-            routeReady ? '22는 공개할 수 없습니다.' : '적용 중에는 변경할 수 없습니다.'
+            routeReady ? '22는 공개할 수 없어요.' : '적용 중에는 변경할 수 없어요.'
           }
           className="w-36"
         >
@@ -382,14 +382,14 @@ function ManageSection({
         <div className="space-y-3">
           {isLast && (
             <Alert variant="danger">
-              이 VM의 마지막 도메인입니다. 해제하면 HTTP 공개가 완전히 중단됩니다.
+              이 VM의 마지막 도메인이에요. 해제하면 연결된 도메인이 남지 않아요.
             </Alert>
           )}
           <p className="text-sm text-neutral-600">
-            <span className="font-mono">{pub.fqdn}</span> 연결을 해제합니다.{' '}
+            <span className="font-mono">{pub.fqdn}</span> 연결을 해제해요.{' '}
             {isCustom
-              ? '해제하면 이 주소로의 접근이 즉시 중단되고 이름도 바로 풀립니다. 다시 연결하려면 소유 확인을 처음부터 진행합니다.'
-              : '해제하면 주소가 즉시 닫히고, 이름은 일정 기간 예약된 뒤 풀립니다. 예약 중에는 다시 연결할 수 있습니다.'}
+              ? '해제가 반영되면 이 주소로 새 연결을 할 수 없어요. 이름은 바로 풀리며, 다시 연결하려면 소유 확인을 처음부터 진행해요.'
+              : '해제가 반영되면 이 주소로 새 연결을 할 수 없어요. 이름은 예약 기간 뒤에 풀리고, 그전에는 다시 연결할 수 있어요.'}
           </p>
           {releaseError && <Alert variant="danger">{releaseError}</Alert>}
         </div>
@@ -432,7 +432,7 @@ function ReservedDomainBody({
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
     onError: (err) => {
-      setError(toApiError(err, '이름 반납을 접수하지 못했습니다.').message)
+      setError(toApiError(err, '이름 반납을 접수하지 못했어요.').message)
     },
   })
 
@@ -488,7 +488,7 @@ function ReservedDomainBody({
       >
         <p className="text-sm text-neutral-600">
           <span className="font-mono">{domain.fqdn}</span> 이름이 즉시 풀려 다른 사용자가
-          사용할 수 있게 됩니다.
+          사용할 수 있게 돼요.
         </p>
       </Modal>
     </div>

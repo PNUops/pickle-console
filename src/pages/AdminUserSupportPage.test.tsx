@@ -121,7 +121,7 @@ test('profile correction previews conditional work and then shows actual joining
   await user.clear(modal.getByLabelText('학번'))
   await user.type(modal.getByLabelText('학번'), '202054321')
   await waitFor(() => expect(modal.getByRole('button', { name: '저장' })).toBeEnabled())
-  expect(modal.getByText(/일치하는 대기 초대를 수락할 수 있습니다/)).toBeInTheDocument()
+  expect(modal.getByText(/일치하는 대기 초대를 수락할 수 있어요/)).toBeInTheDocument()
   expect(modal.getByRole('link', { name: '가상머신 신청' })).toHaveAttribute('href', `/admin/requests/${uuid(201)}?org=${uuid(1)}`)
   expect(adminProfilePatches).toHaveLength(0)
   await user.click(modal.getByRole('button', { name: '저장' }))
@@ -162,7 +162,7 @@ test('a global account change observes an impacted request outside the selected 
   expect(actualRequest).toHaveAttribute('href', `/admin/requests/${uuid(201)}?org=${uuid(2)}`)
   expect(outcome.getByText('생성 대기')).toBeInTheDocument()
   expect(outcome.getByRole('link', { name: '현재 업무 범위에서 사용자 관계 다시 조회' })).toHaveAttribute('href', `/admin/users/${uuid(42)}`)
-  expect(screen.getByText('현재 관리 범위에서 연결된 신청이 없습니다.')).toBeInTheDocument()
+  expect(screen.getByText('현재 관리 범위에 연결된 신청이 없어요.')).toBeInTheDocument()
 })
 
 test('claiming an invitation for an unapproved request shows approval wait in preview and actual results', async () => {
@@ -207,7 +207,7 @@ test('reactivation restored to verification pending does not promise invitation 
   await user.click(await screen.findByRole('button', { name: '비활성화 해제' }))
   const modal = within(screen.getByRole('dialog', { name: '계정 재활성화 영향 확인' }))
   await modal.findByText('변경 후 계정 상태: 인증 대기')
-  expect(modal.getByText('이 변경만으로 초대 수락이나 자원 생성이 진행되지 않습니다.')).toBeInTheDocument()
+  expect(modal.getByText('이 변경만으로 초대 수락이나 리소스 생성이 진행되지는 않아요.')).toBeInTheDocument()
   expect(account.status).toBe('DISABLED')
   await user.click(modal.getByRole('button', { name: '영향 확인 후 재활성화' }))
   await waitFor(() => expect(account.status).toBe('PENDING_VERIFICATION'))
@@ -234,8 +234,8 @@ test('empty scoped results differ from a denied or missing diagnostic target', a
   const user = userEvent.setup()
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
   renderApp(`/admin/users/${uuid(42)}?org=${uuid(2)}&resourceType=VM&resourceId=${uuid(100)}`)
-  expect(await screen.findByText('현재 관리 범위에서 연결된 신청이 없습니다.')).toBeInTheDocument()
-  expect(await screen.findByText('현재 관리 범위에서 연결된 자원이 없습니다.')).toBeInTheDocument()
+  expect(await screen.findByText('현재 관리 범위에 연결된 신청이 없어요.')).toBeInTheDocument()
+  expect(await screen.findByText('현재 관리 범위에 연결된 리소스가 없어요.')).toBeInTheDocument()
   expect(await screen.findByText('대상이 없거나 현재 관리 범위에서 조회할 수 없습니다.')).toBeInTheDocument()
   await user.clear(screen.getByLabelText('자원 ID'))
   await user.type(screen.getByLabelText('자원 ID'), 'invalid')
@@ -248,9 +248,9 @@ test('workspace ownership standing does not claim that a missing resource grant 
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser), http.get('*/api/v1/admin/users/:userId/support/access', () => HttpResponse.json(resource)))
   renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}&resourceType=VM&resourceId=${uuid(100)}`)
   const result = await screen.findByRole('region', { name: '자원 접근 조회 결과' })
-  expect(await within(result).findByText('실효 자원 접근 권한이 없습니다.')).toBeInTheDocument()
-  expect(within(result).getByText('워크스페이스 소유자의 상시권은 접근 권한 목록과 삭제에 관한 권한이며 자원 이용 등급과 별개입니다.')).toBeInTheDocument()
-  expect(within(result).queryByText(/기본 조건을 충족합니다/)).not.toBeInTheDocument()
+  expect(await within(result).findByText('이 리소스의 접근 권한이 없어요.')).toBeInTheDocument()
+  expect(within(result).getByText('워크스페이스 소유자의 접근 권한 관리와 삭제 권한은 리소스 이용 등급과 별개예요.')).toBeInTheDocument()
+  expect(within(result).queryByText(/기본 조건을 충족해요/)).not.toBeInTheDocument()
 })
 
 test('an elapsed resource period does not describe a still running VM as externally stopped', async () => {
@@ -258,7 +258,7 @@ test('an elapsed resource period does not describe a still running VM as externa
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser), http.get('*/api/v1/admin/users/:userId/support/access', () => HttpResponse.json(resource)))
   renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}&resourceType=VM&resourceId=${uuid(100)}`)
   const result = await screen.findByRole('region', { name: '자원 접근 조회 결과' })
-  expect(await within(result).findByText('사용 기간이 지났거나 종료 상태입니다.')).toBeInTheDocument()
+  expect(await within(result).findByText('사용 기간이 지났거나 종료 상태예요.')).toBeInTheDocument()
   expect(within(result).getByText('실행 중')).toBeInTheDocument()
   expect(within(result).queryByText('종료됨')).not.toBeInTheDocument()
 })
@@ -268,6 +268,23 @@ test('missing or system-tier accounts stay inaccessible to the organization read
   renderApp(`/admin/users/${uuid(5)}?org=${uuid(1)}`)
   await screen.findByRole('alert')
   expect(screen.queryByRole('heading', { name: '워크스페이스 관계' })).not.toBeInTheDocument()
+})
+
+test('shows separate lifetime for domain requests without changing VM periods', async () => {
+  const data = supportFixture(uuid(42), uuid(1))
+  const base = { ...data.requests[0], status: 'APPROVED' as const, recipientId: null, recipientStatus: null, resourceId: null, reason: null, applicant: true }
+  data.requests = [
+    { ...base, id: uuid(201), type: 'DOMAIN', grantedEndDate: null },
+    { ...base, id: uuid(202), type: 'VM', grantedEndDate: null },
+    { ...base, id: uuid(203), type: 'VM', grantedEndDate: '2026-12-31' },
+  ]
+  server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser), http.get('*/api/v1/admin/users/:userId/support', () => HttpResponse.json(data)))
+  renderApp(`/admin/users/${uuid(42)}?org=${uuid(1)}`)
+  const table = await screen.findByRole('table', { name: '사용자 관련 신청 결과' })
+  const rows = within(table).getAllByRole('row')
+  expect(within(rows[1]).getByText('별도 기한')).toBeInTheDocument()
+  expect(within(rows[2]).getByText('무기한')).toBeInTheDocument()
+  expect(within(rows[3]).getByText('2026-12-31')).toBeInTheDocument()
 })
 
 test('partial recipient failure names the actual request and does not make an applicant-only relation a recipient', async () => {
@@ -305,7 +322,7 @@ test('removing the last grant of a nonmember retains the receipt when the relati
   await modal.findByText('회수할 등급: 소유자')
   expect(modal.getByText(/대상 자원: 현재 자원 이름/)).toBeInTheDocument()
   await user.click(modal.getByRole('button', { name: '미리보기 확인 후 회수' }))
-  await screen.findByText('현재 관리 범위에서 연결된 자원이 없습니다.')
+  await screen.findByText('현재 관리 범위에 연결된 리소스가 없어요.')
   const receipt = screen.getByRole('region', { name: '최근 권한 회수 결과' })
   expect(within(receipt).getByText(/^처리 ID [0-9a-f-]{36}$/)).toBeInTheDocument()
   expect(within(receipt).getByText('현재 자원 이름: 적용됨')).toBeInTheDocument()

@@ -120,7 +120,7 @@ function AdminRequestDetailContent() {
   const workspaceReturn = workspaceSourceReturn(searchParams.get('returnTo'), data.workspaceId, true)
   if (activeOrgId != null && data.orgId !== activeOrgId) {
     return (
-      <Alert variant="danger" title="선택한 관리 범위의 신청이 아닙니다">
+      <Alert variant="danger" title="선택한 관리 범위의 신청이 아니에요">
         <Link to={returnPath} className="font-medium underline">
           신청 목록으로 돌아가기
         </Link>
@@ -213,7 +213,7 @@ function RequestMailSelectionCard({ requestId }: { requestId: string }) {
     {selection.isPending && <Spinner label="신청 알림 선정 기록 불러오는 중" />}
     {selection.isError && <Alert variant="danger">{selection.error.message}<Button variant="secondary" onClick={() => void selection.refetch()}>선정 기록 다시 조회</Button></Alert>}
     {selection.data?.selection && <RequestMailSelectionSnapshot selection={selection.data.selection} />}
-    {selection.isSuccess && !selection.data.selection && <p className="text-sm text-neutral-500">이 신청의 접수 당시 기관 알림 선정 명단은 기록되지 않았습니다. 현재 명단으로 과거 수신자를 추정하지 않습니다.</p>}
+    {selection.isSuccess && !selection.data.selection && <p className="text-sm text-neutral-500">이 신청에는 접수 당시 기관 알림 선정 기록이 없어요.</p>}
   </Card>
 }
 
@@ -233,8 +233,7 @@ function DecisionResultCard({
       </CardHeader>
       <CardContent>
         <OperationResult stage="stored">
-          {approved ? '승인과 부여 내용이 저장되었습니다. 리소스의 외부 적용과 실제 완료는 해당 리소스 상세에서 확인해 주세요.'
-            : '반려 결정과 의견이 저장되었습니다. 알림 전달 완료를 확인한 결과는 아닙니다.'}
+          {approved ? '승인했어요.' : '반려했어요.'}
         </OperationResult>
         <dl className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
           <Field label="검토자">{review.reviewerName}</Field>
@@ -317,7 +316,7 @@ function DecisionSection({
       onNotice({
         variant: 'warning',
         message:
-          '이미 처리된 신청입니다. 다른 관리자가 먼저 처리했을 수 있어 최신 상태로 새로 고쳤습니다.',
+          '이미 처리된 신청이에요. 최신 상태를 다시 확인해 주세요.',
       })
       void refresh()
       return
@@ -339,11 +338,11 @@ function DecisionSection({
         params: { path: { requestId: request.id } },
         body: approval,
       })
-      if (!data) throw toApiError(error, '신청을 승인하지 못했습니다.')
+      if (!data) throw toApiError(error, '신청 승인 결과를 확인하지 못했어요.')
       return data
     },
     onSuccess: async () => {
-      if (active.current) { setConfirm(null); onNotice({ variant: 'success', message: form.successMessage }) }
+      if (active.current) { setConfirm(null); onNotice({ variant: 'success', message: '승인했어요.' }) }
       // 승인은 사업 계정에 걸린 배정 상태를 바꾸므로 계정 목록도 다시 읽는다.
       await Promise.all([
         refresh(),
@@ -353,7 +352,7 @@ function DecisionSection({
         queryClient.invalidateQueries({ queryKey: ['resources'] }),
       ])
     },
-    onError: (error) => { if (active.current) handleError(error, '신청을 승인하지 못했습니다.') },
+    onError: (error) => { if (active.current) handleError(error, '신청 승인 결과를 확인하지 못했어요.') },
   })
 
   const reject = useMutation({
@@ -362,18 +361,18 @@ function DecisionSection({
         params: { path: { requestId: request.id } },
         body: { comment: rejectComment.trim() },
       })
-      if (!data) throw toApiError(error, '신청을 반려하지 못했습니다.')
+      if (!data) throw toApiError(error, '신청 반려 결과를 확인하지 못했어요.')
       return data
     },
     onSuccess: async () => {
       setConfirm(null)
       onNotice({
         variant: 'success',
-        message: '반려 결정과 사유를 저장했습니다. 알림 전달 완료는 별도로 확인해야 합니다.',
+        message: '반려했어요.',
       })
       await refresh()
     },
-    onError: (error) => handleError(error, '신청을 반려하지 못했습니다.'),
+    onError: (error) => handleError(error, '신청 반려 결과를 확인하지 못했어요.'),
   })
 
   const submitApprove = (event: FormEvent) => {
@@ -447,7 +446,7 @@ function DecisionSection({
               label="반려 사유"
               required
               error={fieldErrors.comment}
-              description="반려 사유는 신청자에게 메일로 전달됩니다."
+              description="반려 사유는 신청자의 알림과 메일 내용에 포함돼요."
             >
               <Textarea
                 value={rejectComment}
@@ -483,7 +482,7 @@ function DecisionSection({
             </>
           }
         >
-          {confirmation.changed && <Alert variant="warning">승인 내용이 갱신되었습니다. 변경된 내용을 확인한 뒤 확정해 주세요.</Alert>}
+          {confirmation.changed && <Alert variant="warning">승인 내용이 바뀌었어요. 변경된 내용을 확인한 뒤 확정해 주세요.</Alert>}
           {confirm === 'approve' && confirmation.displayed && <ApprovalConfirmation request={request} approval={confirmation.displayed} comparisons={form.comparisons} targetFacts={targetFacts} targetFactsKnown={context.isSuccess} workspaceReadable={context.data?.workspace.canReadDetail} nodeName={form.nodeName}>{form.confirmBody}</ApprovalConfirmation>}
         </Modal>
 
@@ -507,7 +506,7 @@ function DecisionSection({
           }
         >
           <p className="text-sm text-neutral-600">
-            입력한 반려 사유가 신청자에게 전달됩니다.
+            입력한 반려 사유로 신청자 알림과 메일 발송을 요청해요.
           </p>
         </Modal>
       </CardContent>
@@ -536,9 +535,9 @@ function ApprovalContextPanel({ request, canDecide }: { request: RequestDetail; 
   }
   if (context.isError) {
     return (
-      <Alert variant="warning" title="승인 참고 정보를 불러오지 못했습니다">
-        {canDecide ? '참고 정보 없이도 승인 또는 반려할 수 있습니다.'
-          : '신청 내용은 계속 확인할 수 있습니다. 잠시 후 다시 조회해 주세요.'}
+      <Alert variant="warning" title="승인 참고 정보를 불러오지 못했어요">
+        {canDecide ? '참고 정보 없이도 승인하거나 반려할 수 있어요.'
+          : '신청 내용은 계속 볼 수 있어요. 잠시 후 다시 조회해 주세요.'}
       </Alert>
     )
   }
@@ -593,8 +592,8 @@ function ApprovalContextPanel({ request, canDecide }: { request: RequestDetail; 
       {/* 종류 카드를 그린 뒤에도 이 경고가 떴다. GPU 카드가 위에 서 있는데
           「참고 정보가 없습니다」가 그 아래 붙어 두 문장이 서로를 반박했다. */}
       {!vm && !llmKey && !gpu && !domain && (
-        <Alert variant="warning" title="종류별 참고 정보가 없습니다">
-          공통 정보만 표시합니다.
+        <Alert variant="warning" title="종류별 참고 정보가 없어요">
+          공통 정보만 표시해요.
         </Alert>
       )}
 
@@ -604,7 +603,7 @@ function ApprovalContextPanel({ request, canDecide }: { request: RequestDetail; 
         </CardHeader>
         <CardContent className="text-sm text-neutral-700">
           {data.history.length === 0 ? (
-            <p className="text-neutral-500">이전 신청 이력이 없습니다.</p>
+            <p className="text-neutral-500">이전 신청 이력이 없어요.</p>
           ) : (
             <ul className="space-y-3">
               {data.history.map((item) => (
@@ -659,7 +658,7 @@ function DomainApprovalContext({ context }: { context: NonNullable<ApprovalConte
         </dl>
         {!context.available && (
           <Alert variant="warning">
-            승인해도 이 이름은 발급되지 않습니다. 신청자에게 다른 이름을 받아야 합니다.
+            현재 이 이름을 사용할 수 없어요. 신청자에게 다른 이름을 받아 주세요.
           </Alert>
         )}
       </CardContent>
@@ -676,8 +675,8 @@ function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
           {vm.requestedImage ? <>
             <p>{vm.requestedImage.name} / revision {vm.requestedImage.version}</p>
             <p>{vm.requestedImage.selectableNow ? '현재 신청 가능' : '현재 신청 불가'}</p>
-            <p className="text-xs text-foreground-muted">연결된 논리 이미지의 현재 상태입니다. 승인 부여 이미지는 아래에서 별도로 선택합니다.</p>
-          </> : <p className="text-foreground-muted">연결된 이미지 정보를 확인할 수 없습니다. 현재 신청 가능한 이미지를 선택해 주세요.</p>}
+            <p className="text-xs text-foreground-muted">신청한 논리 이미지의 현재 상태예요. 승인할 이미지는 승인 양식에서 따로 선택해요.</p>
+          </> : <p className="text-foreground-muted">신청한 이미지 정보를 확인할 수 없어요. 현재 신청 가능한 이미지를 선택해 주세요.</p>}
         </CardContent>
       </Card>
       {vm.orgHeadroom != null && <Alert variant={vm.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}>
@@ -705,7 +704,7 @@ function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
         <CardHeader>
           <CardTitle className="text-sm">기관 가상머신 리소스 여유</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-neutral-700">{vm.orgHeadroom == null ? <p>기관 할당·용량 정보는 현재 업무로 제공되지 않습니다.</p> : <>
+        <CardContent className="space-y-3 text-sm text-neutral-700">{vm.orgHeadroom == null ? <p>현재 권한으로 기관 할당량과 용량을 확인할 수 없어요.</p> : <>
           {vm.orgHeadroom.warnings.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {vm.orgHeadroom.warnings.map((warning) => (
@@ -753,7 +752,7 @@ function LlmKeyBriefCard({ title, keys }: { title: string; keys: LlmKeyBrief[] }
       </CardHeader>
       <CardContent>
         {keys.length === 0 ? (
-          <p className="text-sm text-neutral-500">보유 중인 LLM API 키가 없습니다.</p>
+          <p className="text-sm text-neutral-500">보유 중인 LLM API 키가 없어요.</p>
         ) : (
           <ul className="space-y-3 text-sm">
             {keys.map((key) => (
@@ -781,9 +780,9 @@ function limitText(value: number | null | undefined): string {
 }
 
 function VmBriefList({ vms }: { vms: NonNullable<ApprovalContext['vm']>['applicantResources']['activeVms'] }) {
-  if (vms == null) return <p className="text-neutral-500">VM 관계는 현재 업무로 제공되지 않습니다.</p>
+  if (vms == null) return <p className="text-neutral-500">현재 권한으로 VM 관계 정보를 확인할 수 없어요.</p>
   if (vms.length === 0) {
-    return <p className="text-neutral-500">보유 중인 VM이 없습니다.</p>
+    return <p className="text-neutral-500">보유 중인 VM이 없어요.</p>
   }
   return (
     <ul className="space-y-1.5">
@@ -804,7 +803,7 @@ function VmBriefList({ vms }: { vms: NonNullable<ApprovalContext['vm']>['applica
 }
 
 function TotalsLine({ totals }: { totals: NonNullable<ApprovalContext['vm']>['applicantResources']['totals'] }) {
-  if (totals == null) return <p className="text-xs text-neutral-500">리소스 합계는 현재 업무로 제공되지 않습니다.</p>
+  if (totals == null) return <p className="text-xs text-neutral-500">현재 권한으로 리소스 합계를 확인할 수 없어요.</p>
   return (
     <p className="text-xs text-neutral-500">
       합계 {formatSpec(totals.vcpu, totals.memoryMb, totals.diskGb)}

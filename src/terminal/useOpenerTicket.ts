@@ -13,9 +13,9 @@ import {
 const TICKET_TIMEOUT_MS = 8000
 
 const DETACHED_MESSAGE =
-  '콘솔 탭과 연결되어 있지 않아 접속 티켓을 받을 수 없습니다. 콘솔에서 다시 열어 주세요.'
+  '콘솔에 연결할 수 없어요. 콘솔에서 다시 열어 주세요.'
 const TIMEOUT_MESSAGE =
-  '콘솔 탭이 응답하지 않아 접속 티켓을 받지 못했습니다. 콘솔에서 다시 열어 주세요.'
+  '콘솔의 응답을 받지 못했어요. 콘솔에서 다시 열어 주세요.'
 
 export interface OpenerTicketSource {
   /** 티켓을 받아올 수 있는 콘솔 탭이 살아 있는가. */

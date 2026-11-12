@@ -33,21 +33,21 @@ function draftOf(policy: SourcePolicyView): SourcePolicyDraft {
 
 function observationOf(policy: SourcePolicyView): NetworkPolicyObservation {
   return policy.applyState === 'FAILED'
-    ? { state: 'FAILED', message: policy.lastError ?? '정책 반영에 실패했습니다.' }
+    ? { state: 'FAILED', message: policy.lastError ?? '정책 반영에 실패했어요.' }
     : { state: policy.applyState }
 }
 
 function policySummary(policy: SourcePolicyView): string {
   if (!policy.explicit) {
-    return '직접 저장한 정책이 없습니다. 기능 활성화 기본값은 새 연결 차단입니다.'
+    return '직접 저장한 정책이 없어요. 기능 활성화 기본값은 새 연결 차단이에요.'
   }
   if (policy.allowedCidrs.length === 0) {
-    return '빈 allowlist가 저장되어 새 연결을 모두 차단합니다.'
+    return '빈 allowlist가 저장되어 새 연결을 모두 차단해요.'
   }
   if (policy.allowedCidrs.some((cidr) => cidr === '0.0.0.0/0' || cidr === '::/0')) {
-    return '전체 출발지를 허용하는 CIDR이 명시적으로 저장되어 있습니다.'
+    return '전체 출발지를 허용하는 CIDR이 명시적으로 저장되어 있어요.'
   }
-  return '저장된 CIDR 목록만 새 연결을 허용합니다.'
+  return '저장된 CIDR 목록만 새 연결을 허용해요.'
 }
 
 export function SourcePolicyPanel(props: SourcePolicyPanelProps) {
@@ -103,7 +103,7 @@ function SourcePolicyPanelState({
     if (dirty) {
       if (baseRevision != null && policy.data.revision !== baseRevision) {
         setConflict(true)
-        setSaveError('편집 중 다른 변경이 저장되었습니다. 입력은 보존했습니다. 최신 정책을 불러와 다시 확인해 주세요.')
+        setSaveError('편집 중 다른 변경이 저장됐어요. 입력은 보존했어요. 최신 정책을 불러와 다시 확인해 주세요.')
       }
       return
     }
@@ -113,7 +113,7 @@ function SourcePolicyPanelState({
 
   const save = useMutation({
     mutationFn: (value: SourcePolicyValue) => {
-      if (baseRevision == null) throw new Error('정책 기준 revision을 불러오지 못했습니다.')
+      if (baseRevision == null) throw new Error('정책의 현재 버전을 확인하지 못했어요.')
       return savePolicy({ expectedRevision: baseRevision, allowedCidrs: value.allowedCidrs })
     },
     onSuccess: (saved) => {
@@ -125,10 +125,10 @@ function SourcePolicyPanelState({
       setSaveError(undefined)
     },
     onError: async (failure) => {
-      const error = toApiError(failure, '출발지 정책을 저장하지 못했습니다.')
+      const error = toApiError(failure, '출발지 정책을 저장하지 못했어요.')
       if (error.code === 'SOURCE_POLICY_REVISION_CONFLICT') {
         setConflict(true)
-        setSaveError('다른 변경이 먼저 저장되었습니다. 입력은 보존했습니다. 최신 정책을 불러와 다시 확인해 주세요.')
+        setSaveError('다른 변경이 먼저 저장됐어요. 입력은 보존했어요. 최신 정책을 불러와 다시 확인해 주세요.')
         await policy.refetch()
       } else {
         setSaveError(error.message)
@@ -140,7 +140,7 @@ function SourcePolicyPanelState({
   if (policy.isPending) return <Spinner label="출발지 정책 불러오는 중" />
   if (policy.isError) {
     return (
-      <Alert variant="danger" title="출발지 정책을 불러오지 못했습니다">
+      <Alert variant="danger" title="출발지 정책을 불러오지 못했어요">
         <p>{policy.error.message}</p>
         <Button variant="secondary" size="sm" onClick={() => void policy.refetch()}>
           다시 시도
@@ -154,7 +154,7 @@ function SourcePolicyPanelState({
 
   const policyValue = policy.data
   const presetError = preset.isError
-    ? toApiError(preset.error, '교내 출발지 목록을 불러오지 못했습니다.')
+    ? toApiError(preset.error, '교내 출발지 목록을 불러오지 못했어요.')
     : null
   const campusPresetCidrs = preset.data?.allowedCidrs ?? null
 
@@ -168,7 +168,7 @@ function SourcePolicyPanelState({
         <NetworkPolicyStatus observation={observationOf(policyValue)} />
       </div>
       {policyValue.applyState === 'FAILED' && (
-        <p className="text-xs text-neutral-500">같은 값을 다시 저장하면 새 반영 요청으로 재처리합니다.</p>
+        <p className="text-xs text-neutral-500">같은 값을 다시 저장하면 새 반영 요청으로 재처리해요.</p>
       )}
       {presetError && !UNAVAILABLE_CODES.has(presetError.code ?? '') && (
         <Alert variant="warning">{presetError.message}</Alert>

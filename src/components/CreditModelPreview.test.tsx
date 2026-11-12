@@ -18,6 +18,6 @@ describe('credit model policy candidates', () => {
 
     expect(screen.getByText(/패턴 조건을 통과하는 후보 1개/)).toBeInTheDocument()
     expect(screen.queryByText(/전부를 쓸 수 있습니다/)).not.toBeInTheDocument()
-    expect(screen.getByText(/기능 권한.*호출/)).toBeInTheDocument()
+    expect(screen.queryByText(/기능 권한.*호출/)).not.toBeInTheDocument()
   })
 })

@@ -45,10 +45,9 @@ class TerminalErrorBoundary extends Component<{ children: ReactNode }, { failed:
     if (!this.state.failed) return this.props.children
     return (
       <div className="flex h-svh w-full flex-col items-center justify-center gap-4 bg-[#0a0a0a] px-8 text-center">
-        <h1 className="text-base font-semibold text-neutral-100">터미널을 불러오지 못했습니다</h1>
+        <h1 className="text-base font-semibold text-neutral-100">터미널을 불러오지 못했어요</h1>
         <p className="max-w-md text-sm leading-relaxed text-neutral-400">
-          창을 닫고 콘솔에서 다시 열어 주세요. 콘솔이 새로 배포된 뒤라면 이 창이 예전 버전을
-          가리키고 있어 생기는 현상입니다.
+          창을 닫고 콘솔에서 다시 열어 주세요.
         </p>
         <button
           type="button"

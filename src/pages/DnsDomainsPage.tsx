@@ -47,7 +47,7 @@ export function DnsDomainsPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">도메인</h1>
           <p className="mt-1 text-sm text-neutral-500">
-            레코드는 플랫폼 밖 서버도 가리킬 수 있습니다.
+            레코드는 플랫폼 밖 서버도 가리킬 수 있어요.
           </p>
         </div>
         <LinkButton to={consolePaths.newRequest(scope, 'DOMAIN')}>도메인 신청</LinkButton>
@@ -63,8 +63,8 @@ export function DnsDomainsPage() {
         <Card className="space-y-4 p-8 text-center text-sm text-neutral-500">
           <p>
             {scope == null
-              ? '접근 권한을 가진 도메인이 없습니다. 워크스페이스를 고르면 그 워크스페이스의 도메인을 볼 수 있습니다.'
-              : '이 워크스페이스에는 아직 발급받은 도메인이 없습니다.'}
+              ? '접근 권한을 가진 도메인이 없어요. 워크스페이스를 고르면 그 워크스페이스의 도메인을 볼 수 있어요.'
+              : '이 워크스페이스에 표시할 도메인이 없어요.'}
           </p>
           <div>
             <LinkButton to={consolePaths.newRequest(scope, 'DOMAIN')}>도메인 신청</LinkButton>
@@ -104,9 +104,9 @@ export function DnsDomainsPage() {
                       )}
                       {domain.accessLimited && (
                         <p className="mt-0.5 text-xs text-neutral-500">
-                          접근 권한이 없습니다
+                          접근 권한이 없어요.
                           {domain.ownerNames.length > 0 &&
-                            ` — ${domain.ownerNames.join(', ')} 님에게 요청하세요`}
+                            ` ${domain.ownerNames.join(', ')}님에게 요청해 주세요.`}
                           {/* A workspace owner who cannot see inside this
                               domain may still decide who can. The detail is
                               closed to them, so this list is the only way in,
@@ -143,7 +143,7 @@ export function DnsDomainsPage() {
                           {domain.reservedUntil
                             ? `${formatDateTime(domain.reservedUntil)}까지 `
                             : '예약이 끝나기 전까지 '}
-                          되살릴 수 있습니다
+                          되살릴 수 있어요
                         </p>
                       )}
                     </TD>

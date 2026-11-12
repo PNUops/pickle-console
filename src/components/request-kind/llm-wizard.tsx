@@ -62,7 +62,7 @@ function requestedFeatures(spec: LlmKeySpecState): PassthroughEndpoint[] {
 
 const PAID_FEATURES_HINT = `${PASSTHROUGH_ENDPOINTS.filter(isCreditOnly)
   .map((entry) => passthroughText([entry]))
-  .join(', ')}은 유료 모델을 선택하면 고를 수 있습니다.`
+  .join(', ')}은 유료 모델을 선택하면 고를 수 있어요.`
 
 /** 요청 금액의 상한. 계약이 정한 수의 폭이다. */
 const MAX_CREDIT = 100_000
@@ -79,7 +79,7 @@ function limitError(raw: string, label: string, max: number): string | undefined
   if (!value) return undefined
   if (!/^\d+$/.test(value)) return `${label}는 0보다 큰 정수로 입력하거나 비워 두세요.`
   const parsed = Number(value)
-  if (parsed < 1) return `${label}는 1 이상이어야 합니다.`
+  if (parsed < 1) return `${label}는 1 이상이어야 해요.`
   if (parsed > max) return `${label}는 ${max.toLocaleString('ko-KR')} 이하로 입력해 주세요.`
   return undefined
 }
@@ -117,7 +117,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
     if (spec.useCommercial && spec.reqCreditLimit.trim()) {
       const amount = Number(spec.reqCreditLimit)
       if (!Number.isFinite(amount) || amount <= 0)
-        next['llmKey.reqCreditLimit'] = '금액은 0보다 커야 합니다.'
+        next['llmKey.reqCreditLimit'] = '금액은 0보다 커야 해요.'
       else if (amount > MAX_CREDIT)
         next['llmKey.reqCreditLimit'] = `금액은 ${MAX_CREDIT.toLocaleString('ko-KR')} 이하로 입력해 주세요.`
     }
@@ -143,7 +143,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
               *
             </span>
           </legend>
-          <p className="text-xs text-foreground-muted">둘 다 쓸 수 있습니다.</p>
+          <p className="text-xs text-foreground-muted">둘 다 쓸 수 있어요.</p>
           {errors['llmKey.useCampusModels'] && (
             <p role="alert" className="text-sm text-danger-600">
               {errors['llmKey.useCampusModels']}
@@ -155,7 +155,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
           <div className="space-y-3">
             <Checkbox
               label="Pickle LLM"
-              description={`학교가 직접 서빙합니다. 돈이 들지 않습니다. 모델 이름은 ${LLM_DEFAULT_MODEL}입니다.`}
+              description={`학교에서 제공하며 사용 금액이 들지 않아요. 모델 이름은 ${LLM_DEFAULT_MODEL}이에요.`}
               checked={spec.useCampus}
               onChange={(event) =>
                 update({
@@ -172,7 +172,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
                 <FormField
                   label="희망 일일 토큰 수"
                   error={errors['llmKey.reqDailyTokens']}
-                  description="하루에 쓸 토큰 상한입니다. 자정(KST)에 초기화됩니다."
+                  description="하루에 쓸 토큰 상한이에요. 자정(KST)에 초기화돼요."
                 >
                   <Input
                     type="number"
@@ -189,7 +189,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
 
             <Checkbox
               label="유료 모델"
-              description="외부 유료 모델입니다. 쓴 만큼 돈이 듭니다."
+              description="외부 유료 모델이에요. 사용한 만큼 금액이 차감돼요."
               checked={spec.useCommercial}
               onChange={(event) =>
                 update({
@@ -203,7 +203,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
                 <FormField
                   label="희망 금액 한도 (USD)"
                   error={errors['llmKey.reqCreditLimit']}
-                  description="이 키가 유료 모델에 쓸 수 있는 금액 상한입니다. 다 쓰면 호출이 거절됩니다."
+                  description="이 키가 유료 모델에 쓸 수 있는 금액 상한이에요. 다 쓰면 호출이 거절돼요."
                 >
                   <Input
                     type="number"
@@ -263,7 +263,7 @@ function useLlmKeyWizard(draftSpec: unknown): KindWizard {
 
     notice: (
       <Alert variant="info" title="한도 확정 안내">
-        실제 부여 한도는 관리자가 승인할 때 정합니다.
+        실제 부여 한도는 관리자가 승인할 때 정해요.
       </Alert>
     ),
 
@@ -295,11 +295,11 @@ export const llmKeyRequestKind: RequestKindModule = {
   type: 'LLM_API_KEY',
   picker: {
     title: 'LLM API 키',
-    description: '코드에서 교내 LLM API를 호출할 때 쓰는 자격증명입니다.',
+    description: '코드에서 교내 LLM API를 호출할 때 쓰는 자격증명이에요.',
   },
   copy: {
     noWorkspaceNotice:
-      'LLM API 키를 신청할 수 있는 워크스페이스가 없습니다. 워크스페이스에 속해 있어야 신청할 수 있습니다.',
+      'LLM API 키를 신청할 수 있는 워크스페이스가 없어요. 워크스페이스에 속해 있어야 신청할 수 있어요.',
   },
   fields: {
     llmKey: { label: 'LLM API 키 신청 항목', step: 'resource' },

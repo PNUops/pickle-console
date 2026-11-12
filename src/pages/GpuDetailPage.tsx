@@ -75,7 +75,7 @@ function GpuDetail({ allocation }: { allocation: GpuAllocation }) {
     {canRelease && stable && (active || allocation.status === 'QUEUED') && <Card><CardHeader><CardTitle>{allocation.status === 'QUEUED' ? 'GPU 대기 취소' : 'GPU 반납'}</CardTitle></CardHeader><CardContent>
       <Button variant="danger" onClick={() => setAction('release')}>{allocation.status === 'QUEUED' ? '대기 취소' : 'GPU 반납'}</Button>
     </CardContent></Card>}
-    {action && <GpuActionModal key={`${allocationId}-${action}`} action={action} allocation={allocation} onClose={() => setAction(null)} onDone={() => { setAction(null); setNotice(`${ACTION_TITLES[action]} 요청을 접수했습니다.`) }} />}
+    {action && <GpuActionModal key={`${allocationId}-${action}`} action={action} allocation={allocation} onClose={() => setAction(null)} onDone={() => { setAction(null); setNotice(`${ACTION_TITLES[action]} 요청을 접수했어요.`) }} />}
   </div>
 }
 
@@ -114,17 +114,17 @@ function GpuActionModal({ action, allocation, onClose, onDone }: { action: Actio
             {options.data?.map((vm) => <option key={vm.vmId} value={vm.vmId}>{vm.vmName}</option>)}
           </Select>
         </FormField>
-        {options.data?.length === 0 && <p className="text-sm text-neutral-600">같은 워크스페이스에서 연결할 VM을 찾을 수 없습니다.</p>}
-        {selected && !selected.ready && <Alert variant="warning">{selected.reason ?? '이 VM은 GPU 연결 준비가 필요합니다.'}</Alert>}
+        {options.data?.length === 0 && <p className="text-sm text-neutral-600">같은 워크스페이스에서 연결할 VM을 찾을 수 없어요.</p>}
+        {selected && !selected.ready && <Alert variant="warning">{selected.reason ?? '이 VM은 GPU 연결 준비가 필요해요.'}</Alert>}
       </>}
       {action === 'extend' ? <>
         <GpuDurationField label="추가 임대 기간" value={duration} unit={unit} onValueChange={setDuration} onUnitChange={setUnit} />
-        <p className="text-sm text-neutral-600">대기자가 없을 때 승인된 전체 사용기간 안에서 연장할 수 있습니다.</p>
+        <p className="text-sm text-neutral-600">대기자가 없을 때 승인된 전체 사용기간 안에서 연장할 수 있어요.</p>
       </> : <>
-        {action === 'detach' && <p className="text-sm text-neutral-600">연결을 해제해도 남은 GPU 임대는 유지됩니다.</p>}
-        {action === 'release' && <p className="text-sm text-neutral-600">반납이 완료되면 GPU 임대가 종료되고 다음 신청자에게 할당될 수 있습니다.</p>}
-        {(action === 'attach' || action === 'detach' || (action === 'release' && allocation.connectionStatus === 'ATTACHED')) && <p className="text-sm text-neutral-700">실행 중인 VM은 재시작되며 작업이 중단될 수 있습니다. 정지된 VM은 작업 후에도 정지 상태를 유지합니다.</p>}
-        <Checkbox label={action === 'release' && allocation.status === 'QUEUED' ? 'GPU 대기를 취소합니다.' : `위 내용을 확인하고 ${ACTION_TITLES[action]}에 동의합니다.`} checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+        {action === 'detach' && <p className="text-sm text-neutral-600">연결을 해제해도 남은 GPU 임대는 유지돼요.</p>}
+        {action === 'release' && <p className="text-sm text-neutral-600">반납이 완료되면 GPU 임대가 종료되고 다음 신청자에게 할당될 수 있어요.</p>}
+        {(action === 'attach' || action === 'detach' || (action === 'release' && allocation.connectionStatus === 'ATTACHED')) && <p className="text-sm text-neutral-700">실행 중인 VM은 재시작되며 작업이 중단될 수 있어요. 정지된 VM은 작업 후에도 정지 상태를 유지해요.</p>}
+        <Checkbox label={action === 'release' && allocation.status === 'QUEUED' ? 'GPU 대기를 취소해요.' : `위 내용을 확인하고 ${ACTION_TITLES[action]}에 동의해요.`} checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
       </>}
       <div className="flex justify-end gap-2"><Button type="button" variant="secondary" disabled={mutation.isPending} onClick={onClose}>취소</Button><Button type="submit" variant={action === 'release' ? 'danger' : 'primary'} disabled={!ready} loading={mutation.isPending}>{ACTION_TITLES[action]}</Button></div>
     </form>

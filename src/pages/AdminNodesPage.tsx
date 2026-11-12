@@ -76,7 +76,7 @@ export function AdminNodesPage() {
       <PageHeader
         eyebrow="운영"
         title="노드/IP"
-        description="Proxmox 노드별 물리 용량·가상머신 할당 합계와 IP 풀 할당 현황입니다. 30초 주기 상태 폴러가 갱신합니다."
+        description="노드별 물리 용량과 VM 할당량, IP 풀 현황을 확인해요."
       />
 
       <Tabs
@@ -205,7 +205,7 @@ export function AdminNodesPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-neutral-500">
-                  오프라인으로 지정된 노드여서 사용량을 수집하지 않습니다.
+                  오프라인으로 지정되어 이 화면에서는 사용량을 조회하지 않아요.
                 </p>
               </CardContent>
             </Card>
@@ -258,17 +258,17 @@ function NodeStatusModal({
     mutationFn: () => updateAdminNode(node.id, { status }),
     onSuccess: async (updated) => {
       setError(null)
-      onDone(`노드 ${updated.name}의 상태를 ${NODE_STATUS_LABELS[updated.status]}(으)로 전환했습니다.`)
+      onDone(`노드 ${updated.name}의 상태를 ${NODE_STATUS_LABELS[updated.status]}으로 변경했어요.`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'nodes'] })
     },
-    onError: (err) => setError(toApiError(err, '노드 상태를 변경하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '노드 상태를 변경하지 못했어요.').message),
   })
 
   return (
     <Modal
       open
       onClose={onClose}
-      title={`노드 상태 전환 — ${node.name}`}
+      title={`노드 상태 전환: ${node.name}`}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -287,8 +287,7 @@ function NodeStatusModal({
     >
       <div className="space-y-3">
         <p className="text-sm text-neutral-600">
-          점검 중·오프라인으로 전환하면 신규 VM 배치에서 제외되고, 기존 게스트는 영향받지
-          않습니다.
+          점검 중이나 오프라인으로 전환하면 새 VM 배치에서 제외돼요. 기존 게스트의 전원은 바뀌지 않아요.
         </p>
         <Select
           aria-label="노드 상태"
@@ -303,7 +302,7 @@ function NodeStatusModal({
         </Select>
         {status !== 'ACTIVE' && (
           <Alert variant="warning">
-            이 노드가 유일한 ACTIVE 노드라면 전환 시 신규 VM 배치가 불가능해집니다.
+            이 노드가 유일한 활성 노드라면 전환 후 새 VM을 배치할 수 없어요.
           </Alert>
         )}
         {error && <Alert variant="danger">{error}</Alert>}

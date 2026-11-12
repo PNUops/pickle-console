@@ -80,7 +80,7 @@ describe('사용 가이드', () => {
     // 거부는 자체 서빙 쪽 사실이다. 유료 축에는 허용 목록이 아예 없어 목록 밖 필드가
     // 그대로 전달되므로, 제목이 축을 말하지 않으면 화면이 두 축 모두에 거부를 약속한다.
     expect(
-      screen.getByText('자체 서빙 모델은 목록에 없는 필드를 거부합니다'),
+      screen.getByText('자체 서빙 모델은 목록에 없는 필드를 거부해요'),
     ).toBeInTheDocument()
     // 제목만 걸면 문구를 되돌려도 통과한다. 유료 쪽이 면제라는 것까지 화면에 있어야
     // 이 구분이 지켜진다.
@@ -170,8 +170,8 @@ describe('사용 가이드', () => {
     // Without the scope a student sends the headers to the self-hosted model
     // and reads the missing effect as a bug.
     const body = document.body.textContent ?? ''
-    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩, 리랭크, TTS, STT 요청에서는 넘기지 않습니다')
-    expect(body).toContain('1024바이트를 넘는 값은 넘기지 않습니다')
+    expect(body).toContain('자체 서빙 모델과 이미지, 임베딩, 리랭크, TTS, STT 요청에서는 넘기지 않아요')
+    expect(body).toContain('1024바이트를 넘는 값은 넘기지 않아요')
     expect(body).toContain('HTTP-Referer')
   })
 
@@ -182,8 +182,8 @@ describe('사용 가이드', () => {
     // 주소를 복사해 가는 자리라, 어디까지가 base URL인지가 그 옆에 있어야 한다.
     // 문장을 통째로 찾으면 안 된다. testing-library 의 매처는 직계 텍스트 노드만
     // 이어 붙이므로 <Code>/v1</Code> 이 매칭에서 빠지고, /v2 로 바뀌어도 통과한다.
-    const note = screen.getByText(/까지가 base URL입니다/).closest('p')
-    expect(note?.textContent ?? '').toContain('/v1까지가 base URL입니다')
+    const note = screen.getByText(/까지가 base URL이에요/).closest('p')
+    expect(note?.textContent ?? '').toContain('/v1까지가 base URL이에요')
   })
 
   test('limits rate headers to self-served responses', async () => {
@@ -194,7 +194,7 @@ describe('사용 가이드', () => {
     // 유료 모델 사용자가 자기에게도 걸린다고 읽는다.
     const body = document.body.textContent ?? ''
     expect(body).toContain(
-      '분당 요청 수, 분당 토큰 수와 동시 요청 수 한도는 자체 서빙 모델에만 적용됩니다',
+      '분당 요청 수, 분당 토큰 수와 동시 요청 수 한도는 자체 서빙 모델에만 적용돼요',
     )
     // 헤더가 어디에 실리는지도 축을 따른다. 이 문장이 빠지면 유료 모델 사용자가
     // 오지 않는 헤더를 기다린다.
@@ -264,7 +264,7 @@ describe('사용 가이드', () => {
     expect(screen.getByText('일일 토큰 한도')).toBeInTheDocument()
     expect(document.body.textContent ?? '').toContain('quota_exhausted')
     expect(document.body.textContent ?? '').toContain('Retry-After')
-    expect(document.body.textContent ?? '').toContain('0달러를 썼다는 뜻이 아닙니다')
+    expect(document.body.textContent ?? '').toContain('0달러를 썼다는 뜻이 아니에요')
   })
 
   test('pairs stable error codes with HTTP status', async () => {

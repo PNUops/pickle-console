@@ -30,7 +30,6 @@ export function CreditModelPolicyEditor({
     {baseline && <div aria-label="모델 정책 변경안 비교" className="space-y-1 break-words rounded border border-line p-3 text-sm">
       <p>{baselineLabel}: {policyText(baseline)}</p>
       <p>작성 중인 변경안: {parsed.errors.length ? '입력 오류를 먼저 고쳐 주세요.' : policyText(parsed)}</p>
-      <p className="text-xs text-foreground-muted">조회한 값과 입력안을 비교합니다. 저장 시점의 서버 변경 충돌 검사나 적용 완료 결과를 뜻하지 않습니다.</p>
     </div>}
     <ModelCatalogueStatus state={state} />
     {state.canRead && <>

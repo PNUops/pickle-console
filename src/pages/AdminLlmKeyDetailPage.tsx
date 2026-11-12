@@ -141,7 +141,7 @@ function AdminLlmKeyDetailContent() {
       if (mounted.current) {
         setRevokeOpen(false)
         setError(null)
-        setNotice('LLM API 키를 폐기했습니다.')
+        setNotice('LLM API 키를 폐기했어요.')
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin', 'llm-keys'] }),
@@ -151,7 +151,7 @@ function AdminLlmKeyDetailContent() {
     onError: (failure) => {
       if (mounted.current) {
         setRevokeOpen(false)
-        setError(toApiError(failure, 'LLM API 키를 폐기하지 못했습니다.').message)
+        setError(toApiError(failure, 'LLM API 키를 폐기하지 못했어요.').message)
       }
     },
   })
@@ -160,7 +160,7 @@ function AdminLlmKeyDetailContent() {
   if (detail.isPending) return <LoadingBlock label="LLM API 키 상세 불러오는 중" />
   if (detail.isError) return <MessageBar variant="danger">{detail.error.message}</MessageBar>
   if (scope.activeOrgId != null && detail.data.orgId !== scope.activeOrgId) {
-    return <MessageBar variant="danger">현재 관리 범위에서 이 LLM API 키를 찾을 수 없습니다.</MessageBar>
+    return <MessageBar variant="danger">현재 관리 범위에서 이 LLM API 키를 찾을 수 없어요.</MessageBar>
   }
 
   const key = detail.data
@@ -223,7 +223,7 @@ function AdminLlmKeyDetailContent() {
       <PageHeader
         eyebrow={`${key.orgName} · ${key.workspaceName}`}
         title={key.name}
-        description={projectionAvailable(key, 'metadataVisible') ? key.purpose ?? '용도가 기록되지 않았습니다.' : '명령이나 조회에 필요한 대상 참조입니다.'}
+        description={projectionAvailable(key, 'metadataVisible') ? key.purpose ?? '기록된 용도가 없어요.' : '업무에 필요한 대상 정보만 보여 줘요.'}
         actions={<><LlmKeyStatusBadge status={status} />{(canUseRowWork(user, key, 'llm.acl.support.read', SYS_READERS) || canUseRowWork(user, key, 'llm.acl.support.manage', SYS_ADMIN)) && <AdminResourceAccessLink type="LLM_API_KEY" resourceId={key.id} orgId={key.orgId} workspaceId={key.workspaceId} />}</>}
       />
 
@@ -385,7 +385,7 @@ function AdminLlmKeyDetailContent() {
           onClose={() => setLimitsOpen(false)}
           onSaved={(updated) => {
             setLimitsOpen(false)
-            updateCached(updated, 'LLM API 키 한도를 변경했습니다.')
+            updateCached(updated, 'LLM API 키 한도를 변경했어요.')
           }}
         />
       )}
@@ -395,7 +395,7 @@ function AdminLlmKeyDetailContent() {
           onClose={() => setExpiryOpen(false)}
           onSaved={(updated) => {
             setExpiryOpen(false)
-            updateCached(updated, 'LLM API 키 만료일을 변경했습니다.')
+            updateCached(updated, 'LLM API 키 만료일을 변경했어요.')
           }}
         />
       )}
@@ -406,7 +406,7 @@ function AdminLlmKeyDetailContent() {
           onClose={() => setSuspendOpen(false)}
           onSaved={(updated) => {
             setSuspendOpen(false)
-            updateCached(updated, 'LLM API 키를 정지했습니다.')
+            updateCached(updated, 'LLM API 키를 정지했어요.')
           }}
         />
       )}
@@ -417,7 +417,7 @@ function AdminLlmKeyDetailContent() {
           onClose={() => setResumeOpen(false)}
           onSaved={(updated) => {
             setResumeOpen(false)
-            updateCached(updated, 'LLM API 키 정지를 해제했습니다.')
+            updateCached(updated, 'LLM API 키 정지를 해제했어요.')
           }}
         />
       )}
@@ -430,8 +430,8 @@ function AdminLlmKeyDetailContent() {
         loading={revoke.isPending}
         onConfirm={() => { if (canRevoke) revoke.mutate() }}
       >
-        <MessageBar variant="danger" title="되돌릴 수 없습니다">
-          폐기 뒤에는 이 키로 보낸 모든 요청이 거부됩니다.
+        <MessageBar variant="danger" title="되돌릴 수 없어요">
+          폐기가 게이트웨이에 반영되면 이 키로 보낸 새 요청을 거부해요. 이미 처리 중인 요청은 계속될 수 있어요.
         </MessageBar>
       </ConfirmNameModal>
     </div>
@@ -530,7 +530,7 @@ function LimitsModal({
     mutationFn: (body: AdminLlmKeyLimits) => replaceAdminLlmKeyLimits(llmKey.id, body),
     onSuccess: onSaved,
     onError: (failure) => {
-      const problem = toApiError(failure, 'LLM API 키 한도를 변경하지 못했습니다.')
+      const problem = toApiError(failure, 'LLM API 키 한도를 변경하지 못했어요.')
       setError(problem.message)
       setFieldErrors(fieldErrorsOf(problem.problem))
     },
@@ -558,18 +558,18 @@ function LimitsModal({
       parsed.tpm != null &&
       parsed.tpm < parsed.rpm
     ) {
-      errors.tpm = 'TPM은 RPM보다 작을 수 없습니다.'
+      errors.tpm = 'TPM은 RPM보다 작을 수 없어요.'
     }
     const credit = Number(creditLimit)
-    if (canEditCredit && (llmKey.creditLimit == null || llmKey.creditAllowedModels == null || llmKey.creditDeniedModels == null || llmKey.passthroughEndpoints == null)) errors.creditLimit = '현재 예산 정책을 확인할 수 없습니다. 키 정보를 다시 조회해 주세요.'
+    if (canEditCredit && (llmKey.creditLimit == null || llmKey.creditAllowedModels == null || llmKey.creditDeniedModels == null || llmKey.passthroughEndpoints == null)) errors.creditLimit = '현재 예산 정책을 확인할 수 없어요. 키 정보를 다시 조회해 주세요.'
     if (canEditCredit && (!Number.isFinite(credit) || credit < 0)) {
-      errors.creditLimit = '금액 한도는 0 이상의 숫자여야 합니다.'
+      errors.creditLimit = '금액 한도는 0 이상의 숫자여야 해요.'
     }
     if (canEditCredit && !errors.creditLimit && creditLimitReset && !(credit > 0)) {
-      errors.creditLimit = '리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'
+      errors.creditLimit = '리셋 창을 두려면 0보다 큰 금액 한도가 필요해요.'
     }
     if (canEditCredit && credit > 0 && llmKey.openrouterAccountId == null && !initialBindingAllowed) {
-      errors.openrouterAccountId = '현재 키의 첫 사업 계정 결합이 허용되지 않았습니다. 키 정보를 다시 조회해 주세요.'
+      errors.openrouterAccountId = '현재 키에는 사업 계정을 처음 연결할 수 없어요. 키 정보를 다시 조회해 주세요.'
     }
     const parsedRules = parseCreditModelRules(creditModelRules)
     const parsedModels = parsedRules.allowed
@@ -578,16 +578,16 @@ function LimitsModal({
     if (modelsError) {
       errors.creditModelRules = modelsError
     } else if (canEditCredit && !errors.creditLimit && parsedModels.length > 0 && !(credit > 0)) {
-      errors.creditLimit = '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'
+      errors.creditLimit = '모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요해요.'
     }
     // Deny-only rules remain valid without a positive credit limit.
     if (canEditCredit && credit > 0 && initialBindingAllowed) {
       if (referencesPending) {
-        errors.openrouterAccountId = '사업 계정 목록을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'
+        errors.openrouterAccountId = '사업 계정 목록을 불러오는 중이에요. 잠시 후 다시 시도해 주세요.'
       } else if (!referencesKnown) {
-        errors.openrouterAccountId = '사업 계정 목록을 불러오지 못해 유료 모델을 연결할 수 없습니다.'
+        errors.openrouterAccountId = '사업 계정 목록을 불러오지 못해 유료 모델을 연결할 수 없어요.'
       } else if (eligibleAccounts.length === 0) {
-        errors.openrouterAccountId = '관리용 키까지 확인된 활성 사업 계정이 필요합니다.'
+        errors.openrouterAccountId = '관리용 키까지 확인된 활성 사업 계정이 필요해요.'
       } else if (eligibleAccounts.length > 1 && !openrouterAccountId) {
         errors.openrouterAccountId = '어느 사업 계정으로 결제할지 선택해 주세요.'
       }
@@ -620,7 +620,7 @@ function LimitsModal({
             </ul>
           </MessageBar>
         )}
-        {canEditToken && <p className="text-xs text-foreground-muted">RPM·TPM·동시 요청을 비우면 서비스 기본값을 사용합니다. 실제 기본값은 서버에서 보고하지 않아 확인할 수 없습니다.</p>}
+        {canEditToken && <p className="text-xs text-foreground-muted">RPM과 TPM, 동시 요청을 비우면 서비스 기본값을 사용해요.</p>}
         {canEditToken && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LimitField label="RPM" min={1} value={rpm} onChange={setRpm} error={fieldErrors.rpm} />
           <LimitField label="TPM" tokens min={1} value={tpm} onChange={setTpm} error={fieldErrors.tpm} />
@@ -641,7 +641,7 @@ function LimitsModal({
           />
         </div>}
         {canEditToken && !canEditCredit && <Checkbox label="Chat 권한" checked={chatEnabled === true} disabled={chatEnabled == null}
-          onChange={(event) => setChatEnabled(event.target.checked)} description="Chat만 변경합니다. 숨겨진 유료 기능 목록은 유지하며, 의존 기능이 있으면 서버가 회수를 거절할 수 있습니다." />}
+          onChange={(event) => setChatEnabled(event.target.checked)} />}
         {canEditCredit && (
           <>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -681,7 +681,7 @@ function LimitsModal({
               locked={!canEditToken ? ['chat'] : []}
               onChange={(next) => {
                 if (!canEditToken && next.includes('chat') !== llmKey.chatEnabled) {
-                  setError('Chat 변경에는 토큰 한도 변경 업무가 별도로 필요합니다.'); return
+                  setError('Chat 권한을 바꾸려면 토큰 한도 변경 업무도 필요해요.'); return
                 }
                 setPassthroughEndpoints(next); setChatEnabled(next.includes('chat'))
               }}
@@ -696,10 +696,10 @@ function LimitsModal({
               onChange={setOpenrouterAccountId}
               error={fieldErrors.openrouterAccountId}
             />
-            {projection.isFetching && <MessageBar>현재 금액·리셋 제안의 계정 영향을 확인하고 있습니다.</MessageBar>}
-            {projection.isError && <MessageBar variant="warning">계정 영향을 조회하지 못했습니다. {projection.error.message}</MessageBar>}
+            {projection.isFetching && <MessageBar>입력한 금액과 리셋 주기가 계정에 미칠 영향을 확인하고 있어요.</MessageBar>}
+            {projection.isError && <MessageBar variant="warning">계정 영향을 조회하지 못했어요. {projection.error.message}</MessageBar>}
             {projected && draftMatches ? <><p className="text-xs text-foreground-muted">구성 조회 {formatDateTime(projected.configurationObservedAt)}</p><AccountImpactView projection={impactVisible ? projected.accountImpact : null} /></>
-              : !projection.isFetching && <MessageBar>현재 제안과 일치하는 계정 영향이 제공되지 않았습니다. 저장 권한과 입력 검증은 별도로 적용됩니다.</MessageBar>}
+              : !projection.isFetching && <MessageBar>현재 입력과 일치하는 계정 영향이 제공되지 않았어요. 저장 권한과 입력 검증은 별도로 적용돼요.</MessageBar>}
           </>
         )}
         <div className="flex justify-end gap-2">
@@ -738,23 +738,22 @@ function OpenRouterBindingField({
   const canReadAccount = hasWork(user, 'institution.account.read', { orgId: llmKey.orgId }, SYS_READERS)
   if (llmKey.openrouterAccountId && llmKey.openrouterAccountName) {
     return (
-      <MessageBar title="연결된 사업 계정은 바꿀 수 없습니다">
+      <MessageBar title="연결된 사업 계정은 바꿀 수 없어요">
         {canReadAccount ? <Link
           to={adminPaths.llmAccountDetail(llmKey.openrouterAccountId, llmKey.orgId ?? undefined)}
           className="font-semibold underline underline-offset-2"
         >
           {llmKey.openrouterAccountName}
         </Link> : <strong>{llmKey.openrouterAccountName}</strong>}
-        으로 계속 결제됩니다. 다른 사업 계정으로 옮기려면 새 키를 발급해 전환해야 합니다.
+        {' '}계정으로 계속 결제해요. 다른 사업 계정으로 옮기려면 새 키를 발급해 전환해야 해요.
       </MessageBar>
     )
   }
-  if (!('initialAccountBindingAllowed' in llmKey) || llmKey.initialAccountBindingAllowed == null) return <MessageBar>첫 사업 계정 결합의 현재 조건이 제공되지 않아 새 계정에 결합할 수 없습니다.</MessageBar>
+  if (!('initialAccountBindingAllowed' in llmKey) || llmKey.initialAccountBindingAllowed == null) return <MessageBar>첫 연결 조건을 확인할 수 없어 사업 계정을 연결할 수 없어요.</MessageBar>
   if (!initialBindingAllowed) {
     return (
-      <MessageBar variant="warning" title="이 키는 이 화면에서 사업 계정에 연결할 수 없습니다">
-        이미 금액이 부여되어 있거나 OpenRouter 쪽 키가 발급된 상태입니다. 연결을 바꾸지 말고
-        올바른 사업 계정으로 새 키를 발급해 전환하세요.{' '}
+      <MessageBar variant="warning" title="이 키는 사업 계정에 연결할 수 없어요">
+        올바른 사업 계정으로 새 키를 발급해 전환해 주세요.{' '}
         <Link
           to={adminPaths.requests(llmKey.orgId ?? undefined)}
           className="font-semibold underline underline-offset-2"
@@ -764,28 +763,28 @@ function OpenRouterBindingField({
       </MessageBar>
     )
   }
-  if (loading) return <MessageBar>연결할 수 있는 사업 계정을 확인하고 있습니다.</MessageBar>
+  if (loading) return <MessageBar>연결할 수 있는 사업 계정을 확인하고 있어요.</MessageBar>
   if (failed) {
     return (
-      <MessageBar variant="warning" title="사업 계정 목록을 불러오지 못했습니다">
-        토큰 한도만 변경할 수 있습니다. 금액 한도를 0보다 크게 저장하려면 목록을 다시 불러와야 합니다.
+      <MessageBar variant="warning" title="사업 계정 목록을 불러오지 못했어요">
+        토큰 한도만 변경할 수 있어요. 금액 한도를 0보다 크게 저장하려면 목록을 다시 불러와야 해요.
       </MessageBar>
     )
   }
   if (accounts.length === 0) {
     return (
-      <MessageBar variant="warning" title="연결할 수 있는 사업 계정이 없습니다">
+      <MessageBar variant="warning" title="연결할 수 있는 사업 계정이 없어요">
         {canReadAccount ? <Link to={adminPaths.llmAccounts(llmKey.orgId ?? undefined)} className="font-semibold underline underline-offset-2">
           OpenRouter 사업 계정 관리
         </Link> : <span>기관의 사업 계정 담당자</span>}
-        에서 관리용 키를 먼저 등록하세요.
+        를 통해 관리용 키를 먼저 등록해 주세요.
       </MessageBar>
     )
   }
   if (accounts.length === 1) {
     return (
       <MessageBar title="사업 계정 자동 선택">
-        {accounts[0].name}에 연결됩니다. 한 번 정해지면 바꿀 수 없습니다.
+        금액 한도를 0보다 크게 저장하면 {accounts[0].name} 계정에 연결해요. 한 번 연결하면 바꿀 수 없어요.
       </MessageBar>
     )
   }
@@ -794,7 +793,7 @@ function OpenRouterBindingField({
       label="OpenRouter 사업 계정"
       required
       error={error}
-      description="처음 연결한 뒤에는 변경할 수 없습니다. 이동하려면 새 Pickle key를 발급해야 합니다."
+      description="처음 연결한 뒤에는 바꿀 수 없어요. 다른 계정으로 옮기려면 새 LLM API 키가 필요해요."
     >
       <Select value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error != null}>
         <option value="">사업 계정 선택</option>
@@ -823,7 +822,7 @@ function ExpiryModal({
     onError: (failure) => {
       // Extending a key with a paid-model half answers 409; its message says
       // why, so it is shown as the server wrote it.
-      const problem = toApiError(failure, 'LLM API 키 만료일을 변경하지 못했습니다.')
+      const problem = toApiError(failure, 'LLM API 키 만료일을 변경하지 못했어요.')
       const fields = fieldErrorsOf(problem.problem)
       setFieldError(fields.endDate)
       setError(fields.endDate ? null : problem.message)
@@ -884,7 +883,7 @@ function SuspendModal({
     mutationFn: () => suspendAdminLlmKey(llmKey.id, reason.trim()),
     onSuccess: onSaved,
     onError: (failure) =>
-      setError(toApiError(failure, 'LLM API 키를 정지하지 못했습니다.').message),
+      setError(toApiError(failure, 'LLM API 키를 정지하지 못했어요.').message),
   })
   return (
     <Modal open={open} onClose={onClose} title="LLM API 키 정지">
@@ -929,7 +928,7 @@ function ResumeModal({
     mutationFn: () => resumeAdminLlmKey(llmKey.id),
     onSuccess: onSaved,
     onError: (failure) =>
-      setError(toApiError(failure, 'LLM API 키 정지를 해제하지 못했습니다.').message),
+      setError(toApiError(failure, 'LLM API 키 정지를 해제하지 못했어요.').message),
   })
   return (
     <Modal
@@ -946,7 +945,7 @@ function ResumeModal({
       {error ? (
         <MessageBar variant="danger">{error}</MessageBar>
       ) : (
-        <p className="text-sm text-foreground-secondary">이 키의 API 호출을 다시 허용합니다.</p>
+        <p className="text-sm text-foreground-secondary">정지 해제는 게이트웨이에 반영된 뒤 새 요청부터 적용돼요.</p>
       )}
     </Modal>
   )

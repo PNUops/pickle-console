@@ -52,11 +52,11 @@ export function RecipientCancellationDialog({ request, recipient, support, resou
     try {
       const next = await fetchRecipientCancellationImpact(request.id, recipient.id, support)
       if (!active.current) return
-      if (!matches(next) || next.type !== request.type) throw new Error('요청한 대상과 취소 영향이 일치하지 않습니다. 다시 조회해 주세요.')
+      if (!matches(next) || next.type !== request.type) throw new Error('요청한 대상과 취소 영향이 일치하지 않아요. 다시 조회해 주세요.')
       if (!next.allowed || next.fingerprint !== impact?.fingerprint) setConfirmed(null)
       setImpact(next)
     } catch (failure) {
-      if (active.current) { setConfirmed(null); setError(failure instanceof Error ? failure.message : '생성 대기 취소 영향을 확인하지 못했습니다.') }
+      if (active.current) { setConfirmed(null); setError(failure instanceof Error ? failure.message : '생성 대기 취소 영향을 확인하지 못했어요.') }
     } finally {
       if (active.current) { busy.current = false; setLoading(false) }
     }
@@ -72,7 +72,7 @@ export function RecipientCancellationDialog({ request, recipient, support, resou
       const current = await onReadback()
       if (!active.current) return
       const target = current.recipients.find((row) => row.id === recipient.id)
-      if (current.id !== request.id || current.workspaceId !== request.workspaceId || !target) throw new Error('선택한 대상의 현재 결과를 확인하지 못했습니다.')
+      if (current.id !== request.id || current.workspaceId !== request.workspaceId || !target) throw new Error('선택한 대상의 현재 결과를 확인하지 못했어요.')
       if (target.cancellation && matches(target.cancellation)) {
         setReceipt(target.cancellation)
         setUnknown(false)
@@ -80,10 +80,10 @@ export function RecipientCancellationDialog({ request, recipient, support, resou
       } else {
         setUnknown(false)
         setImpact(null)
-        setError(`현재 대상자 상태는 ${requestRecipientStatusLabel(current.status, target.status, true)}이며 저장된 개별 취소 결과가 없습니다. 다시 취소하려면 현재 영향을 새로 조회하고 확인해 주세요.`)
+        setError(`현재 대상자 상태는 ${requestRecipientStatusLabel(current.status, target.status, true)}이며 저장된 개별 취소 결과가 없어요. 다시 취소하려면 현재 영향을 새로 조회하고 확인해 주세요.`)
       }
     } catch (failure) {
-      if (active.current) setError(failure instanceof Error ? failure.message : '현재 결과를 조회하지 못했습니다.')
+      if (active.current) setError(failure instanceof Error ? failure.message : '현재 결과를 조회하지 못했어요.')
     } finally {
       if (active.current) { busy.current = false; setLoading(false) }
     }
@@ -97,17 +97,17 @@ export function RecipientCancellationDialog({ request, recipient, support, resou
     try {
       const result = await cancelRequestRecipient(request.id, recipient.id, support, { reason, confirmation: { fingerprint: impact.fingerprint, confirmed: true } })
       if (!active.current) return
-      if (!matches(result)) throw new Error('선택한 대상과 취소 결과가 일치하지 않습니다.')
+      if (!matches(result)) throw new Error('선택한 대상과 취소 결과가 일치하지 않아요.')
       setReceipt(result)
       setConfirmed(null)
       onStored(result)
     } catch (failure) {
       if (!active.current) return
-      const problem = toApiError(failure, '취소 결과를 확인하지 못했습니다.')
+      const problem = toApiError(failure, '취소 결과를 확인하지 못했어요.')
       setConfirmed(null)
       if (!problem.problem || problem.problem.status >= 500) {
         setUnknown(true)
-        setError('처리 결과를 확인하지 못했습니다. 완료나 실패를 단정할 수 없습니다. 현재 결과를 조회해 주세요.')
+        setError('처리 결과를 확인하지 못했어요. 완료나 실패를 단정할 수 없어요. 현재 결과를 조회해 주세요.')
       } else {
         setError(problem.message)
         if (problem.problem.status === 409) {
@@ -135,7 +135,7 @@ export function RecipientCancellationDialog({ request, recipient, support, resou
         <div><dt className="text-foreground-muted">종류</dt><dd>{resourceTypeEntry(request.type).label}</dd></div>
         <div><dt className="text-foreground-muted">수행 자격</dt><dd>{support ? '워크스페이스 지원 쓰기 권한' : '현재 워크스페이스 소유자 자격'}</dd></div>
       </dl>
-      <Alert variant="info">선택한 한 사람의 생성 대기만 취소합니다. 신청의 승인 결정과 승인값, 다른 대상자, 구성원과 초대는 유지됩니다. 등록된 리소스의 삭제나 회수, 외부 적용 취소는 실행하지 않습니다.</Alert>
+      <Alert variant="info">선택한 한 사람의 생성 대기만 취소해요. 신청의 승인 결정과 승인값, 다른 대상자, 구성원과 초대는 유지돼요. 등록된 리소스의 삭제나 회수, 외부 적용 취소는 실행하지 않아요.</Alert>
       {loading && <Spinner label="현재 대상자 결과 확인 중" />}
       {error && <Alert variant="danger">{error}</Alert>}
       {receipt ? <RecipientCancellationResult receipt={receipt} /> : <>
@@ -145,11 +145,11 @@ export function RecipientCancellationDialog({ request, recipient, support, resou
           <p className="text-sm">현재 상태: {requestRecipientStatusLabel(request.status, impact.previousStatus, true)} · 조회 {formatDateTime(impact.observedAt)}</p>
           <p className="text-sm">이전 생성 시도: {impact.previousAttempts}회</p>
           {impact.previousReason && <p className="text-sm">이전 생성 실패·제외 사유: {impact.previousReason}</p>}
-          {impact.previousStatus === 'FAILED' && <Alert variant="warning">생성 실패의 재시도를 포기합니다. 실패는 진행 중인 생성 대기와 다르며 이전 실패 사유와 시도 이력은 유지됩니다.</Alert>}
-          {!impact.allowed && <Alert variant="warning">{impact.blockedReason ?? '현재 조건에서는 생성 대기를 취소할 수 없습니다.'}</Alert>}
-          {!impact.allowed && <p className="text-sm">이미 등록된 VM과 발급 전 LLM API 키는 등록 자원입니다. {resourceHref ? <Link className="text-primary-700 underline" to={resourceHref}>기존 리소스 상세</Link> : '현재 권한에서 열 수 있는 기존 리소스 상세'}에서 허용된 삭제·폐기 경로를 확인해 주세요. 연결이 불명확하면 운영자에게 확인해 주세요.</p>}
+          {impact.previousStatus === 'FAILED' && <Alert variant="warning">생성 실패의 재시도를 포기해요. 실패는 진행 중인 생성 대기와 다르며 이전 실패 사유와 시도 이력은 유지돼요.</Alert>}
+          {!impact.allowed && <Alert variant="warning">{impact.blockedReason ?? '현재 조건에서는 생성 대기를 취소할 수 없어요.'}</Alert>}
+          {!impact.allowed && <p className="text-sm">이미 등록된 VM과 발급 전 LLM API 키는 등록 자원이에요. {resourceHref ? <Link className="text-primary-700 underline" to={resourceHref}>기존 리소스 상세</Link> : '현재 권한에서 열 수 있는 기존 리소스 상세'}에서 허용된 삭제 또는 폐기 경로를 확인해 주세요. 연결이 불명확하면 운영자에게 확인해 주세요.</p>}
           <FormField label="취소 사유" required><Textarea value={reason} maxLength={500} disabled={pending || unknown} onChange={(event) => { setReason(event.target.value); setConfirmed(null) }} rows={3} /></FormField>
-          <Checkbox label="선택한 대상과 현재 상태, 생성 대기 취소 효과를 확인했습니다" checked={confirmed === impact.fingerprint}
+          <Checkbox label="선택한 대상과 현재 상태, 생성 대기 취소 효과를 확인했어요" checked={confirmed === impact.fingerprint}
             disabled={!impact.allowed || pending || loading || unknown} onChange={(event) => setConfirmed(event.target.checked ? impact.fingerprint : null)} />
           <Button variant="secondary" disabled={pending || loading || unknown} onClick={() => void load()}>현재 취소 영향 새로 조회</Button>
         </>}

@@ -67,11 +67,11 @@ describe('passwordRuleError', () => {
   })
 
   test('길이 → 바이트 → 반복 → 연속 순으로 첫 위반을 알린다', () => {
-    expect(passwordRuleError('short')).toBe('비밀번호는 8자 이상 72자 이하여야 합니다.')
+    expect(passwordRuleError('short')).toBe('비밀번호는 8자 이상 72자 이하여야 해요.')
     expect(passwordRuleError('가'.repeat(25))).toContain('72바이트')
-    expect(passwordRuleError('ababababab')).toBe('같은 문자가 반복되는 비밀번호는 사용할 수 없습니다.')
+    expect(passwordRuleError('ababababab')).toBe('같은 문자가 반복되는 비밀번호는 사용할 수 없어요.')
     expect(passwordRuleError('abcdefgh')).toBe(
-      '연속된 문자·숫자로만 이루어진 비밀번호는 사용할 수 없습니다.',
+      '연속된 문자나 숫자로만 이루어진 비밀번호는 사용할 수 없어요.',
     )
   })
 })

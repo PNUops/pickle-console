@@ -60,10 +60,10 @@ describe('관리자 OS 이미지·사양 관리 — OS 이미지', () => {
     await user.click(within(active).getByRole('button', { name: '은퇴' }))
 
     const dialog = await screen.findByRole('dialog', { name: 'OS 이미지 은퇴' })
-    expect(within(dialog).getByText(/마지막으로 선택 가능한 OS revision입니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/마지막으로 선택 가능한 이미지예요/)).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '은퇴' }))
 
-    expect(await screen.findByText('OS 이미지를 은퇴시켰습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('이 노드의 OS 이미지를 은퇴시켰어요.')).toBeInTheDocument()
     const updated = (await screen.findByText('Ubuntu 24.04 LTS')).closest('tr')!
     expect(within(updated).getByText('은퇴')).toBeInTheDocument()
   })
@@ -112,7 +112,7 @@ describe('catalogue navigation and selection impact', () => {
     const activeReplica = screen.getByText('Ubuntu replica').closest('tr')!
     await user.click(within(activeReplica).getByRole('button', { name: '은퇴' }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(/마지막으로 선택 가능한 OS revision/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/마지막으로 선택 가능한 이미지/)).toBeInTheDocument()
   })
 
   test('does not promise removal of a logical choice when another compatible active replica remains', async () => {
@@ -130,7 +130,7 @@ describe('catalogue navigation and selection impact', () => {
     await within(row).findByText('선택 가능')
     await user.click(within(row).getByRole('button', { name: '은퇴' }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText(/선택 가능 여부는 유지/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/신청 가능한 이미지는 유지돼요/)).toBeInTheDocument()
     expect(within(dialog).queryByText(/마지막으로 선택 가능한/)).not.toBeInTheDocument()
   })
 
@@ -149,7 +149,7 @@ describe('catalogue navigation and selection impact', () => {
     const order = within(dialog).getByLabelText('표시 순서')
     await user.clear(order); await user.type(order, '-10')
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
-    await screen.findByText('사양을 수정했습니다.')
+    await screen.findByText('사양을 수정했어요.')
     expect(within(await findFlavorRow('메모리 최적화')).getByText('-10')).toBeInTheDocument()
     app.unmount()
     server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
@@ -164,13 +164,13 @@ describe('catalogue navigation and selection impact', () => {
     renderApp('/admin/os-images?tab=periods&q=지난')
     expect(await screen.findByText('지난 학기')).toBeInTheDocument()
     expect(screen.queryByText('이번 학기')).not.toBeInTheDocument()
-    expect(screen.getByText(/표시명을 수정하면 기존 신청/)).toBeInTheDocument()
+    expect(screen.getByText(/표시명을 바꾸면 기존 신청/)).toBeInTheDocument()
   })
 
   test('keeps empty filter results distinct from missing catalogs', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp('/admin/os-images?tab=flavors&q=no-matching-choice')
-    expect(await screen.findByText('검색 조건에 맞는 사양이 없습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('검색 조건에 맞는 사양이 없어요.')).toBeInTheDocument()
     await waitFor(() => expect(currentPath()).toContain('q=no-matching-choice'))
   })
 })
@@ -210,7 +210,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
     await user.type(display, '메모리 최적화 플러스')
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('사양을 수정했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사양을 수정했어요.')).toBeInTheDocument()
     const updated = flavorRow('메모리 최적화 플러스')
     expect(within(updated).getByText('1 vCPU · 2 GiB · 32 GiB')).toBeInTheDocument()
   })
@@ -221,18 +221,18 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
     renderApp('/admin/os-images?tab=flavors')
 
     const before = await findFlavorRow('메모리 최적화')
-    expect(within(before).getByText('메모리를 많이 쓰는 작업에 맞습니다.')).toBeInTheDocument()
+    expect(within(before).getByText('메모리를 많이 쓰는 작업에 맞아요.')).toBeInTheDocument()
     await user.click(within(before).getByRole('button', { name: '수정' }))
 
     const dialog = await screen.findByRole('dialog', { name: '사양 수정' })
     await user.clear(within(dialog).getByLabelText('비고'))
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('사양을 수정했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사양을 수정했어요.')).toBeInTheDocument()
     // 빈 값은 null이 아니라 빈 문자열로 보내야 서버가 "변경 없음"으로 보지 않는다.
     const after = flavorRow('메모리 최적화')
     expect(
-      within(after).queryByText('메모리를 많이 쓰는 작업에 맞습니다.'),
+      within(after).queryByText('메모리를 많이 쓰는 작업에 맞아요.'),
     ).not.toBeInTheDocument()
     expect(within(after).getByText('—')).toBeInTheDocument()
   })
@@ -250,7 +250,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
     expect(within(dialog).queryByText(/마지막 활성 사양입니다/)).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '은퇴' }))
 
-    expect(await screen.findByText('사양을 은퇴시켰습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사양을 은퇴시켰어요.')).toBeInTheDocument()
     expect(within(flavorRow('메모리 최적화')).getByText('은퇴')).toBeInTheDocument()
   })
 
@@ -281,7 +281,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
     await user.type(vcpu, '8')
     await user.click(within(dialog).getByRole('button', { name: '추가' }))
 
-    expect(await screen.findByText('사양을 추가했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사양을 추가했어요.')).toBeInTheDocument()
     const created = flavorRow('컴퓨팅 최적화 사본')
     expect(within(created).getByText('xlarge')).toBeInTheDocument()
     expect(within(created).getByText('8 vCPU · 2 GiB · 20 GiB')).toBeInTheDocument()
@@ -301,7 +301,7 @@ describe('관리자 OS 이미지·사양 관리 — 사양', () => {
     await user.click(within(dialog).getByRole('button', { name: '추가' }))
 
     expect(
-      within(dialog).getByText(/사양 이름은 소문자·숫자·하이픈만 사용해 주세요/),
+      within(dialog).getByText(/사양 이름은 소문자와 숫자, 하이픈만 사용해 주세요/),
     ).toBeInTheDocument()
   })
 
@@ -351,7 +351,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
     await user.type(within(dialog).getByLabelText('종료일'), '2027-06-30')
     await user.click(within(dialog).getByRole('button', { name: '추가' }))
 
-    expect(await screen.findByText('사용 기간을 추가했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사용 기간을 추가했어요.')).toBeInTheDocument()
     const created = await findPeriodRow('2027학년도 1학기')
     expect(within(created).getByText('2027-06-30')).toBeInTheDocument()
   })
@@ -389,7 +389,7 @@ describe('관리자 OS 이미지·사양 관리 — 사용 기간', () => {
     await user.type(endDate, '2027-02-28')
     await user.click(within(dialog).getByRole('button', { name: '저장' }))
 
-    expect(await screen.findByText('사용 기간을 수정했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('사용 기간을 수정했어요.')).toBeInTheDocument()
     expect(within(await findPeriodRow('이번 방학')).getByText('2027-02-28')).toBeInTheDocument()
   })
 

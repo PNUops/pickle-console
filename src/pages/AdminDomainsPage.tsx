@@ -106,7 +106,7 @@ export function AdminDomainsPage() {
 function AdminDomainsContent() {
   const { user } = useAuth()
   const permissions = useInstitutionResourcePermissions()
-  const { activeOrgId, activeOrg } = useAdminScope()
+  const { activeOrgId } = useAdminScope()
   const canResync = SYS_OPERATORS.includes(permissions.role)
   const canReadDomains = permissions.canAnyWork([...DOMAIN_READ_COMMANDS, ...PUBLICATION_READ_COMMANDS], SYS_READERS)
   const canReadCertificates = permissions.canAnyWork(CERTIFICATE_READS, SYS_READERS)
@@ -164,7 +164,7 @@ function AdminDomainsContent() {
     name: domain.fqdn,
   }))
 
-  if (availableTabs.length === 0) return <Alert variant="danger">공개 서비스를 조회할 권한이 없습니다.</Alert>
+  if (availableTabs.length === 0) return <Alert variant="danger">공개 서비스를 조회할 권한이 없어요.</Alert>
   return (
     <div className="space-y-6 [overflow-wrap:anywhere]">
       {selected?.workspaceId && <WorkspaceSourceReturnLink workspaceId={selected.workspaceId} admin />}
@@ -172,10 +172,6 @@ function AdminDomainsContent() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">공개 서비스</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            {activeOrg?.name ?? '플랫폼 전체'}의 도메인과 라우트 적용, 인증서 상태입니다. 행을
-            선택하면 상세와 개입 작업이 열립니다.
-          </p>
         </div>
         {canResync && <ResyncButton />}
       </div>
@@ -245,7 +241,7 @@ function AdminDomainsContent() {
         {domains.isError && <Alert variant="danger">{domains.error.message}</Alert>}
         {domains.isSuccess && domains.data.content.length === 0 && (
           <Card className="p-8 text-center text-sm text-neutral-500">
-            연결된 도메인이 없습니다.
+            표시할 도메인이 없어요.
           </Card>
         )}
         {domains.isSuccess && domains.data.content.length > 0 && (
@@ -437,7 +433,7 @@ function DomainDrawerContent({
         <DomainStatusBadge status={domain.status} />
       </div>
       {notice && <Alert variant={notice.variant}>{notice.text}</Alert>}
-      {!domain.metadataVisible && <Alert variant="info">허용된 작업에 필요한 참조만 표시합니다. 나머지 세부 정보는 조회 권한이 필요합니다.</Alert>}
+      {!domain.metadataVisible && <Alert variant="info">허용된 작업에 필요한 대상 정보만 보여 줘요. 나머지 세부 정보는 조회 권한이 필요해요.</Alert>}
       <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
         <Field label="종류" value={DOMAIN_KIND_LABELS[domain.kind]} />
         <Field label="루트 도메인" value={domain.metadataVisible ? domain.rootDomain ?? '—' : '조회 권한 없음'} />
@@ -484,9 +480,7 @@ function DomainDrawerContent({
 
       {domain.releasedAt && (
         <Alert variant="info">
-          트래픽은 받지 않고 이름만 예약되어 있습니다. 예약이 만료되면 이름이 자동으로
-          회수되고, 그 전에는 소유 워크스페이스가 같은 이름으로 다시 연결할 수 있습니다. 이름을
-          먼저 풀어야 한다면 아래 강제 해제를 씁니다.
+          이름을 예약 중이에요. 예약 기간에는 외부 도메인을 소유 워크스페이스에서 되살릴 수 있어요. VM에 연결했던 이름은 같은 VM에서 다시 연결할 수 있어요. 기한이 지나면 정리 과정에서 이름을 회수해요. 먼저 반환하려면 강제 해제를 사용해 주세요.
         </Alert>
       )}
 
@@ -506,11 +500,11 @@ function DomainDrawerContent({
       <>
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">라우트</h3>
-        {!canLoadRoutes && <p className="text-sm text-neutral-500">라우트를 조회할 권한이 없습니다.</p>}
+        {!canLoadRoutes && <p className="text-sm text-neutral-500">라우트를 조회할 권한이 없어요.</p>}
         {canLoadRoutes && routes.isPending && <Spinner label="라우트 불러오는 중" />}
         {routes.isError && <Alert variant="danger">{routes.error.message}</Alert>}
         {routes.isSuccess && !route && (
-          <p className="text-sm text-neutral-500">살아 있는 라우트가 없습니다.</p>
+          <p className="text-sm text-neutral-500">연결된 라우트가 없어요.</p>
         )}
         {route && (
           <div className="space-y-4 rounded-lg border border-neutral-200 p-4">
@@ -543,17 +537,17 @@ function DomainDrawerContent({
               loadPreset={fetchCampusSourcePolicyPreset}
               canEdit={canApplyRoute}
               surface="admin"
-            /> : <p className="text-sm text-neutral-500">연결 정책 원문을 조회할 권한이 없습니다.</p>}
+            /> : <p className="text-sm text-neutral-500">연결 정책 원문을 조회할 권한이 없어요.</p>}
           </div>
         )}
       </section>
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">인증서</h3>
-        {!domain.metadataVisible ? <p className="text-sm text-neutral-500">인증서를 조회할 권한이 없습니다.</p> : domain.certificateStatus ? (
+        {!domain.metadataVisible ? <p className="text-sm text-neutral-500">인증서를 조회할 권한이 없어요.</p> : domain.certificateStatus ? (
           <CertificateStatusBadge status={domain.certificateStatus} />
         ) : (
-          <p className="text-sm text-neutral-500">연결된 인증서가 없습니다.</p>
+          <p className="text-sm text-neutral-500">연결된 인증서가 없어요.</p>
         )}
       </section>
       </>
@@ -616,8 +610,8 @@ function ExternalDomainSections({
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">사용 기한</h3>
         {domain.renewDueAt ? <p className="text-sm text-neutral-600">
-          {formatDateTime(domain.renewDueAt)}까지입니다. 소유자가 연장하지 않으면 그 시점에 레코드가 내려가고 이름은 예약 상태로 바뀝니다.
-        </p> : <p className="text-sm text-neutral-500">{domain.metadataVisible ? '사용 기한 정보가 없습니다.' : '사용 기한을 조회할 권한이 없습니다.'}</p>}
+          {formatDateTime(domain.renewDueAt)}까지예요. 연장하지 않으면 기한이 지난 뒤 레코드를 내리고 이름을 예약 상태로 바꿔요.
+        </p> : <p className="text-sm text-neutral-500">{domain.metadataVisible ? '사용 기한 정보가 없어요.' : '사용 기한을 조회할 권한이 없어요.'}</p>}
         {canIntervene && domain.releasedAt == null && (
           <AdjustRenewalForm domain={domain} onResult={onResult} />
         )}
@@ -625,11 +619,11 @@ function ExternalDomainSections({
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold text-neutral-800">레코드</h3>
-        {!canReadRecords && <p className="text-sm text-neutral-500">레코드 원문을 조회할 권한이 없습니다.</p>}
+        {!canReadRecords && <p className="text-sm text-neutral-500">레코드 원문을 조회할 권한이 없어요.</p>}
         {canReadRecords && records.isPending && <Spinner label="레코드 불러오는 중" />}
         {canReadRecords && records.isError && <Alert variant="danger">{records.error.message}</Alert>}
         {canReadRecords && records.isSuccess && records.data.length === 0 && (
-          <p className="text-sm text-neutral-500">넣은 레코드가 없습니다.</p>
+          <p className="text-sm text-neutral-500">등록된 레코드가 없어요.</p>
         )}
         {canReadRecords && records.isSuccess && records.data.length > 0 && (
           <Table>
@@ -703,14 +697,14 @@ function AdjustRenewalForm({
         reason: reason.trim() || undefined,
       }),
     onSuccess: async () => {
-      onResult({ variant: 'info', text: '사용 기한을 옮겼습니다. 소유자에게 알렸습니다.' })
+      onResult({ variant: 'info', text: '사용 기한을 변경했어요.' })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] })
       await invalidateAdminDeadlines(queryClient)
     },
     onError: (err) =>
       onResult({
         variant: 'danger',
-        text: toApiError(err, '사용 기한을 바꾸지 못했습니다.').message,
+        text: toApiError(err, '사용 기한을 바꾸지 못했어요.').message,
       }),
   })
 
@@ -730,7 +724,7 @@ function AdjustRenewalForm({
           />
         </label>
         <label className="flex-1 text-sm text-neutral-600">
-          사유 (감사 기록에 남습니다)
+          사유 (감사 기록에 남아요)
           <Input
             className="mt-1"
             value={reason}
@@ -765,13 +759,12 @@ function DomainRootsSection() {
   const permissions = useInstitutionResourcePermissions()
   const canRead = permissions.canAnyWork(ROOT_READS, SYS_READERS)
   const roots = useQuery({ queryKey: ['admin', 'domain-roots', user?.id, permissions.fingerprint], queryFn: fetchAdminDomainRoots, enabled: canRead })
-  if (!canRead) return <Alert variant="danger">루트 도메인을 조회할 권한이 없습니다.</Alert>
+  if (!canRead) return <Alert variant="danger">루트 도메인을 조회할 권한이 없어요.</Alert>
 
   return (
     <div className="space-y-4">
       <Alert variant="info">
-        지금 이 정책이 다스리는 것은 외부 도메인 발급뿐입니다. 가상머신에 서브도메인을 붙이는
-        경로는 아직 승인을 거치지 않습니다.
+        이 승인 정책은 외부 도메인 발급에만 적용해요. VM에 서브도메인을 연결할 때는 승인을 거치지 않아요.
       </Alert>
       {roots.isPending && (
         <div className="flex justify-center py-12">
@@ -781,7 +774,7 @@ function DomainRootsSection() {
       {roots.isError && <Alert variant="danger">{roots.error.message}</Alert>}
       {roots.isSuccess && roots.data.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          등록된 루트 도메인이 없습니다. 루트는 등록 절차가 넣습니다.
+          등록된 루트 도메인이 없어요.
         </Card>
       )}
       {roots.isSuccess && roots.data.length > 0 && (
@@ -833,7 +826,7 @@ function ToggleRootPolicyButton({ root }: { root: AdminDomainRootView }) {
       setError(null)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'domain-roots'] })
     },
-    onError: (err) => setError(toApiError(err, '승인 정책을 바꾸지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '승인 정책을 바꾸지 못했어요.').message),
   })
 
   return (
@@ -882,7 +875,7 @@ function ReverifyButton({
     onError: (err) =>
       onResult({
         variant: 'danger',
-        text: toApiError(err, '재검증을 접수하지 못했습니다.').message,
+        text: toApiError(err, '재검증을 접수하지 못했어요.').message,
       }),
   })
   return (
@@ -917,7 +910,7 @@ function ApplyRouteButton({
     onError: (err) =>
       onResult({
         variant: 'danger',
-        text: toApiError(err, '라우트 재적용을 접수하지 못했습니다.').message,
+        text: toApiError(err, '라우트 재적용을 접수하지 못했어요.').message,
       }),
   })
   return (
@@ -952,7 +945,7 @@ function ForceReleaseModal({
       await invalidateAdminDeadlines(queryClient)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'routes'] })
     },
-    onError: (err) => setError(toApiError(err, '도메인을 강제 해제하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '도메인을 강제 해제하지 못했어요.').message),
   })
 
   return (
@@ -967,20 +960,16 @@ function ForceReleaseModal({
       // 지목했음을 클라이언트에서 한 번 더 확인한다 (되돌릴 수 없는 작업).
       onConfirm={() => release.mutate()}
     >
-      <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
+      <Alert variant="danger" title="되돌릴 수 없어요">
         {domain.releasedAt ? (
           // 예약 중인 행에는 내릴 라우트가 없다 — 남은 효과는 예약 만료를
           // 기다리지 않고 이름을 지금 푸는 것이다.
           <>
-            예약이 만료되기를 기다리지 않고 이름이 즉시 회수되어 다른 사용자가 사용할
-            수 있게 됩니다. 소유 워크스페이스는 이 이름으로 다시 연결할 수 없게 됩니다. 감사
-            기록이 남습니다.
+            예약 기한을 기다리지 않고 이름을 즉시 반환해 다른 사용자가 새로 신청할 수 있어요. 소유 워크스페이스도 기존 예약을 되살릴 수 없어요. 감사 기록이 남아요.
           </>
         ) : (
           <>
-            라우트가 즉시 제거되고 이름이 즉시 회수되어 다른 사용자가 사용할 수 있게
-            됩니다. 커스텀 인증서는 폐기됩니다. 다시 공개하려면 사용자가 새로 접수해야
-            합니다. 감사 기록이 남습니다.
+            이름을 즉시 반환해 다른 사용자가 새로 신청할 수 있어요. 연결된 라우트와 플랫폼이 관리하는 DNS 레코드는 비동기로 내려가요. 라우트 변경은 반영된 뒤 새 연결부터 적용돼요. 이미 처리 중인 요청은 계속될 수 있어요. 커스텀 인증서는 폐기돼요. 다시 쓰려면 새로 신청해야 해요. 감사 기록이 남아요.
           </>
         )}
       </Alert>
@@ -1007,7 +996,7 @@ function ResyncButton() {
     },
     onError: (err) => {
       setMessage(null)
-      setError(toApiError(err, '라우트 재동기화를 접수하지 못했습니다.').message)
+      setError(toApiError(err, '라우트 재동기화를 접수하지 못했어요.').message)
     },
   })
 

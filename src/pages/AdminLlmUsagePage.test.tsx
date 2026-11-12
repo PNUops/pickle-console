@@ -123,7 +123,7 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     // 요청 수를 갖고도 같은 응답 시간을 말하게 된다.
     expect(within(known).getByText('1,300ms')).toBeInTheDocument()
     expect(within(unknown).getByText('1,750ms')).toBeInTheDocument()
-    expect(screen.getByText('일부 토큰은 추정값입니다')).toBeInTheDocument()
+    expect(screen.getByText('일부 토큰은 추정값이에요')).toBeInTheDocument()
     expect(adminLlmUsageQueries.some((query) => query.includes('days=7') && query.includes('top=20'))).toBe(true)
 
     const thirty = screen.getByRole('button', { name: '30일' })
@@ -256,14 +256,49 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
 
     await user.click(screen.getByRole('button', { name: '호출 종류별' }))
     const kinds = await screen.findByRole('table', { name: '호출 종류별 사용' })
-    // 채팅은 스물한 건이지만 유료로 나간 것은 셋이고 그중 둘에 금액이 붙었다.
+    // Reported costs do not establish which budget-axis requests were priced.
     const chat = within(kinds).getByText('Chat').closest('tr')!
     expect(within(chat).getByText('21건')).toBeInTheDocument()
-    expect(within(chat).getByText('$0.0623 (1건 미상)')).toBeInTheDocument()
-    // 경로가 기록되기 전의 요청에는 유료 축이 없다.
+    expect(within(chat).getByText('$0.0623')).toBeInTheDocument()
+    // This fixture has no reported cost samples.
     const unknown = within(kinds).getByText('종류 미상').closest('tr')!
-    expect(within(unknown).getByText('—')).toBeInTheDocument()
+    expect(within(unknown).getByText('금액 표본 없음')).toBeInTheDocument()
     expect(within(unknown).queryByText(/미상 \(/)).not.toBeInTheDocument()
+  })
+
+  // Two unpriced CREDIT requests and one priced TOKEN request can share a row.
+  test.each([
+    ['mixed axes', 2, 1, 0.375, '$0.375'],
+    ['ordinary reported cost', 3, 3, 0.625, '$0.625'],
+    ['reported zero', 0, 1, 0, '$0.00'],
+    ['no reported samples', 2, 0, null, '금액 표본 없음'],
+    ['unconfirmed amount', 2, 1, null, '미확인'],
+    ['hidden financial projection', null, null, null, '제공되지 않음'],
+  ] as const)('endpoint reported amounts preserve %s without deriving an unknown count', async (
+    _case, creditAxisRequests, pricedRequests, attributedCostUsd, expected,
+  ) => {
+    const user = userEvent.setup()
+    server.use(
+      refreshSuccessHandler('access-sys-admin', sysAdminUser),
+      http.get('*/api/v1/admin/llm/usage', () => {
+        const body = adminLlmUsageFixture()
+        body.breakdown.endpointKinds = [{
+          endpoint: 'chat', requests: 3, succeeded: 3, rateLimited: 0, failed: 0,
+          inputTokens: 20, outputTokens: 7, imageCount: 0,
+          creditAxisRequests, pricedRequests, attributedCostUsd,
+        }]
+        return HttpResponse.json(body)
+      }),
+    )
+    renderApp('/admin/llm/usage')
+
+    await screen.findByRole('table', { name: '모델별 사용' })
+    await user.click(screen.getByRole('button', { name: '호출 종류별' }))
+    const kinds = await screen.findByRole('table', { name: '호출 종류별 사용' })
+    const chat = within(kinds).getByText('Chat').closest('tr')!
+    expect(within(chat).getByRole('cell', { name: expected })).toBeInTheDocument()
+    expect(within(chat).queryByText(/건 미상/)).not.toBeInTheDocument()
+    expect(within(chat).getByRole('cell', { name: '3건' })).toBeInTheDocument()
   })
 
   test('actual exhaustion만 danger이고 exact 5 reasons·null/0·deep link를 보존한다', async () => {
@@ -274,7 +309,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     expect(within(actual).getByText('실제 소진 확인')).toBeInTheDocument()
     expect(within(actual).getByRole('button', { name: '90K, 정확값 보기' })).toBeInTheDocument()
     expect(within(actual).getByRole('button', { name: '1K, 정확값 보기' })).toBeInTheDocument()
-    expect(within(actual).getByText('사용 $0.00')).toBeInTheDocument()
+    expect(within(actual).getByText('누적 사용 $0.00')).toBeInTheDocument()
     expect(within(actual).getByText('잔여 $10.00')).toBeInTheDocument()
     expect(actual.querySelector('time[datetime="2026-08-31T12:00:00+09:00"]')).not.toBeNull()
     expect(within(actual).getByText('일일 토큰 한도 소진 2건')).toBeInTheDocument()
@@ -290,7 +325,7 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
     const rateOnly = screen.getByRole('link', { name: 'suspended-admin-key' }).closest('tr')!
     expect(within(rateOnly).getByText('한도 압력')).toBeInTheDocument()
     expect(within(rateOnly).queryByText('실제 소진 확인')).not.toBeInTheDocument()
-    expect(within(rateOnly).getByText('사용 확인 전')).toBeInTheDocument()
+    expect(within(rateOnly).getByText('누적 사용 확인 전')).toBeInTheDocument()
     expect(rateOnly).toHaveTextContent('종류 미상 0')
     expect(document.body).not.toHaveTextContent('server_busy')
     expect(document.body).not.toHaveTextContent('80%')
@@ -397,9 +432,9 @@ describe('관리자 LLM 사용량 신뢰도와 상태 처리', () => {
       }),
     )
     const empty = renderApp('/admin/llm/usage')
-    expect(await screen.findByRole('heading', { name: '선택 기간에 LLM 요청이 없습니다' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '표시할 소비처가 없습니다' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '검토할 한도가 없습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '선택 기간에 기록된 LLM 요청이 없어요' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '표시할 소비처가 없어요' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '표시할 한도 검토 항목이 없어요' })).toBeInTheDocument()
     empty.unmount()
 
     server.use(

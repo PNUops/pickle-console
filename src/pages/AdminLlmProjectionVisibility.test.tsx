@@ -58,10 +58,10 @@ test.each(['financeVisible', 'observationVisible'] as const)('a current row mask
     await actions.type(modal.getByLabelText('금액 한도 (USD)'), '20')
     expect.soft(modal.queryByText('$5.00 → $15.00')).not.toBeInTheDocument()
     await act(async () => { release(); await gate })
-    await modal.findByText(/계정 영향을 조회하지 못했습니다/)
+    await modal.findByText(/계정 영향을 조회하지 못했어요/)
     expect.soft(modal.queryByText('$5.00 → $15.00')).not.toBeInTheDocument()
     await actions.click(modal.getByRole('button', { name: '저장' }))
-    await screen.findByText('LLM API 키 한도를 변경했습니다.')
+    await screen.findByText('LLM API 키 한도를 변경했어요.')
     expect(saved).toHaveProperty('creditLimit', 20)
     expect(saved).not.toHaveProperty('dailyTokens')
   } finally { release() }

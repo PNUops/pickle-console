@@ -16,10 +16,10 @@ export function SharedManagement() {
               id="sharing-title"
               className="mt-3 text-3xl font-bold tracking-tight text-neutral-950 sm:text-4xl"
             >
-              워크스페이스에서<br className="hidden sm:block" /> 함께 관리합니다
+              워크스페이스에서<br className="hidden sm:block" /> 함께 관리해요
             </h2>
             <p className="mt-4 text-base leading-relaxed text-neutral-600">
-              개인 작업부터 수업, 연구실, 프로젝트까지 리소스를 워크스페이스에 모아 관리합니다.
+              개인 작업과 수업, 연구실, 프로젝트의 리소스를 한곳에 모아요.
             </p>
             <TransitionLink
               to="/docs/workspaces/access"
@@ -38,7 +38,7 @@ export function SharedManagement() {
               <div>
                 <h3 className="text-lg font-semibold text-neutral-950">구성원과 리소스를 한 공간에</h3>
                 <p className="mt-2 text-sm leading-7 text-neutral-600">
-                  함께 작업할 구성원을 추가하고 가상머신, LLM API 키, 도메인을 같은 워크스페이스에서 관리합니다.
+                  구성원을 초대하고 가상머신, LLM API 키, 도메인을 함께 관리해요.
                 </p>
               </div>
             </article>
@@ -49,7 +49,7 @@ export function SharedManagement() {
               <div>
                 <h3 className="text-lg font-semibold text-neutral-950">리소스마다 필요한 접근 권한</h3>
                 <p className="mt-2 text-sm leading-7 text-neutral-600">
-                  구성원 관리와 리소스 접근 권한은 따로 정합니다. 조회, 접속, 설정 변경에 필요한 권한을 사람마다 부여할 수 있습니다.
+                  구성원 초대와 별도로 리소스별 조회와 접속, 설정 변경 권한을 정해요.
                 </p>
               </div>
             </article>

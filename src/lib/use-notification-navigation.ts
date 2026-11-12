@@ -31,7 +31,7 @@ export function useNotificationNavigation() {
           targetOrgId = request
             ? (await fetchAdminRequest(request[1])).orgId ?? undefined
             : new URLSearchParams(location.search).get('org') ?? undefined
-          if (request && targetOrgId == null) throw new Error('신청의 대상 기관을 확인하지 못했습니다.')
+          if (request && targetOrgId == null) throw new Error('신청의 대상 기관을 확인하지 못했어요.')
         }
         destination = adminNotificationPath(linkPath, targetOrgId)
       }
@@ -40,7 +40,7 @@ export function useNotificationNavigation() {
       return true
     } catch (failure) {
       if (sequence.current === attempt) {
-        setNavigationError(toApiError(failure, '알림 대상을 열지 못했습니다. 다시 시도해 주세요.').message)
+        setNavigationError(toApiError(failure, '알림 대상을 열지 못했어요. 다시 시도해 주세요.').message)
       }
       return false
     }

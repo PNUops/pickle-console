@@ -74,7 +74,7 @@ const unknownKindView: RequestKindView = {
   useDecisionData: () => ({
     status: 'blocked',
     gate: (
-      <Alert variant="warning" title="결정할 수 없는 신청입니다">
+      <Alert variant="warning" title="결정할 수 없는 신청이에요">
         콘솔을 새로 고친 뒤 다시 열어 주세요.
       </Alert>
     ),

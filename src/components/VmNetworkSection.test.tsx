@@ -56,11 +56,11 @@ describe('VM 네트워크 탭 — 캠퍼스 IP', () => {
     renderNetworkTab(uuid(57)) // web-lab: 워크스페이스 12 OWNER
 
     await screen.findByRole('heading', { name: 'web-lab' })
-    // 개정된 안내: 교내 IP(10.x) 연결 + 기본 차단·신청 포트만 개방 + 공인 IP는 별도.
+    // Address registration and approval do not perform the external connection work.
     expect(
-      await screen.findByText(/승인되면 VM이 캠퍼스 네트워크의 교내 IP\(10\.x\)로 연결됩니다/),
+      await screen.findByText(/VM의 교내 IP\(10\.x\)와 필요한 포트 개방을 신청해요/),
     ).toBeInTheDocument()
-    expect(screen.getByText(/신청한 포트만 개방됩니다/)).toBeInTheDocument()
+    expect(screen.getByText(/개방 범위는 승인된 포트로 제한해요/)).toBeInTheDocument()
 
     await user.type(
       await screen.findByLabelText('신청 목적'),
@@ -84,7 +84,7 @@ describe('VM 네트워크 탭 — 캠퍼스 IP', () => {
 
     await screen.findByRole('heading', { name: 'algo-judge' })
     expect(
-      await screen.findByText(/캠퍼스 IP 신청·취소는 이 VM의 소유자·편집자만/),
+      await screen.findByText(/캠퍼스 IP 신청과 취소는 이 VM의 소유자나 편집자만/),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '캠퍼스 IP 신청' })).not.toBeInTheDocument()
   })

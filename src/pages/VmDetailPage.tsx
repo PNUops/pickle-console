@@ -235,15 +235,15 @@ export function VmDetailPage() {
       </div>
 
       {data.status === 'CREATING' && (
-        <Alert variant="info">생성이 끝나면 상태가 자동으로 갱신됩니다.</Alert>
+        <Alert variant="info">생성이 끝나면 상태가 자동으로 갱신돼요.</Alert>
       )}
       {data.status === 'NEEDS_ADMIN' && (
-        <Alert variant="warning" title="관리자 확인 중입니다">
-          복구될 때까지 전원 제어·삭제 등 모든 조작이 제한됩니다.
+        <Alert variant="warning" title="관리자 확인이 필요해요">
+          전원 제어와 삭제를 사용할 수 없어요.
         </Alert>
       )}
       {data.status === 'DELETED' && (
-        <Alert variant="info">기록 조회만 가능합니다.</Alert>
+        <Alert variant="info">기록 조회만 가능해요.</Alert>
       )}
       {/* 정상 실행 중에는 지난 작업 메시지(예: "프로비저닝 완료")를 경고로 띄우지 않는다. */}
       {data.statusDetail && data.status !== 'RUNNING' && (
@@ -388,7 +388,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
     placement: 'button',
     run: startVm,
     confirmTitle: 'VM 시작',
-    confirmBody: '잠시 후 실행 중 상태로 바뀝니다.',
+    confirmBody: '가상머신을 시작해요.',
   },
   shutdown: {
     label: '종료',
@@ -397,7 +397,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
     run: shutdownVm,
     confirmTitle: 'VM 종료',
     confirmBody:
-      'VM에 종료(ACPI) 신호를 보냅니다. 게스트 OS가 응답하지 않으면 종료가 실패할 수 있으며, 그 경우 강제 종료를 이용해야 합니다.',
+      '게스트 OS에 종료(ACPI)를 요청해요. 응답이 없으면 강제 종료를 사용할 수 있어요.',
   },
   reboot: {
     label: '재부팅',
@@ -405,7 +405,7 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
     placement: 'button',
     run: rebootVm,
     confirmTitle: 'VM 재부팅',
-    confirmBody: '재부팅하는 동안 접속이 잠시 끊깁니다.',
+    confirmBody: '재부팅하는 동안 접속이 잠시 끊겨요.',
   },
   forceStop: {
     label: '강제 종료',
@@ -414,9 +414,9 @@ const POWER_ACTIONS: Record<PowerAction, PowerActionConfig> = {
     run: forceStopVm,
     confirmTitle: 'VM 강제 종료',
     confirmBody:
-      '전원 차단에 해당하는 강제 종료를 수행합니다. 종료가 응답하지 않을 때만 사용하세요.',
+      '전원 차단에 해당하는 강제 종료를 수행해요. 정상 종료 요청에 응답하지 않을 때만 사용해 주세요.',
     warning:
-      '디스크 쓰기 중 강제 종료하면 파일 시스템과 데이터가 손상될 수 있습니다.',
+      '디스크 쓰기 중 강제 종료하면 파일 시스템과 데이터가 손상될 수 있어요.',
     danger: true,
   },
 }
@@ -438,7 +438,7 @@ function PowerControls({ vm }: { vm: VmDetail }) {
     },
     onError: async (err) => {
       setConfirming(null)
-      setError(toApiError(err, 'VM 전원 제어 요청에 실패했습니다.').message)
+      setError(toApiError(err, 'VM 전원 제어 요청에 실패했어요.').message)
       // 409(상태 불일치) 등은 화면이 뒤처진 것이므로 최신 상태를 다시 불러온다.
       await invalidateResourceLists(queryClient)
     },
@@ -587,13 +587,13 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
     mutationFn: () => issueVmSshKey(vm.id),
     onSuccess: async (res) => {
       setError(null)
-      saveFrom(res, '개인키를 내려받았습니다. 안전한 곳에 보관해 주세요.')
+      saveFrom(res, '개인키를 내려받았어요. 안전한 곳에 보관해 주세요.')
       // The plaintext sits in the mutation result until it is reset; once it is
       // a file on disk there is no reason to keep a copy in memory.
       issue.reset()
       await refresh()
     },
-    onError: (err) => setError(toApiError(err, 'SSH 키를 발급하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, 'SSH 키를 발급하지 못했어요.').message),
   })
 
   const download = useMutation({
@@ -601,10 +601,10 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
     mutationFn: () => downloadVmSshKey(vm.id),
     onSuccess: (res) => {
       setError(null)
-      saveFrom(res, '개인키를 다시 내려받았습니다. 다운로드는 기록에 남습니다.')
+      saveFrom(res, '개인키를 다시 내려받았어요. 다운로드는 기록에 남아요.')
       download.reset()
     },
-    onError: (err) => setError(toApiError(err, '개인키를 다운로드하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '개인키를 다운로드하지 못했어요.').message),
   })
 
   const reissue = useMutation({
@@ -613,13 +613,13 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
     onSuccess: async (res) => {
       setError(null)
       setConfirmReissue(false)
-      saveFrom(res, '새 개인키를 내려받았습니다. 이전 키로는 접속할 수 없습니다.')
+      saveFrom(res, '새 개인키를 내려받았어요. 이전 키로는 접속할 수 없어요.')
       reissue.reset()
       await refresh()
     },
     onError: (err) => {
       setConfirmReissue(false)
-      setError(toApiError(err, 'SSH 키를 재발급하지 못했습니다.').message)
+      setError(toApiError(err, 'SSH 키를 재발급하지 못했어요.').message)
     },
   })
 
@@ -632,7 +632,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
     },
     onError: (err) => {
       setConfirmDelete(false)
-      setError(toApiError(err, 'SSH 키를 삭제하지 못했습니다.').message)
+      setError(toApiError(err, 'SSH 키를 삭제하지 못했어요.').message)
     },
   })
 
@@ -658,8 +658,8 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
             <p className="text-sm font-medium text-neutral-900">웹 터미널</p>
             <p className="mt-0.5 text-sm text-neutral-500">
               {canUseTerminal(vm)
-                ? '키 파일 없이 브라우저에서 바로 셸을 엽니다. 별도 창으로 열립니다.'
-                : '가상머신이 실행 중일 때만 열 수 있습니다.'}
+                ? '키 파일 없이 브라우저의 별도 창에서 접속해요.'
+                : '가상머신이 실행 중일 때만 열 수 있어요.'}
             </p>
           </div>
           <Button
@@ -680,7 +680,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
           <div>
             <p className="text-sm font-medium text-neutral-900">SSH 클라이언트</p>
             <p className="mt-0.5 text-sm text-neutral-500">
-              이 가상머신 전용 개인키로 접속합니다. 다른 가상머신에는 쓸 수 없습니다.
+              이 가상머신 전용 개인키로 접속해요. 다른 가상머신에는 쓸 수 없어요.
             </p>
           </div>
 
@@ -709,7 +709,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
                 </div>
               ) : (
                 <Alert variant="warning">
-                  SSH 게이트웨이 주소가 준비되지 않아 접속 명령을 표시할 수 없습니다.
+                  SSH 게이트웨이 주소를 확인할 수 없어 접속 명령을 표시하지 못해요.
                 </Alert>
               )}
 
@@ -731,7 +731,7 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-neutral-600">
-                아직 이 가상머신의 SSH 키를 발급받지 않았습니다.
+                아직 이 가상머신의 SSH 키를 발급받지 않았어요.
               </p>
               <Button size="sm" disabled={busy} onClick={() => issue.mutate()}>
                 SSH 키 발급 및 다운로드
@@ -770,10 +770,10 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
       >
         <div className="space-y-3">
           <p className="text-sm text-neutral-600">
-            새 키쌍을 만들고 개인키를 내려받습니다.
+            새 키쌍을 만들고 개인키를 내려받아요.
           </p>
           <Alert variant="danger">
-            기존 키는 즉시 무효화됩니다. 이미 열려 있는 SSH 세션은 끊기지 않습니다.
+            기존 키는 즉시 무효화돼요. 이미 열려 있는 SSH 세션은 끊기지 않아요.
           </Alert>
         </div>
       </Modal>
@@ -796,8 +796,8 @@ function SshAccessSection({ vm }: { vm: VmDetail }) {
       >
         <div className="space-y-3">
           <p className="text-sm text-neutral-600">
-            삭제하면 이 키로는 접속할 수 없습니다. 필요하면 언제든 다시 발급받을 수
-            있습니다.
+            삭제하면 이 키로는 접속할 수 없어요. 필요하면 언제든 다시 발급받을 수
+            있어요.
           </p>
           <Alert variant="warning">
             내려받아 둔 개인키 파일도 함께 지워 주세요.
@@ -840,7 +840,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
     mutationFn: () => revealVmPassword(vm.id),
     onError: async (err) => {
       setModalOpen(false)
-      setError(toApiError(err, '비밀번호를 열람하지 못했습니다.').message)
+      setError(toApiError(err, '비밀번호를 열람하지 못했어요.').message)
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
   })
@@ -857,7 +857,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
     },
     onError: async (err) => {
       setConfirmRegen(false)
-      setError(toApiError(err, '비밀번호를 재생성하지 못했습니다.').message)
+      setError(toApiError(err, '비밀번호를 재생성하지 못했어요.').message)
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
   })
@@ -897,7 +897,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
         {vm.passwordAvailable && vm.passwordRevealAllowed && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-neutral-600">
-              비밀번호는 VM 내부 sudo 자격입니다.
+              비밀번호는 VM 내부 sudo 자격이에요.
             </p>
             <Button size="sm" onClick={openReveal} disabled={!viewable}>
               비밀번호 보기
@@ -907,15 +907,14 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
 
         {vm.passwordAvailable && !vm.passwordRevealAllowed && (
           <Alert variant="info">
-            이 VM은 비밀번호 열람이 제한되어 있습니다. 열람하려면 더 높은 워크스페이스
-            역할이 필요합니다.
+            비밀번호를 열람하려면 더 높은 VM 접근 등급이 필요해요.
           </Alert>
         )}
 
         {/* 편집 권한을 말하던 뒷절을 뺐다. 그 절이 뜨려면 위 가드를 지나야 하고,
             지나는 경로는 페이지를 읽는 동안 서버 쪽 값이 바뀌는 레이스뿐이다. 그
             순간에는 편집자에게도 「편집자 이상만」이라고 말할 수 있어 틀린다. */}
-        {!vm.passwordAvailable && <Alert variant="info">저장된 비밀번호가 없습니다.</Alert>}
+        {!vm.passwordAvailable && <Alert variant="info">저장된 비밀번호가 없어요.</Alert>}
 
         {/* The row is absent unless the VM is running. A disabled button used to
             stand here with no reason on screen. Only a missing permission is shown
@@ -924,7 +923,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
         {canRegenerate && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-3">
             <p className="text-sm text-neutral-600">
-              분실했거나 회수가 필요하면 비밀번호를 재생성할 수 있습니다.
+              분실했거나 회수가 필요하면 비밀번호를 재생성할 수 있어요.
             </p>
             <Button
               size="sm"
@@ -947,7 +946,7 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
             gone, which is why no test can tell the two conditions apart here. */}
         {settingsTabVisible(vm) && (
           <p className="border-t border-neutral-100 pt-3 text-xs text-neutral-500">
-            비밀번호 SSH 허용과 열람 최소 역할은 설정 탭에서 바꿉니다.
+            비밀번호 SSH 허용과 열람 최소 역할은 설정 탭에서 바꿔요.
           </p>
         )}
       </CardContent>
@@ -986,9 +985,8 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
               </div>
             </dl>
             <p className="text-xs text-neutral-500">
-              비밀번호는 언제든 이 화면에서 다시 확인할 수 있습니다. 게스트 안에서
-              직접 변경했다면 저장된 값은 실제와 달라질 수 있으며, 그 경우
-              재생성으로 복구합니다.
+              게스트 안에서 직접 비밀번호를 바꿨다면 저장된 값과 다를 수 있어요.
+              필요하면 재생성해 주세요.
             </p>
           </div>
         ) : (
@@ -1019,9 +1017,9 @@ function VmPasswordSection({ vm }: { vm: VmDetail }) {
         }
       >
         <div className="space-y-3">
-          <Alert variant="danger">기존 비밀번호가 즉시 무효화됩니다.</Alert>
+          <Alert variant="danger">기존 비밀번호가 즉시 무효화돼요.</Alert>
           <p className="text-sm text-neutral-600">
-            새 비밀번호는 시스템이 생성하며 실행 중인 VM에 즉시 적용됩니다.
+            새 비밀번호는 시스템이 생성하며 실행 중인 VM에 즉시 적용돼요.
           </p>
         </div>
       </Modal>
@@ -1102,13 +1100,13 @@ function VmSettingRow({ vmId, setting }: { vmId: string; setting: VmSettingView 
       setConfirmEnable(false)
       setError(null)
       queryClient.setQueryData(['vms', vmId, 'settings'], updated)
-      toast.success(`'${setting.label}' 설정을 변경했습니다.`)
+      toast.success(`'${setting.label}' 설정을 변경했어요.`)
       // password_reveal_min_role 변경은 passwordRevealAllowed에 영향 → 상세도 갱신.
       await queryClient.invalidateQueries({ queryKey: ['vms', vmId] })
     },
     onError: (err) => {
       setConfirmEnable(false)
-      setError(toApiError(err, '설정을 변경하지 못했습니다.').message)
+      setError(toApiError(err, '설정을 변경하지 못했어요.').message)
     },
   })
 
@@ -1139,7 +1137,7 @@ function VmSettingRow({ vmId, setting }: { vmId: string; setting: VmSettingView 
       </div>
       {!setting.editable && (
         <p className="text-xs text-neutral-500">
-          『{requiredLabel}』만 변경할 수 있습니다.
+          『{requiredLabel}』 이상 등급이 변경할 수 있어요.
         </p>
       )}
       {(setting.updatedByName || setting.updatedAt) && (
@@ -1168,12 +1166,12 @@ function VmSettingRow({ vmId, setting }: { vmId: string; setting: VmSettingView 
         <div className="space-y-2 text-sm text-neutral-700">
           <p>비밀번호 접속을 허용하면:</p>
           <ul className="list-disc space-y-1 pl-5">
-            <li>누가 접속했는지 개인을 식별할 수 없습니다.</li>
+            <li>누가 접속했는지 개인을 식별할 수 없어요.</li>
             <li>
-              <strong>이 경로는 접근 권한 목록을 검사하지 않습니다.</strong> 비밀번호를
-              아는 사람이면 목록에 없어도, 접근 권한을 회수한 뒤에도 접속할 수 있습니다.
+              <strong>이 경로는 접근 권한 목록을 검사하지 않아요.</strong> 비밀번호를
+              아는 사람이면 목록에 없어도, 접근 권한을 회수한 뒤에도 접속할 수 있어요.
             </li>
-            <li>이 변경은 관리자에게 표시됩니다.</li>
+            <li>이 변경은 관리자에게 표시돼요.</li>
           </ul>
         </div>
       </Modal>
@@ -1295,11 +1293,11 @@ function DeletionBanner({ deletion }: { deletion: VmDeletion }) {
              a deletion was forced, and the sentence beneath it was saying so in
              its first two words -- while naming a reason nothing here knows: a
              forced deletion carries no reason field at all. */
-          <p>즉시 파기됩니다. 취소할 수 없습니다.</p>
+          <p>파기 요청을 접수했어요. 취소할 수 없어요.</p>
         ) : (
           <p>
-            {scheduled}에 영구 파기될 예정입니다. 파기 전에 복구가 필요하면 관리자에게
-            문의하세요.
+            {scheduled}에 영구 파기될 예정이에요. 파기 전에 복구가 필요하면 관리자에게
+            문의해 주세요.
           </p>
         )}
         {deletion.reason && <p>사유: {deletion.reason}</p>}
@@ -1330,7 +1328,7 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
     },
     onError: async (err) => {
       setOpen(false)
-      setError(toApiError(err, 'VM 삭제를 접수하지 못했습니다.').message)
+      setError(toApiError(err, 'VM 삭제를 접수하지 못했어요.').message)
       await invalidateResourceLists(queryClient)
     },
   })
@@ -1351,8 +1349,8 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
           <>
             <p className="text-sm text-neutral-600">
               {isErrorVm
-                ? '생성에 실패한 VM입니다. 접수 즉시 삭제됩니다.'
-                : '삭제를 접수하면 VM이 종료되고 유예 기간이 지난 뒤 영구 파기됩니다.'}
+                ? '생성에 실패한 VM이에요. 유예 기간 없이 파기를 요청해요.'
+                : '종료를 요청하고 유예 기간 뒤 영구 파기를 예약해요.'}
             </p>
             <Button variant="danger" onClick={() => setOpen(true)}>
               VM 삭제
@@ -1367,13 +1365,13 @@ function DeleteSection({ vm }: { vm: VmDetail }) {
               onConfirm={() => remove.mutate()}
             >
               <Alert variant="danger" title="백업 책임 안내">
-                플랫폼은 VM 데이터를 백업하지 않습니다. 데이터 보호와 백업은 사용자
-                책임이며, 삭제된 VM의 데이터는 복구할 수 없습니다.
+                플랫폼은 VM 데이터를 백업하지 않아요. 데이터 보호와 백업은 사용자
+                책임이며, 삭제된 VM의 데이터는 복구할 수 없어요.
               </Alert>
               {!isErrorVm && (
                 <p className="text-sm text-neutral-600">
-                  삭제 접수 후에는 취소할 수 없습니다. 유예 기간 중 복구가 필요하면
-                  관리자에게 문의하세요.
+                  삭제 접수 후에는 취소할 수 없어요. 유예 기간 중 복구가 필요하면
+                  관리자에게 문의해 주세요.
                 </p>
               )}
             </ConfirmNameModal>
@@ -1401,19 +1399,19 @@ function ProvisioningPanel({ task }: { task: ProvisioningTaskView }) {
           단계 {task.currentStep + 1}/{task.totalSteps} · {task.stepLabel}
         </p>
         {task.status === 'RETRYING' && (
-          <Alert variant="warning" title="일시적인 오류로 재시도 중입니다">
-            잠시 후 자동으로 다시 시도합니다.
+          <Alert variant="warning" title="일시적인 오류로 재시도 중이에요">
+            잠시 후 자동으로 다시 시도해요.
             {task.lastError && ` 마지막 오류: ${task.lastError}`}
           </Alert>
         )}
         {task.status === 'NEEDS_ADMIN' && (
-          <Alert variant="warning" title="관리자 개입이 필요합니다">
-            재시도가 모두 실패했습니다.
+          <Alert variant="warning" title="관리자 개입이 필요해요">
+            관리자에게 문의해 주세요.
             {task.lastError && ` 마지막 오류: ${task.lastError}`}
           </Alert>
         )}
         {task.status === 'FAILED' && (
-          <Alert variant="danger" title="작업이 실패했습니다">
+          <Alert variant="danger" title="작업이 실패했어요">
             {task.lastError ?? '자세한 내용은 관리자에게 문의해 주세요.'}
           </Alert>
         )}
@@ -1446,7 +1444,7 @@ function VmEventsSection({ vmId }: { vmId: string }) {
         )}
         {events.isError && <Alert variant="danger">{events.error.message}</Alert>}
         {events.isSuccess && events.data.content.length === 0 && (
-          <p className="py-2 text-sm text-neutral-500">기록된 이벤트가 없습니다.</p>
+          <p className="py-2 text-sm text-neutral-500">기록된 이벤트가 없어요.</p>
         )}
         {events.isSuccess && events.data.content.length > 0 && (
           <>

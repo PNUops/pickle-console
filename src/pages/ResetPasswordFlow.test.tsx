@@ -11,7 +11,7 @@ describe('비밀번호 재설정 흐름 (공개 페이지)', () => {
     await user.type(await screen.findByLabelText('이메일'), 'example@pusan.ac.kr')
     await user.click(screen.getByRole('button', { name: '재설정 메일 받기' }))
 
-    expect(await screen.findByText(/재설정 메일을 발송했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/재설정 메일을 보냈어요/)).toBeInTheDocument()
   })
 
   test('확정 페이지: 유효 토큰으로 새 비밀번호를 설정하면 로그인으로 이동한다', async () => {
@@ -33,7 +33,7 @@ describe('비밀번호 재설정 흐름 (공개 페이지)', () => {
     await user.type(screen.getByLabelText('새 비밀번호 확인'), 'brand-new-pass-9!')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
-    expect(await screen.findByText('재설정 링크가 만료되었습니다')).toBeInTheDocument()
+    expect(await screen.findByText('재설정 링크가 만료됐어요')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '재설정을 다시 요청하기' })).toBeInTheDocument()
   })
 
@@ -57,13 +57,13 @@ describe('비밀번호 재설정 흐름 (공개 페이지)', () => {
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
     expect(
-      await screen.findByText('비밀번호는 8자 이상 72자 이하여야 합니다.'),
+      await screen.findByText('비밀번호는 8자 이상 72자 이하여야 해요.'),
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '새 비밀번호 설정' })).toBeInTheDocument()
   })
 
   test('토큰 없이 진입하면 잘못된 링크 안내를 보여준다', async () => {
     renderApp('/reset-password')
-    expect(await screen.findByText('잘못된 링크입니다')).toBeInTheDocument()
+    expect(await screen.findByText('링크를 확인해 주세요')).toBeInTheDocument()
   })
 })

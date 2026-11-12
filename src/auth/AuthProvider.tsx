@@ -33,7 +33,7 @@ function isCurrent(request: AuthRequest): boolean {
 
 function requireCurrent(request: AuthRequest): void {
   if (!isCurrent(request)) {
-    throw new ApiError(null, '로그인 상태가 바뀌었습니다. 다시 로그인해 주세요.')
+    throw new ApiError(null, '로그인 상태가 바뀌었어요. 다시 로그인해 주세요.')
   }
 }
 
@@ -167,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     requireCurrent(request)
     if (!me.data) {
       clearAccessToken()
-      throw toApiError(me.error, '사용자 정보를 불러오지 못했습니다. 다시 로그인해 주세요.')
+      throw toApiError(me.error, '사용자 정보를 불러오지 못했어요. 다시 로그인해 주세요.')
     }
     // 직전 세션(다른 계정)의 캐시가 새 세션 화면에 렌더링되지 않도록 비운다.
     resetMfaEnrollmentRequired()
@@ -190,7 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       requireCurrent(request)
       if (!data) {
-        throw toApiError(error, '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+        throw toApiError(error, '로그인하지 못했어요. 잠시 후 다시 시도해 주세요.')
       }
       if ('mfaRequired' in data) {
         // 2FA 계정: 토큰 대신 스텝업 챌린지를 반환한다 — LoginPage가 코드 입력
@@ -220,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         requireCurrent(request)
         if (!data) {
-          throw toApiError(error, '2단계 인증에 실패했습니다. 다시 시도해 주세요.')
+          throw toApiError(error, '2단계 인증을 마치지 못했어요. 다시 시도해 주세요.')
         }
         setAccessToken(data.accessToken)
         request.generation = getSessionGeneration()
@@ -247,7 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (replaceSession) requireCurrent(request)
       if (!isCurrent(request)) return
       if (!data && replaceSession) {
-        throw toApiError(error, '사용자 정보를 불러오지 못했습니다. 다시 로그인해 주세요.')
+        throw toApiError(error, '사용자 정보를 불러오지 못했어요. 다시 로그인해 주세요.')
       }
       if (data) {
         const user = await withAuthority(data, request)

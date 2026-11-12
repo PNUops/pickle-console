@@ -27,9 +27,6 @@ export function WorkspacesPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">내 워크스페이스</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            리소스는 워크스페이스 명의로 신청합니다.
-          </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>새 워크스페이스 만들기</Button>
       </div>
@@ -42,7 +39,7 @@ export function WorkspacesPage() {
       {workspaces.isError && <Alert variant="danger">{workspaces.error.message}</Alert>}
       {workspaces.isSuccess && workspaces.data.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          속한 워크스페이스가 없습니다. 새 워크스페이스를 만들어 시작해 보세요.
+          속한 워크스페이스가 없어요. 새 워크스페이스를 만들어 시작해 보세요.
         </Card>
       )}
       {workspaces.isSuccess && workspaces.data.length > 0 && (

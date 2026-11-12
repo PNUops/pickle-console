@@ -20,34 +20,34 @@ import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
 
 /** WebSocket close 코드 → 한국어 폴백 메시지 (서버 exit 프레임이 없을 때). */
 const CLOSE_MESSAGES: Record<number, string> = {
-  1000: '세션이 종료되었습니다.',
-  1001: '서버 점검으로 연결이 종료되었습니다. 잠시 후 다시 연결해 주세요.',
-  4000: '접속 티켓이 유효하지 않거나 만료되었습니다.',
-  4001: '15분 동안 입력이 없어 연결이 종료되었습니다.',
-  4002: '관리자가 세션을 종료했습니다.',
-  4003: 'VM이 실행 중이 아닙니다.',
-  4004: '접근 권한이 변경되어 연결이 종료되었습니다.',
-  4005: '웹 터미널 기능이 현재 비활성화되어 있습니다.',
-  4006: '연결에 실패했습니다 (호스트 키 불일치 또는 전송 오류).',
+  1000: '세션이 종료됐어요.',
+  1001: '연결이 종료됐어요. 잠시 후 다시 연결해 주세요.',
+  4000: '접속 정보가 유효하지 않아요. 다시 연결해 주세요.',
+  4001: '15분 동안 입력이 없어 연결이 종료됐어요.',
+  4002: '관리자가 세션을 종료했어요.',
+  4003: 'VM이 실행 중이 아니에요.',
+  4004: '접근 권한이 바뀌어 연결이 종료됐어요.',
+  4005: '웹 터미널이 비활성화되어 있어요.',
+  4006: '터미널에 연결하지 못했어요. 관리자에게 문의해 주세요.',
 }
 
-const UNKNOWN_CLOSE_MESSAGE = '알 수 없는 오류로 연결이 종료되었습니다.'
+const UNKNOWN_CLOSE_MESSAGE = '알 수 없는 오류로 연결이 종료됐어요.'
 
 /** 재연결 버튼을 숨기는 종료 코드 — 관리자 종료(4002)·기능 비활성(4005). */
 const NO_RECONNECT_CODES = new Set([4002, 4005])
 
 /** mint 실패 Problem code → 한국어 메시지 (없으면 서버 detail 폴백). */
 const MINT_ERROR_MESSAGES: Record<string, string> = {
-  TERMINAL_DISABLED: '웹 터미널 기능이 현재 비활성화되어 있습니다.',
+  TERMINAL_DISABLED: '웹 터미널이 비활성화되어 있어요.',
   TERMINAL_SESSION_LIMIT:
-    '동시 터미널 세션 상한을 초과했습니다. 사용 중인 세션을 닫은 뒤 다시 시도해 주세요.',
-  RATE_LIMITED: '요청이 너무 잦습니다. 잠시 후 다시 시도해 주세요.',
-  VM_INVALID_STATE: 'VM이 실행 중이 아닙니다.',
-  ACCESS_DENIED: '관리자가 이 VM의 원격 접속을 차단했습니다. 관리자에게 문의하세요.',
-  WORKSPACE_ROLE_INSUFFICIENT: '웹 터미널은 워크스페이스 참여자(MEMBER) 이상만 사용할 수 있습니다.',
+    '동시에 열 수 있는 터미널 수에 도달했어요. 사용 중인 세션을 닫고 다시 시도해 주세요.',
+  RATE_LIMITED: '요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.',
+  VM_INVALID_STATE: 'VM이 실행 중이 아니에요.',
+  ACCESS_DENIED: '관리자가 이 VM의 원격 접속을 차단했어요. 관리자에게 문의해 주세요.',
+  WORKSPACE_ROLE_INSUFFICIENT: '이 VM에 접속할 권한이 없어요.',
 }
 
-const MINT_FALLBACK_MESSAGE = '터미널 접속 티켓을 발급하지 못했습니다.'
+const MINT_FALLBACK_MESSAGE = '터미널 연결을 준비하지 못했어요.'
 
 export type TerminalPhase =
   | { status: 'connecting' }

@@ -85,7 +85,7 @@ describe('관리자 VM 목록', () => {
     await user.selectOptions(screen.getByLabelText('관리 기관 선택'), uuid(2))
     expect(await screen.findByText('ai-train')).toBeInTheDocument()
     expect(screen.queryByText('capstone-team3-api')).not.toBeInTheDocument()
-    expect(screen.getByText(/테스트 기관 가상머신을 조회하고/)).toBeInTheDocument()
+    expect(screen.getByText('테스트 기관', { selector: 'p' })).toBeInTheDocument()
   })
 
   test('drops prior institution rows while the new scoped list is pending', async () => {
@@ -221,7 +221,7 @@ describe('관리자 VM 삭제 예약', () => {
     fireEvent.change(dateInput, { target: { value: '2020-01-01' } })
     await user.type(reasonInput, '사용 종료일이 지난 VM 정리')
     expect(
-      screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일입니다/),
+      screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일이에요/),
     ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '삭제 예약' }))
     expect(
@@ -232,12 +232,12 @@ describe('관리자 VM 삭제 예약', () => {
     const nearDate = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10)
     fireEvent.change(dateInput, { target: { value: nearDate } })
     expect(
-      screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일입니다/),
+      screen.getByText(/권장 통보 기간\(7일\)보다 이른 파기 예정일이에요/),
     ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '삭제 예약' }))
     expect(
       await screen.findByText(
-        '삭제 예약을 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.',
+        '삭제 예약을 접수했어요.',
       ),
     ).toBeInTheDocument()
     expect(await screen.findByText('삭제 예약됨')).toBeInTheDocument()
@@ -295,7 +295,7 @@ describe('SSH·웹 터미널 차단 토글', () => {
     await user.type(within(dialog).getByPlaceholderText(/감사 기록/), '남용 신고 확인')
     await user.click(within(dialog).getByRole('button', { name: '차단' }))
 
-    expect(await screen.findByText('SSH·웹 터미널 접속을 차단했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('이 VM의 접속 차단을 설정했어요.')).toBeInTheDocument()
     expect(await screen.findByText('SSH·터미널 차단됨')).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '차단 해제' })).toBeEnabled()
   })
@@ -322,7 +322,7 @@ describe('VM detail period changes', () => {
     })
     await user.click(within(dialog).getByRole('button', { name: '연장' }))
 
-    expect(await screen.findByText(/새 종료일을 저장했습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/새 종료일을 저장했어요/)).toBeInTheDocument()
     expect(screen.queryByRole('dialog', { name: '기간 연장 — algo-judge' })).not.toBeInTheDocument()
   })
 })
@@ -349,8 +349,8 @@ describe('관리자 삭제 취소', () => {
     renderAsOrgAdmin()
 
     await selectVm(user, 'algo-judge')
-    expect(screen.getByText('삭제가 진행 중입니다')).toBeInTheDocument()
-    expect(screen.getByText(/취소할 수 없습니다/)).toBeInTheDocument()
+    expect(screen.getByText('삭제 요청 접수')).toBeInTheDocument()
+    expect(screen.getByText(/현재 삭제 요청은 취소할 수 없어요/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '삭제 취소' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '삭제 예약' })).not.toBeInTheDocument()
   })
@@ -421,7 +421,7 @@ describe('강제 삭제 (SYS_ADMIN)', () => {
       expect(screen.getByRole('heading', { name: 'algo-judge' })).toBeInTheDocument()
       expect(screen.getAllByText('삭제됨').length).toBeGreaterThan(0)
       expect(screen.queryByRole('button', { name: '강제 삭제' })).not.toBeInTheDocument()
-      expect(screen.queryByText('삭제가 진행 중입니다')).not.toBeInTheDocument()
+      expect(screen.queryByText('삭제 요청 접수')).not.toBeInTheDocument()
     })
   })
 

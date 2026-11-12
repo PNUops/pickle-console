@@ -137,7 +137,7 @@ function DemandSection({
         <div>
           <CardTitle>수요 추이</CardTitle>
           <p className="type-caption mt-1 text-foreground-muted">
-            KST 달력일 기준입니다.
+            KST 달력일 기준이에요.
           </p>
         </div>
         <div role="group" aria-label="LLM 사용량 조회 기간" className="flex flex-wrap gap-1">
@@ -170,9 +170,9 @@ function DemandSection({
           <DescriptionList
             columns={2}
             items={[
-              { term: '자체 서빙 모델 요청', description: axisShare(selected.tokenAxisRequests, selected.requests) },
-              { term: '유료 모델 요청', description: axisShare(selected.creditAxisRequests, selected.requests) },
-              { term: '종류 미상 요청', description: axisShare(selected.unknownAxisRequests, selected.requests) },
+              { term: 'TOKEN 축 요청', description: axisShare(selected.tokenAxisRequests, selected.requests) },
+              { term: 'CREDIT 축 요청', description: axisShare(selected.creditAxisRequests, selected.requests) },
+              { term: '축 미상 요청', description: axisShare(selected.unknownAxisRequests, selected.requests) },
               { term: '예산 축 기록 범위', description: ratio(selected.axisCoverage) },
             ]}
           />
@@ -180,7 +180,7 @@ function DemandSection({
 
         {noUsage ? (
           <EmptyState
-            title="선택 기간에 LLM 요청이 없습니다"
+            title="선택 기간에 기록된 LLM 요청이 없어요"
             description="다른 기간이나 관리 범위를 선택해 보세요."
             className="min-h-40"
           />
@@ -199,12 +199,12 @@ function DemandSection({
         )}
 
         {quality.totalTokens > 0 && quality.estimatedTokens == null && (
-          <MessageBar variant="warning" title="추정 토큰 비율을 계산할 수 없습니다">
-            선택 구간에 원본 기록이 보존되지 않은 날이 있습니다.
+          <MessageBar variant="warning" title="추정 토큰 비율을 계산할 수 없어요">
+            선택 구간에 원본 기록이 보존되지 않은 날이 있어요.
           </MessageBar>
         )}
         {quality.estimatedTokenRatio != null && quality.estimatedTokenRatio > 0 && (
-          <MessageBar variant="warning" title="일부 토큰은 추정값입니다">
+          <MessageBar variant="warning" title="일부 토큰은 추정값이에요">
             {tokens(quality.estimatedTokens)} · 전체 토큰의 {percent(quality.estimatedTokenRatio)}
           </MessageBar>
         )}
@@ -233,40 +233,15 @@ function WindowSummary({ window, selected }: { window: LlmUsageWindow; selected:
   )
 }
 
-/**
- * 금액 칸.
- *
- * **값이 없는 것과 0은 다르고, 값이 없는 이유도 둘이다.** 자체 서빙 모델에는 금액이라는
- * 것이 아예 없고, 축이 생기기 전(2026-09-06)의 요청은 기록되지 않았다. 둘 다 `$0.00`으로
- * 적으면 「공짜로 썼다」는, 서버가 한 적 없는 주장이 된다.
- *
- * **일부만 가격이 붙은 행은 그 사실을 그 자리에서 말한다.** 전체 개수만 따로 세면 그 몇
- * 건이 어느 모델에서, 어느 경로에서 빠진 것인지 알 수 없다. 여기 붙이면 빠진 자리가
- * 곧 그 행이다.
- *
- * **이 건수는 하한이다.** 축이 기록되기 전의 요청이나 축이 null 로 내려간 요청에 금액이
- * 붙어 있으면 가격 붙은 수가 유료 축 수보다 커져 차가 음수가 되고, 그때는 아무것도 적지
- * 않는다. 실제보다 적게 말할 수는 있어도 없는 것을 말하지는 않는 쪽으로 기운다.
- *
- * **빠진 건수는 전체 요청이 아니라 유료 모델 요청에서 뺀다.** 전체 요청에서 빼면 자체
- * 서빙 요청이 전부 「금액을 모르는 요청」이 되는데, 자체 서빙에는 금액이라는 것이 아예
- * 없으므로 모르는 것이 아니다. 카드 위의 총계 문장을 뺀 이유가 정확히 그것이었고, 행마다
- * 같은 계산을 하면 같은 거짓을 행 수만큼 말하게 된다.
- *
- * **소비처 표는 2026-09-07부터 이 함수를 쓰지 않는다.** 그 표는 공급자가 키마다 보고한
- * 사용액을 쓰므로 값을 매기지 못한 건수라는 것이 없다. 여기 남은 두 표는 모델과 경로로
- * 나누므로 그럴 수 없다 — 공급자는 키 단위로만 알려 주고, 그 금액을 모델이나 경로로
- * 쪼개는 방법은 요청별 금액밖에 없다.
- */
+/** Reported costs and axis counts describe independent request populations. */
 function amountCell(
   amount: number | null | undefined,
   creditAxisRequests: number | null | undefined,
   priced: number | null | undefined,
 ): string {
   if (creditAxisRequests == null || priced == null) return '제공되지 않음'
-  const missing = creditAxisRequests - priced
-  if (amount == null) return missing > 0 ? `— (${count(missing)}건 미상)` : '—'
-  return missing > 0 ? `${formatUsd(amount)} (${count(missing)}건 미상)` : formatUsd(amount)
+  if (amount == null) return priced === 0 ? '금액 표본 없음' : '미확인'
+  return formatUsd(amount)
 }
 
 /**
@@ -322,8 +297,8 @@ function ConsumersSection({
             단계마다 다른 말을 해야 화면이 보여 주는 것과 어긋나지 않는다. */}
         <p className="type-caption mt-1 text-foreground-muted">
           {consumers.level === 'KEY'
-            ? '이름을 누르면 그 키의 상세로 갑니다.'
-            : '이름을 누르면 이 화면이 그 범위로 좁혀집니다.'}
+            ? '이름 링크로 키 상세를 열어요.'
+            : '이름 링크로 조회 범위를 좁혀요.'}
         </p>
         {/* The amounts are the vendor's readings, so the column needs one
             moment saying how current they are. The server sends the oldest
@@ -336,15 +311,14 @@ function ConsumersSection({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-foreground-muted">{consumers.from} ~ {consumers.to} KST · 일별 기록과 키 금액 대사 기준 · 전체 {count(consumers.totalItems)}개 · 응답 {count(consumers.page + 1)}페이지 / {CONSUMER_SORT_LABELS[consumers.sort]}</p>
+        <p className="text-sm text-foreground-muted">{consumers.from} ~ {consumers.to} KST · 전체 {count(consumers.totalItems)}개 · {count(consumers.page + 1)}페이지 / {CONSUMER_SORT_LABELS[consumers.sort]}</p>
         <Select aria-label="소비처 정렬" value={selectedSort} onChange={(event) => onSort(event.target.value as typeof consumers.sort)}>
           {CONSUMER_SORTS.map((value) => <option key={value} value={value}>{CONSUMER_SORT_LABELS[value]}</option>)}
         </Select>
-        <p className="text-xs text-foreground-muted">금액 정렬은 요청별 보고 금액을 기준으로 합니다. 기간 키 미터는 공급자 관측값의 별도 차분입니다. 현재 조회 집합의 금융 정보를 읽을 수 없으면 서버가 정렬 요청을 거절하며 조건은 유지됩니다.</p>
         {consumers.items.length === 0 ? (
           <EmptyState
-            title="표시할 소비처가 없습니다"
-            description="선택 기간과 관리 범위에 귀속된 요청이 없습니다."
+            title="표시할 소비처가 없어요"
+            description="선택 기간과 관리 범위에 귀속된 요청 기록이 없어요."
             className="min-h-40"
           />
         ) : (
@@ -503,7 +477,7 @@ function BreakdownSection({ data }: { data: AdminLlmUsage }) {
           && data.quality.endpointRecordedRequests < data.quality.totalRequests && (
           <MessageBar>
             「종류 미상」은 {count(data.quality.totalRequests
-              - data.quality.endpointRecordedRequests)}건입니다.
+              - data.quality.endpointRecordedRequests)}건이에요.
           </MessageBar>
         )}
       </CardContent>
@@ -515,8 +489,8 @@ function ModelBreakdownTable({ rows }: { rows: AdminLlmUsage['breakdown']['model
   if (rows.length === 0) {
     return (
       <EmptyState
-        title="표시할 모델이 없습니다"
-        description="선택 기간과 관리 범위에 호출된 모델이 없습니다."
+        title="표시할 모델이 없어요"
+        description="선택 기간과 관리 범위에서 확인된 모델 기록이 없어요."
         className="min-h-40"
       />
     )
@@ -649,8 +623,8 @@ function EndpointBreakdownTable({
   if (rows.length === 0) {
     return (
       <EmptyState
-        title="표시할 호출 종류가 없습니다"
-        description="선택 기간과 관리 범위에 들어온 요청이 없습니다."
+        title="표시할 호출 종류가 없어요"
+        description="선택 기간과 관리 범위에 표시할 요청 기록이 없어요."
         className="min-h-40"
       />
     )
@@ -663,7 +637,7 @@ function EndpointBreakdownTable({
           <TH>호출 종류</TH>
           <TH>요청</TH>
           <TH>토큰</TH>
-          <TH>금액</TH>
+          <TH>요청별 보고 금액</TH>
           {anyImages && <TH>이미지</TH>}
         </TR>
       </THead>
@@ -729,11 +703,11 @@ function LimitReviewSection({ data, activeOrgId, onPage }: { data: AdminLlmUsage
         <CardTitle>한도 검토</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-foreground-muted">압력 기간 {data.limitReview.pressureFrom} ~ {data.limitReview.pressureTo} KST · 설정 조회 {data.limitReview.configurationObservedAt ? formatDateTimeSeconds(data.limitReview.configurationObservedAt) : '미보고'}. 오늘 토큰과 현재 금액 창은 선택한 소비 기간과 별도입니다.</p>
+        <p className="text-sm text-foreground-muted">압력 기간 {data.limitReview.pressureFrom} ~ {data.limitReview.pressureTo} KST · 설정 조회 {data.limitReview.configurationObservedAt ? formatDateTimeSeconds(data.limitReview.configurationObservedAt) : '미보고'}</p>
         {data.limitReview.items.length === 0 ? (
           <EmptyState
-            title="검토할 한도가 없습니다"
-            description="설정된 한도나 최근 한도 압력이 있는 활성 키가 없습니다."
+            title="표시할 한도 검토 항목이 없어요"
+            description="한도가 설정됐거나 소진됐거나 최근에 한도 압력이 기록된 키를 보여 줘요. 폐기되거나 만료된 키는 제외해요."
             className="min-h-40"
           />
         ) : (
@@ -784,7 +758,7 @@ function LimitReviewSection({ data, activeOrgId, onPage }: { data: AdminLlmUsage
                     </TD>
                     <TD className="min-w-48 text-xs">{item.financeVisible ? <>
                       <span className="block">한도 {formatUsd(item.creditLimit)}</span>
-                      <span className="block">사용 {formatUsd(item.creditUsage)}</span>
+                      <span className="block">누적 사용 {formatUsd(item.creditUsage)}</span>
                       <span className="block">잔여 {formatUsd(item.creditLimitRemaining)}</span>
                       <span className="block text-foreground-muted">{moment(item.creditUsageAt, '금액 관측 전')}</span>
                       <span className="mt-1 block">
@@ -906,7 +880,7 @@ function QualitySection({
           <CardHeader>
             <CardTitle>사용량 전달 진단</CardTitle>
             <p className="type-caption mt-1 text-foreground-muted">
-              기관 범위와 무관한 플랫폼 전체 수치입니다.
+              기관 범위와 관계없는 플랫폼 전체 수치예요.
             </p>
           </CardHeader>
           <CardContent>
@@ -982,7 +956,7 @@ export function AdminLlmUsagePage() {
       <PageHeader
         eyebrow="리소스"
         title="LLM 사용량"
-        description={`${scope.activeOrg?.name ?? '플랫폼 전체'}의 수요, 소비처, 한도 압력과 데이터 신뢰도를 확인합니다.`}
+        description={`${scope.activeOrg?.name ?? '플랫폼 전체'}의 수요와 소비처, 한도 압력, 데이터 신뢰도를 확인해요.`}
       />
 
       {/* 워크스페이스를 직접 고르는 자리. 종전에는 「주요 소비처」 표에서 이름을
@@ -1017,25 +991,23 @@ export function AdminLlmUsagePage() {
           </button>
         )}
       </div>
-      {workspaces.isFetching && <MessageBar>워크스페이스 선택 목록을 불러오는 중입니다.</MessageBar>}
-      {workspaces.isError && <MessageBar variant="warning">워크스페이스 목록을 불러오지 못했습니다. 현재 조회 조건은 유지합니다.</MessageBar>}
-      {!workspaces.isEnabled && <MessageBar>워크스페이스 선택 목록은 현재 업무에서 조회하지 않습니다.</MessageBar>}
-      {queryError && <MessageBar variant="danger">조회 대상이나 정렬 조건이 올바르지 않습니다.</MessageBar>}
+      {workspaces.isFetching && <MessageBar>워크스페이스 선택 목록을 불러오는 중이에요.</MessageBar>}
+      {workspaces.isError && <MessageBar variant="warning">워크스페이스 목록을 불러오지 못했어요. 현재 조회 조건은 유지해요.</MessageBar>}
+      {!workspaces.isEnabled && <MessageBar>현재 업무에서는 워크스페이스 선택 목록을 조회하지 않아요.</MessageBar>}
+      {queryError && <MessageBar variant="danger">조회 대상이나 정렬, 페이지 크기를 확인해 주세요.</MessageBar>}
       <Button variant="secondary" onClick={() => change({ consumerSort: undefined, consumerPage: undefined, reviewPage: undefined, consumerSize: undefined, reviewSize: undefined })}>소비처 정렬·페이지 초기화</Button>
       <Button variant="secondary" disabled={usage.isFetching || !usageAllowed || !scope.ready || !!queryError} onClick={() => { void usage.refetch() }}>다시 조회</Button>
 
-      {!usageAllowed && <MessageBar>선택한 기관·공간 범위의 LLM 관측 업무가 없습니다.</MessageBar>}
+      {!usageAllowed && <MessageBar>선택한 기관과 워크스페이스 범위의 LLM 관측 업무가 없어요.</MessageBar>}
       {usageAllowed && usage.isPending && <LoadingBlock label="LLM 사용량 불러오는 중" />}
-      {usage.isFetching && data && <MessageBar>새 조회 중입니다. 마지막 성공 응답의 기간과 조건을 표시합니다.</MessageBar>}
-      {usage.isError && <MessageBar variant="danger">{usage.error.message} {data ? '마지막 성공 응답은 아래에 보존합니다.' : ''}</MessageBar>}
+      {usage.isFetching && data && <MessageBar>새 결과를 불러오는 중이에요. 마지막 성공 결과의 기간과 조건을 표시해요.</MessageBar>}
+      {usage.isError && <MessageBar variant="danger">{usage.error.message} {data ? '마지막 성공 결과를 아래에 표시해요.' : ''}</MessageBar>}
       {data && (
         <>
-          {previousResponse && <MessageBar variant="warning">이전 조회 결과입니다. 새 기간·페이지·정렬의 결과로 해석하지 마세요.</MessageBar>}
+          {previousResponse && <MessageBar variant="warning">이전 조회 결과예요.</MessageBar>}
           <DescriptionList columns={2} items={[
             { term: '실제 응답 기간', description: `${data.from} ~ ${data.to} KST` },
-            { term: '요청한 기간', description: `${days}일` },
-            { term: '응답 생성', description: formatDateTimeSeconds(data.generatedAt) },
-            { term: '콘솔 마지막 GET 성공', description: result?.fetchedAt ? formatDateTimeSeconds(result.fetchedAt) : '미보고' },
+            { term: '최근 조회', description: result?.fetchedAt ? formatDateTimeSeconds(result.fetchedAt) : '미보고' },
           ]} />
           <DemandSection data={data} onDays={selectDays} />
           <ConsumersSection

@@ -148,6 +148,8 @@ export type UpdateCampusIpRequestStatusRequest =
 
 /* ─── 알림·운영 콘솔 ─── */
 export type NotificationView = Schemas['NotificationView']
+export type NotificationPreferences = Schemas['NotificationPreferencesView']
+export type UpdateNotificationPreferences = Schemas['UpdateNotificationPreferencesRequest']
 export type NotificationPage = Schemas['PageResponseNotificationView']
 export type UnreadCountResponse = Schemas['UnreadCountResponse']
 export type VmPeriodUpdateRequest = Schemas['VmPeriodUpdateRequest']
@@ -221,7 +223,7 @@ export async function guardNetwork<T>(run: () => Promise<T>): Promise<T> {
     if (error instanceof ApiError) throw error
     throw new ApiError(
       null,
-      '서버에 연결할 수 없습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.',
+      '요청을 처리하지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.',
     )
   }
 }
@@ -231,7 +233,7 @@ export async function guardNetwork<T>(run: () => Promise<T>): Promise<T> {
 export function fetchWorkspaces(): Promise<WorkspaceSummary[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/workspaces')
-    if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -241,7 +243,7 @@ export function fetchWorkspace(workspaceId: string): Promise<WorkspaceDetail> {
     const { data, error } = await api.GET('/workspaces/{workspaceId}', {
       params: { path: { workspaceId } },
     })
-    if (!data) throw toApiError(error, '워크스페이스 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '워크스페이스 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -251,7 +253,7 @@ export function fetchWorkspaceInvitations(workspaceId: string): Promise<Workspac
     const { data, error } = await api.GET('/workspaces/{workspaceId}/invitations', {
       params: { path: { workspaceId } },
     })
-    if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했어요.')
     return data
   })
 }
@@ -272,7 +274,7 @@ export function resolveWorkspaceRoster(
       params: { path: { workspaceId } },
       body: { studentNos, orgId: orgId ?? null, ...(type ? { type } : {}) },
     })
-    if (!data) throw toApiError(error, '명단을 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '명단을 확인하지 못했어요.')
     return data.results
   })
 }
@@ -283,7 +285,7 @@ export function fetchAdminWorkspaceInvitations(workspaceId: string): Promise<Wor
     const { data, error } = await api.GET('/admin/workspaces/{workspaceId}/invitations', {
       params: { path: { workspaceId } },
     })
-    if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '대기 중인 초대를 불러오지 못했어요.')
     return data
   })
 }
@@ -291,7 +293,7 @@ export function fetchAdminWorkspaceInvitations(workspaceId: string): Promise<Wor
 export function fetchOrgs(): Promise<OrgSummary[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/orgs')
-    if (!data) throw toApiError(error, '기관 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -299,7 +301,7 @@ export function fetchOrgs(): Promise<OrgSummary[]> {
 export function fetchOsImages(): Promise<OsImage[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/os-images')
-    if (!data) throw toApiError(error, 'OS 이미지 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'OS 이미지 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -308,7 +310,7 @@ export function fetchOsImages(): Promise<OsImage[]> {
 export function fetchVmFlavors(): Promise<VmFlavor[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vm-flavors')
-    if (!data) throw toApiError(error, '사양 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사양 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -320,7 +322,7 @@ export function fetchVmFlavors(): Promise<VmFlavor[]> {
 export function fetchRequestPeriods(): Promise<RequestPeriod[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/request-periods')
-    if (!data) throw toApiError(error, '사용 기간 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사용 기간 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -328,7 +330,7 @@ export function fetchRequestPeriods(): Promise<RequestPeriod[]> {
 export function fetchRequestOptions(): Promise<RequestOptions> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/meta/request-options')
-    if (!data) throw toApiError(error, '신청 선택지를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 선택지를 불러오지 못했어요.')
     return data
   })
 }
@@ -337,7 +339,7 @@ export function fetchRequestOptions(): Promise<RequestOptions> {
 export function fetchSystemStatus(): Promise<SystemStatus> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/meta/status')
-    if (!data) throw toApiError(error, '시스템 상태를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '시스템 상태를 불러오지 못했어요.')
     return data
   })
 }
@@ -350,7 +352,7 @@ export function fetchRequests(params: {
 }): Promise<RequestPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/requests', { params: { query: params } })
-    if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -360,7 +362,7 @@ export function fetchRequest(requestId: string): Promise<RequestDetail> {
     const { data, error } = await api.GET('/requests/{requestId}', {
       params: { path: { requestId } },
     })
-    if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -372,7 +374,7 @@ export function fetchVms(params: {
 }): Promise<VmPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms', { params: { query: params } })
-    if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -408,7 +410,7 @@ export function fetchResources(params: {
 }): Promise<ResourcePage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/resources', { params: { query: params } })
-    if (!data) throw toApiError(error, '리소스 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '리소스 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -416,7 +418,7 @@ export function fetchResources(params: {
 export function fetchVm(vmId: string): Promise<VmDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/vms/{vmId}', { params: { path: { vmId } } })
-    if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -440,7 +442,7 @@ export function fetchAdminRequests(params: {
     const { data, error } = await api.GET('/admin/requests', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '신청 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -450,7 +452,7 @@ export function fetchAdminRequest(requestId: string): Promise<RequestDetail> {
     const { data, error } = await api.GET('/admin/requests/{requestId}', {
       params: { path: { requestId } },
     })
-    if (!data) throw toApiError(error, '신청 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -460,7 +462,7 @@ export function fetchApprovalContext(requestId: string): Promise<ApprovalContext
     const { data, error } = await api.GET('/admin/requests/{requestId}/context', {
       params: { path: { requestId } },
     })
-    if (!data) throw toApiError(error, '승인 참고 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '승인 참고 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -472,7 +474,7 @@ export function startVm(vmId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/vms/{vmId}/start', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM을 시작하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM을 시작하지 못했어요.')
     return data
   })
 }
@@ -482,7 +484,7 @@ export function shutdownVm(vmId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/vms/{vmId}/shutdown', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM을 종료하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM을 종료하지 못했어요.')
     return data
   })
 }
@@ -492,7 +494,7 @@ export function rebootVm(vmId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/vms/{vmId}/reboot', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM을 재부팅하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM을 재부팅하지 못했어요.')
     return data
   })
 }
@@ -502,7 +504,7 @@ export function forceStopVm(vmId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/vms/{vmId}/force-stop', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM을 강제 종료하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM을 강제 종료하지 못했어요.')
     return data
   })
 }
@@ -512,7 +514,7 @@ export function deleteVm(vmId: string): Promise<VmDeletion> {
     const { data, error } = await api.DELETE('/vms/{vmId}', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 삭제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 삭제를 접수하지 못했어요.')
     return data
   })
 }
@@ -522,7 +524,7 @@ export function revealVmPassword(vmId: string): Promise<VmPasswordResponse> {
     const { data, error } = await api.GET('/vms/{vmId}/password', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '비밀번호를 열람하지 못했습니다.')
+    if (!data) throw toApiError(error, '비밀번호를 열람하지 못했어요.')
     return data
   })
 }
@@ -533,7 +535,7 @@ export function regenerateVmPassword(vmId: string): Promise<VmPasswordResponse> 
     const { data, error } = await api.POST('/vms/{vmId}/password/regenerate', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '비밀번호를 재생성하지 못했습니다.')
+    if (!data) throw toApiError(error, '비밀번호를 재생성하지 못했어요.')
     return data
   })
 }
@@ -545,7 +547,7 @@ export function fetchVmSettings(vmId: string): Promise<VmSettingView[]> {
     const { data, error } = await api.GET('/vms/{vmId}/settings', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 설정을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 설정을 불러오지 못했어요.')
     return data
   })
 }
@@ -560,7 +562,7 @@ export function updateVmSettings(
       params: { path: { vmId } },
       body: { settings },
     })
-    if (!data) throw toApiError(error, 'VM 설정을 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 설정을 변경하지 못했어요.')
     return data
   })
 }
@@ -579,7 +581,7 @@ export function fetchVmAccessGrants(vmId: string): Promise<VmAccessList> {
     const { data, error } = await api.GET('/vms/{vmId}/access', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했어요.')
     return data
   })
 }
@@ -594,7 +596,7 @@ export function addVmAccessGrant(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했습니다.')
+    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했어요.')
     return data
   })
 }
@@ -610,7 +612,7 @@ export function updateVmAccessGrant(
       params: { path: { vmId, grantId } },
       body: { role, ...(confirmation ? { confirmation } : {}) },
     })
-    if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '등급을 변경하지 못했어요.')
     return data
   })
 }
@@ -620,7 +622,7 @@ export function removeVmAccessGrant(vmId: string, grantId: string): Promise<void
     const { error } = await api.DELETE('/vms/{vmId}/access/{grantId}', {
       params: { path: { vmId, grantId } },
     })
-    if (error) throw toApiError(error, '접근 권한을 회수하지 못했습니다.')
+    if (error) throw toApiError(error, '접근 권한을 회수하지 못했어요.')
   })
 }
 
@@ -703,7 +705,7 @@ export type ModelPriceTier = Schemas['ModelPriceTier']
 export function fetchOpenRouterCatalogue(): Promise<OpenRouterCatalogue> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/openrouter-models', {})
-    if (!data) throw toApiError(error, '유료 모델 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '유료 모델 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -713,7 +715,7 @@ export function fetchOpenRouterAccounts(orgId?: string): Promise<OpenRouterAccou
     const { data, error } = await api.GET('/admin/llm/accounts', {
       params: { query: { orgId } },
     })
-    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -723,7 +725,7 @@ export function fetchOpenRouterAccount(accountId: string): Promise<OpenRouterAcc
     const { data, error } = await api.GET('/admin/llm/accounts/{accountId}', {
       params: { path: { accountId } },
     })
-    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -733,7 +735,7 @@ export function createOpenRouterAccount(
 ): Promise<OpenRouterAccount> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/llm/accounts', { body })
-    if (!data) throw toApiError(error, 'OpenRouter 사업 계정을 등록하지 못했습니다.')
+    if (!data) throw toApiError(error, 'OpenRouter 사업 계정을 등록하지 못했어요.')
     return data
   })
 }
@@ -747,7 +749,7 @@ export function updateOpenRouterAccount(
       params: { path: { accountId } },
       body,
     })
-    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 정보를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, 'OpenRouter 사업 계정 정보를 변경하지 못했어요.')
     return data
   })
 }
@@ -767,7 +769,7 @@ export function registerOpenRouterCredential(
       params: { path: { accountId } },
       body: { managementKey, confirmName },
     })
-    if (!data) throw toApiError(error, '관리용 키를 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '관리용 키를 확인하지 못했어요.')
     return data
   })
 }
@@ -790,7 +792,7 @@ export function stageOpenRouterCredential(
         body: { managementKey, confirmName },
       },
     )
-    if (!data) throw toApiError(error, '관리용 키를 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '관리용 키를 확인하지 못했어요.')
     return data
   })
 }
@@ -818,7 +820,7 @@ export function confirmOpenRouterCredentialAction(
             body: { confirmName },
           })
     const { data, error } = await request
-    if (!data) throw toApiError(error, 'OpenRouter credential 상태를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, 'OpenRouter credential 상태를 변경하지 못했어요.')
     return data
   })
 }
@@ -843,7 +845,7 @@ export function revokeOpenRouterCredential(
             body,
           })
     const { data, error } = await request
-    if (!data) throw toApiError(error, 'OpenRouter credential을 정리하지 못했습니다.')
+    if (!data) throw toApiError(error, 'OpenRouter credential을 정리하지 못했어요.')
     return data
   })
 }
@@ -851,7 +853,7 @@ export function revokeOpenRouterCredential(
 export function fetchAdminLlmKeys(params: AdminLlmKeysQuery): Promise<AdminLlmKeyPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/keys', { params: { query: params } })
-    if (!data) throw toApiError(error, '관리자 LLM API 키 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '관리자 LLM API 키 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -861,7 +863,7 @@ export function fetchAdminLlmStatus(orgId?: string): Promise<AdminLlmStatus> {
     const { data, error } = await api.GET('/admin/llm/status', {
       params: { query: { orgId } },
     })
-    if (!data) throw toApiError(error, 'LLM 서비스 상태를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM 서비스 상태를 불러오지 못했어요.')
     return data
   })
 }
@@ -871,7 +873,7 @@ export function fetchAdminLlmMetrics(orgId?: string, days = 7): Promise<AdminLlm
     const { data, error } = await api.GET('/admin/llm/metrics', {
       params: { query: { orgId, days } },
     })
-    if (!data) throw toApiError(error, 'LLM 서비스 지표를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM 서비스 지표를 불러오지 못했어요.')
     return data
   })
 }
@@ -879,7 +881,7 @@ export function fetchAdminLlmMetrics(orgId?: string, days = 7): Promise<AdminLlm
 export function fetchAdminLlmCapacity(params: LlmCapacityQuery): Promise<AdminLlmCapacity> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/llm/capacity', { params: { query: params } })
-    if (!data) throw toApiError(error, 'LLM 수요 비교 자료를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM 수요 비교 자료를 불러오지 못했어요.')
     return data
   })
 }
@@ -889,7 +891,7 @@ export function fetchAdminLlmUsage(params: AdminLlmUsageQuery): Promise<AdminLlm
     const { data, error } = await api.GET('/admin/llm/usage', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '관리자 LLM 사용량을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '관리자 LLM 사용량을 불러오지 못했어요.')
     return data
   })
 }
@@ -899,7 +901,7 @@ export function fetchAdminLlmKey(keyId: string, query?: AdminLlmKeyProjectionQue
     const { data, error } = await api.GET('/admin/llm/keys/{keyId}', {
       params: { path: { keyId }, query },
     })
-    if (!data) throw toApiError(error, '관리자 LLM API 키 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '관리자 LLM API 키 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -913,7 +915,7 @@ export function replaceAdminLlmKeyLimits(
       params: { path: { keyId } },
       body,
     })
-    if (!data) throw toApiError(error, 'LLM API 키 한도를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM API 키 한도를 변경하지 못했어요.')
     return data
   })
 }
@@ -927,7 +929,7 @@ export function suspendAdminLlmKey(
       params: { path: { keyId } },
       body: { reason },
     })
-    if (!data) throw toApiError(error, 'LLM API 키를 정지하지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM API 키를 정지하지 못했어요.')
     return data
   })
 }
@@ -937,7 +939,7 @@ export function resumeAdminLlmKey(keyId: string): Promise<AdminLlmKeyDetail> {
     const { data, error } = await api.POST('/admin/llm/keys/{keyId}/resume', {
       params: { path: { keyId } },
     })
-    if (!data) throw toApiError(error, 'LLM API 키 정지를 해제하지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM API 키 정지를 해제하지 못했어요.')
     return data
   })
 }
@@ -951,7 +953,7 @@ export function updateAdminLlmKeyExpiry(
       params: { path: { keyId } },
       body: { endDate },
     })
-    if (!data) throw toApiError(error, 'LLM API 키 만료일을 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM API 키 만료일을 변경하지 못했어요.')
     return data
   })
 }
@@ -978,7 +980,7 @@ export function previewAdminBulkChange(
 ): Promise<AdminBulkChangePreview> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/bulk-changes/preview', { body })
-    if (!data) throw toApiError(error, '일괄 변경 미리보기를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '일괄 변경 미리보기를 불러오지 못했어요.')
     return data
   })
 }
@@ -989,7 +991,7 @@ export function applyAdminBulkChange(
 ): Promise<AdminBulkChangeApply> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/bulk-changes', { body })
-    if (!data) throw toApiError(error, '일괄 변경을 적용하지 못했습니다.')
+    if (!data) throw toApiError(error, '일괄 변경을 적용하지 못했어요.')
     return data
   })
 }
@@ -1008,7 +1010,7 @@ export function fetchDnsDomains(params: {
 }): Promise<DnsDomainPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/dns-domains', { params: { query: params } })
-    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1018,7 +1020,7 @@ export function fetchDnsDomain(domainId: string): Promise<DnsDomain> {
     const { data, error } = await api.GET('/dns-domains/{domainId}', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '도메인 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -1036,7 +1038,7 @@ export function reviveDnsDomain(domainId: string): Promise<DnsDomain> {
     const { data, error } = await api.POST('/dns-domains/{domainId}/revive', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '도메인을 되살리지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인을 되살리지 못했어요.')
     return data
   })
 }
@@ -1046,7 +1048,7 @@ export function deleteDnsDomain(domainId: string): Promise<void> {
     const { error } = await api.DELETE('/dns-domains/{domainId}', {
       params: { path: { domainId } },
     })
-    if (error) throw toApiError(error, '도메인을 해제하지 못했습니다.')
+    if (error) throw toApiError(error, '도메인을 해제하지 못했어요.')
   })
 }
 
@@ -1055,7 +1057,7 @@ export function renewDnsDomain(domainId: string): Promise<DnsDomain> {
     const { data, error } = await api.POST('/dns-domains/{domainId}/renew', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '사용 기간을 연장하지 못했습니다.')
+    if (!data) throw toApiError(error, '사용 기간을 연장하지 못했어요.')
     return data
   })
 }
@@ -1065,7 +1067,7 @@ export function fetchDnsRecordSets(domainId: string): Promise<DnsRecordSet[]> {
     const { data, error } = await api.GET('/dns-domains/{domainId}/records', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '레코드를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '레코드를 불러오지 못했어요.')
     return data
   })
 }
@@ -1085,7 +1087,7 @@ export function replaceDnsRecordSets(
       params: { path: { domainId } },
       body: { records },
     })
-    if (!data) throw toApiError(error, '레코드를 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '레코드를 저장하지 못했어요.')
     return data
   })
 }
@@ -1097,7 +1099,7 @@ export function fetchLlmKeys(params: {
 }): Promise<LlmKeyPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/llm-keys', { params: { query: params } })
-    if (!data) throw toApiError(error, 'LLM API 키 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM API 키 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1107,7 +1109,7 @@ export function fetchLlmKey(keyId: string): Promise<LlmKeyDetail> {
     const { data, error } = await api.GET('/llm-keys/{keyId}', {
       params: { path: { keyId } },
     })
-    if (!data) throw toApiError(error, 'LLM API 키 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM API 키 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -1132,7 +1134,7 @@ export function fetchLlmKeyModels(keyId: string): Promise<LlmKeyModels> {
     const { data, error } = await api.GET('/llm-keys/{keyId}/models', {
       params: { path: { keyId } },
     })
-    if (!data) throw toApiError(error, '호출할 수 있는 모델을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '호출할 수 있는 모델을 불러오지 못했어요.')
     return data
   })
 }
@@ -1148,7 +1150,7 @@ export function fetchAdminLlmKeyModels(keyId: string): Promise<Schemas['Institut
     const { data, error } = await api.GET('/admin/llm/keys/{keyId}/models', {
       params: { path: { keyId } },
     })
-    if (!data) throw toApiError(error, '호출할 수 있는 모델을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '호출할 수 있는 모델을 불러오지 못했어요.')
     return data
   })
 }
@@ -1158,7 +1160,7 @@ export function issueLlmKeyToken(keyId: string): Promise<IssuedLlmKey> {
     const { data, error } = await api.POST('/llm-keys/{keyId}/token', {
       params: { path: { keyId } },
     })
-    if (!data) throw toApiError(error, 'LLM API 키를 발급하지 못했습니다.')
+    if (!data) throw toApiError(error, 'LLM API 키를 발급하지 못했어요.')
     return data
   })
 }
@@ -1168,7 +1170,7 @@ export function revokeLlmKey(keyId: string): Promise<void> {
     const { error } = await api.POST('/llm-keys/{keyId}/revoke', {
       params: { path: { keyId } },
     })
-    if (error) throw toApiError(error, 'LLM API 키를 폐기하지 못했습니다.')
+    if (error) throw toApiError(error, 'LLM API 키를 폐기하지 못했어요.')
   })
 }
 
@@ -1179,7 +1181,7 @@ export function updateLlmKey(keyId: string, body: UpdateLlmKey): Promise<void> {
       params: { path: { keyId } },
       body,
     })
-    if (error) throw toApiError(error, 'LLM API 키를 수정하지 못했습니다.')
+    if (error) throw toApiError(error, 'LLM API 키를 수정하지 못했어요.')
   })
 }
 
@@ -1200,7 +1202,7 @@ export function fetchLlmKeyUsage(keyId: string, days: number): Promise<LlmKeyUsa
     const { data, error } = await api.GET('/llm-keys/{keyId}/usage', {
       params: { path: { keyId }, query: { days } },
     })
-    if (!data) throw toApiError(error, '사용량을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사용량을 불러오지 못했어요.')
     return data
   })
 }
@@ -1222,7 +1224,7 @@ export function fetchAdminLlmKeyUsage(keyId: string, days: number): Promise<Admi
     const { data, error } = await api.GET('/admin/llm/keys/{keyId}/usage', {
       params: { path: { keyId }, query: { days } },
     })
-    if (!data) throw toApiError(error, '사용량을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사용량을 불러오지 못했어요.')
     return data
   })
 }
@@ -1243,7 +1245,7 @@ export function fetchAdminLlmAccountUsage(
     const { data, error } = await api.GET('/admin/llm/accounts/{accountId}/usage', {
       params: { path: { accountId }, query: { days, ...query } },
     })
-    if (!data) throw toApiError(error, '계정 사용량을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '계정 사용량을 불러오지 못했어요.')
     return data
   })
 }
@@ -1268,7 +1270,7 @@ export function fetchLlmKeyBodies(
     const { data, error } = await api.GET('/llm-keys/{keyId}/bodies', {
       params: { path: { keyId }, query: { page, size } },
     })
-    if (!data) throw toApiError(error, '기록된 본문을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '기록된 본문을 불러오지 못했어요.')
     return data
   })
 }
@@ -1279,7 +1281,7 @@ export function fetchLlmKeyBody(keyId: string, bodyId: string): Promise<LlmKeyBo
     const { data, error } = await api.GET('/llm-keys/{keyId}/bodies/{bodyId}', {
       params: { path: { keyId, bodyId } },
     })
-    if (!data) throw toApiError(error, '기록된 본문을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '기록된 본문을 불러오지 못했어요.')
     return data
   })
 }
@@ -1291,7 +1293,7 @@ export function fetchLlmKeyAccessGrants(keyId: string): Promise<VmAccessList> {
     const { data, error } = await api.GET('/llm-keys/{keyId}/access', {
       params: { path: { keyId } },
     })
-    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했어요.')
     return data
   })
 }
@@ -1305,7 +1307,7 @@ export function addLlmKeyAccessGrant(
       params: { path: { keyId } },
       body,
     })
-    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했습니다.')
+    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했어요.')
     return data
   })
 }
@@ -1321,7 +1323,7 @@ export function updateLlmKeyAccessGrant(
       params: { path: { keyId, grantId } },
       body: { role, ...(confirmation ? { confirmation } : {}) },
     })
-    if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '등급을 변경하지 못했어요.')
     return data
   })
 }
@@ -1331,7 +1333,7 @@ export function removeLlmKeyAccessGrant(keyId: string, grantId: string): Promise
     const { error } = await api.DELETE('/llm-keys/{keyId}/access/{grantId}', {
       params: { path: { keyId, grantId } },
     })
-    if (error) throw toApiError(error, '접근 권한을 회수하지 못했습니다.')
+    if (error) throw toApiError(error, '접근 권한을 회수하지 못했어요.')
   })
 }
 
@@ -1340,7 +1342,7 @@ export function fetchDnsDomainAccessGrants(domainId: string): Promise<VmAccessLi
     const { data, error } = await api.GET('/dns-domains/{domainId}/access', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '접근 권한을 불러오지 못했어요.')
     return data
   })
 }
@@ -1354,7 +1356,7 @@ export function addDnsDomainAccessGrant(
       params: { path: { domainId } },
       body,
     })
-    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했습니다.')
+    if (!data) throw toApiError(error, '접근 권한을 부여하지 못했어요.')
     return data
   })
 }
@@ -1370,7 +1372,7 @@ export function updateDnsDomainAccessGrant(
       params: { path: { domainId, grantId } },
       body: { role, ...(confirmation ? { confirmation } : {}) },
     })
-    if (!data) throw toApiError(error, '등급을 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '등급을 변경하지 못했어요.')
     return data
   })
 }
@@ -1380,7 +1382,7 @@ export function removeDnsDomainAccessGrant(domainId: string, grantId: string): P
     const { error } = await api.DELETE('/dns-domains/{domainId}/access/{grantId}', {
       params: { path: { domainId, grantId } },
     })
-    if (error) throw toApiError(error, '접근 권한을 회수하지 못했습니다.')
+    if (error) throw toApiError(error, '접근 권한을 회수하지 못했어요.')
   })
 }
 
@@ -1392,7 +1394,7 @@ export function fetchVmSshKey(vmId: string): Promise<VmSshKeyStatus> {
     const { data, error } = await api.GET('/vms/{vmId}/ssh-key', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'SSH 키 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'SSH 키 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -1403,7 +1405,7 @@ export function issueVmSshKey(vmId: string): Promise<VmSshKeyIssueResponse> {
     const { data, error } = await api.POST('/vms/{vmId}/ssh-key', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'SSH 키를 발급하지 못했습니다.')
+    if (!data) throw toApiError(error, 'SSH 키를 발급하지 못했어요.')
     return data
   })
 }
@@ -1414,7 +1416,7 @@ export function reissueVmSshKey(vmId: string): Promise<VmSshKeyIssueResponse> {
     const { data, error } = await api.POST('/vms/{vmId}/ssh-key/reissue', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'SSH 키를 재발급하지 못했습니다.')
+    if (!data) throw toApiError(error, 'SSH 키를 재발급하지 못했어요.')
     return data
   })
 }
@@ -1425,7 +1427,7 @@ export function downloadVmSshKey(vmId: string): Promise<VmSshKeyIssueResponse> {
     const { data, error } = await api.GET('/vms/{vmId}/ssh-key/private-key', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '개인키를 다운로드하지 못했습니다.')
+    if (!data) throw toApiError(error, '개인키를 다운로드하지 못했어요.')
     return data
   })
 }
@@ -1435,7 +1437,7 @@ export function deleteVmSshKey(vmId: string): Promise<void> {
     const { error, response } = await api.DELETE('/vms/{vmId}/ssh-key', {
       params: { path: { vmId } },
     })
-    if (!response.ok) throw toApiError(error, 'SSH 키를 삭제하지 못했습니다.')
+    if (!response.ok) throw toApiError(error, 'SSH 키를 삭제하지 못했어요.')
   })
 }
 
@@ -1448,7 +1450,7 @@ export function fetchVmEvents(
     const { data, error } = await api.GET('/vms/{vmId}/events', {
       params: { path: { vmId }, query: params },
     })
-    if (!data) throw toApiError(error, 'VM 이벤트 이력을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 이벤트 이력을 불러오지 못했어요.')
     return data
   })
 }
@@ -1466,7 +1468,7 @@ export function fetchVmMetrics(
     const { data, error } = await api.GET('/vms/{vmId}/metrics', {
       params: { path: { vmId }, query: { timeframe } },
     })
-    if (!data) throw toApiError(error, '사용량 데이터를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사용량 데이터를 불러오지 못했어요.')
     return data
   })
 }
@@ -1482,7 +1484,7 @@ export function createTerminalSession(vmId: string): Promise<TerminalSessionTick
     const { data, error } = await api.POST('/vms/{vmId}/terminal-sessions', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '터미널 접속 티켓을 발급하지 못했습니다.')
+    if (!data) throw toApiError(error, '터미널 연결을 준비하지 못했어요.')
     return data
   })
 }
@@ -1491,7 +1493,7 @@ export function createTerminalSession(vmId: string): Promise<TerminalSessionTick
 export function fetchAdminTerminalSessions(): Promise<TerminalSessionView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/terminal-sessions')
-    if (!data) throw toApiError(error, '터미널 세션 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '터미널 세션 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1503,7 +1505,7 @@ export function terminateTerminalSession(sessionId: string): Promise<void> {
       '/admin/terminal-sessions/{sessionId}/terminate',
       { params: { path: { sessionId } } },
     )
-    if (!response.ok) throw toApiError(error, '터미널 세션을 종료하지 못했습니다.')
+    if (!response.ok) throw toApiError(error, '터미널 세션을 종료하지 못했어요.')
   })
 }
 
@@ -1519,7 +1521,7 @@ export function createVmDomain(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '도메인 연결을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 연결을 접수하지 못했어요.')
     return data
   })
 }
@@ -1534,7 +1536,7 @@ export function updateDomainPort(
       params: { path: { domainId } },
       body,
     })
-    if (!data) throw toApiError(error, '공개 포트 변경을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '공개 포트 변경을 접수하지 못했어요.')
     return data
   })
 }
@@ -1544,7 +1546,7 @@ export function fetchDomainSourcePolicy(domainId: string): Promise<SourcePolicyV
     const { data, error } = await api.GET('/domains/{domainId}/source-policy', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '도메인 출발지 정책을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 출발지 정책을 불러오지 못했어요.')
     return data
   })
 }
@@ -1554,7 +1556,7 @@ export function fetchVmNetworkPolicy(vmId: string): Promise<VmNetworkPolicyView>
     const { data, error } = await api.GET('/vms/{vmId}/network-policy', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 통신 정책을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 통신 정책을 불러오지 못했어요.')
     return data
   })
 }
@@ -1567,7 +1569,7 @@ export function updateVmNetworkPolicy(
     const { data, error } = await api.PUT('/vms/{vmId}/network-policy', {
       params: { path: { vmId } }, body,
     })
-    if (!data) throw toApiError(error, 'VM 통신 정책을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 통신 정책을 저장하지 못했어요.')
     return data
   })
 }
@@ -1577,7 +1579,7 @@ export function fetchAdminVmNetworkPolicy(vmId: string): Promise<VmNetworkPolicy
     const { data, error } = await api.GET('/admin/vms/{vmId}/network-policy', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 통신 정책을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 통신 정책을 불러오지 못했어요.')
     return data
   })
 }
@@ -1590,7 +1592,7 @@ export function updateAdminVmNetworkPolicy(
     const { data, error } = await api.PUT('/admin/vms/{vmId}/network-policy', {
       params: { path: { vmId } }, body,
     })
-    if (!data) throw toApiError(error, 'VM 통신 정책을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 통신 정책을 저장하지 못했어요.')
     return data
   })
 }
@@ -1603,7 +1605,7 @@ export function updateDomainSourcePolicy(
     const { data, error } = await api.PUT('/domains/{domainId}/source-policy', {
       params: { path: { domainId } }, body,
     })
-    if (!data) throw toApiError(error, '도메인 출발지 정책을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 출발지 정책을 저장하지 못했어요.')
     return data
   })
 }
@@ -1615,7 +1617,7 @@ export function fetchCampusSourcePolicyPreset(
     const { data, error } = await api.GET('/source-policy-presets/campus', {
       params: { query: { target } },
     })
-    if (!data) throw toApiError(error, '교내 출발지 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '교내 출발지 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1628,7 +1630,7 @@ export function fetchDomains(params: {
 } = {}): Promise<DomainPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/domains', { params: { query: params } })
-    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1642,7 +1644,7 @@ export function deleteDomain(domainId: string): Promise<MessageResponse> {
     const { data, error } = await api.DELETE('/domains/{domainId}', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '도메인 해제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 해제를 접수하지 못했어요.')
     return data
   })
 }
@@ -1652,7 +1654,7 @@ export function verifyDomain(domainId: string): Promise<DomainDetail> {
     const { data, error } = await api.POST('/domains/{domainId}/verify', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '도메인 검증 재시도를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 검증 재시도를 접수하지 못했어요.')
     return data
   })
 }
@@ -1664,7 +1666,7 @@ export function fetchVmPortForwardings(vmId: string): Promise<PortForwardingView
     const { data, error } = await api.GET('/vms/{vmId}/port-forwardings', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '포트포워딩 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '포트포워딩 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1678,7 +1680,7 @@ export function createVmPortForwarding(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '포트포워딩을 만들지 못했습니다.')
+    if (!data) throw toApiError(error, '포트포워딩을 만들지 못했어요.')
     return data
   })
 }
@@ -1692,7 +1694,7 @@ export function deleteVmPortForwarding(
       '/vms/{vmId}/port-forwardings/{portForwardingId}',
       { params: { path: { vmId, portForwardingId } } },
     )
-    if (!data) throw toApiError(error, '포트포워딩 삭제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '포트포워딩 삭제를 접수하지 못했어요.')
     return data
   })
 }
@@ -1702,7 +1704,7 @@ export function fetchVmCampusIpRequests(vmId: string): Promise<CampusIpRequestVi
     const { data, error } = await api.GET('/vms/{vmId}/campus-ip-requests', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '캠퍼스 IP 신청 이력을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '캠퍼스 IP 신청 이력을 불러오지 못했어요.')
     return data
   })
 }
@@ -1716,7 +1718,7 @@ export function createVmCampusIpRequest(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '캠퍼스 IP 신청을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '캠퍼스 IP 신청을 접수하지 못했어요.')
     return data
   })
 }
@@ -1728,7 +1730,7 @@ export function cancelVmCampusIpRequest(vmId: string, requestId: string): Promis
       '/vms/{vmId}/campus-ip-requests/{requestId}',
       { params: { path: { vmId, requestId } } },
     )
-    if (!response.ok) throw toApiError(error, '캠퍼스 IP 신청을 취소하지 못했습니다.')
+    if (!response.ok) throw toApiError(error, '캠퍼스 IP 신청을 취소하지 못했어요.')
   })
 }
 
@@ -1737,7 +1739,7 @@ export function cancelVmCampusIpRequest(vmId: string, requestId: string): Promis
 export function fetchAdminRelays(): Promise<AdminRelayView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/relays')
-    if (!data) throw toApiError(error, '릴레이 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '릴레이 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1748,7 +1750,7 @@ export function issueAdminRelayToken(relayId: string): Promise<RelayTokenRespons
     const { data, error } = await api.POST('/admin/relays/{relayId}/token', {
       params: { path: { relayId } },
     })
-    if (!data) throw toApiError(error, '릴레이 토큰을 발급하지 못했습니다.')
+    if (!data) throw toApiError(error, '릴레이 토큰을 발급하지 못했어요.')
     return data
   })
 }
@@ -1764,7 +1766,7 @@ export function fetchAdminPortMappings(params: {
     const { data, error } = await api.GET('/admin/port-mappings', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '포트 매핑 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '포트 매핑 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1778,7 +1780,7 @@ export function fetchPortForwardingSourcePolicy(
       '/vms/{vmId}/port-forwardings/{portForwardingId}/source-policy',
       { params: { path: { vmId, portForwardingId } } },
     )
-    if (!data) throw toApiError(error, '포트포워딩 출발지 정책을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '포트포워딩 출발지 정책을 불러오지 못했어요.')
     return data
   })
 }
@@ -1793,7 +1795,7 @@ export function updatePortForwardingSourcePolicy(
       '/vms/{vmId}/port-forwardings/{portForwardingId}/source-policy',
       { params: { path: { vmId, portForwardingId } }, body },
     )
-    if (!data) throw toApiError(error, '포트포워딩 출발지 정책을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '포트포워딩 출발지 정책을 저장하지 못했어요.')
     return data
   })
 }
@@ -1803,7 +1805,7 @@ export function fetchAdminPortMappingSourcePolicy(mappingId: string): Promise<So
     const { data, error } = await api.GET('/admin/port-mappings/{mappingId}/source-policy', {
       params: { path: { mappingId } },
     })
-    if (!data) throw toApiError(error, '포트 매핑 출발지 정책을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '포트 매핑 출발지 정책을 불러오지 못했어요.')
     return data
   })
 }
@@ -1816,7 +1818,7 @@ export function updateAdminPortMappingSourcePolicy(
     const { data, error } = await api.PUT('/admin/port-mappings/{mappingId}/source-policy', {
       params: { path: { mappingId } }, body,
     })
-    if (!data) throw toApiError(error, '포트 매핑 출발지 정책을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '포트 매핑 출발지 정책을 저장하지 못했어요.')
     return data
   })
 }
@@ -1831,7 +1833,7 @@ export function suspendAdminPortMapping(
       params: { path: { mappingId } },
       body: { reason },
     })
-    if (!data) throw toApiError(error, '포트 매핑을 정지하지 못했습니다.')
+    if (!data) throw toApiError(error, '포트 매핑을 정지하지 못했어요.')
     return data
   })
 }
@@ -1844,7 +1846,7 @@ export function unsuspendAdminPortMapping(
       '/admin/port-mappings/{mappingId}/unsuspend',
       { params: { path: { mappingId } } },
     )
-    if (!data) throw toApiError(error, '포트 매핑 정지를 해제하지 못했습니다.')
+    if (!data) throw toApiError(error, '포트 매핑 정지를 해제하지 못했어요.')
     return data
   })
 }
@@ -1854,7 +1856,7 @@ export function deleteAdminPortMapping(mappingId: string): Promise<MessageRespon
     const { data, error } = await api.DELETE('/admin/port-mappings/{mappingId}', {
       params: { path: { mappingId } },
     })
-    if (!data) throw toApiError(error, '포트 매핑 삭제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '포트 매핑 삭제를 접수하지 못했어요.')
     return data
   })
 }
@@ -1869,7 +1871,7 @@ export function updateAdminPortMappingGuards(
       params: { path: { mappingId } },
       body,
     })
-    if (!data) throw toApiError(error, '연결 가드를 조정하지 못했습니다.')
+    if (!data) throw toApiError(error, '연결 가드를 조정하지 못했어요.')
     return data
   })
 }
@@ -1884,7 +1886,7 @@ export function fetchAdminCampusIpRequests(params: {
     const { data, error } = await api.GET('/admin/campus-ip-requests', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '캠퍼스 IP 신청 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '캠퍼스 IP 신청 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1898,7 +1900,7 @@ export function updateAdminCampusIpRequestStatus(
       '/admin/campus-ip-requests/{requestId}/status',
       { params: { path: { requestId } }, body },
     )
-    if (!data) throw toApiError(error, '신청 상태를 전환하지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 상태를 전환하지 못했어요.')
     return data
   })
 }
@@ -1908,7 +1910,7 @@ export function updateAdminCampusIpRequestStatus(
 export function fetchAdminNodes(): Promise<NodeSummary[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/nodes')
-    if (!data) throw toApiError(error, '노드 현황을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '노드 현황을 불러오지 못했어요.')
     return data
   })
 }
@@ -1926,7 +1928,7 @@ export function fetchAdminVms(params: {
 }): Promise<VmPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/vms', { params: { query: params } })
-    if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -1941,7 +1943,7 @@ export function updateVmPeriod(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '사용 기간을 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '사용 기간을 변경하지 못했어요.')
     return data
   })
 }
@@ -1955,7 +1957,7 @@ export function scheduleVmDeletion(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '삭제 예약을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '삭제 예약을 접수하지 못했어요.')
     return data
   })
 }
@@ -1965,7 +1967,7 @@ export function cancelScheduledVmDeletion(vmId: string): Promise<MessageResponse
     const { data, error } = await api.POST('/admin/vms/{vmId}/cancel-scheduled-delete', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, '접수된 삭제를 취소하지 못했습니다.')
+    if (!data) throw toApiError(error, '접수된 삭제를 취소하지 못했어요.')
     return data
   })
 }
@@ -1979,7 +1981,7 @@ export function forceDeleteVm(
       params: { path: { vmId } },
       body: { confirmName },
     })
-    if (!data) throw toApiError(error, '강제 삭제를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '강제 삭제를 접수하지 못했어요.')
     return data
   })
 }
@@ -1994,7 +1996,7 @@ export function fetchAdminRoutes(params: {
 } = {}): Promise<AdminRoutePage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/routes', { params: { query: params } })
-    if (!data) throw toApiError(error, '라우트 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '라우트 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2009,7 +2011,7 @@ export function fetchAdminDomains(params: {
 } = {}): Promise<AdminDomainPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/domains', { params: { query: params } })
-    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2017,7 +2019,7 @@ export function fetchAdminDomains(params: {
 export function fetchAdminDomain(domainId: string): Promise<AdminDomainView> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/domains/{domainId}', { params: { path: { domainId } } })
-    if (!data) throw toApiError(error, '도메인 상세를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인 상세를 불러오지 못했어요.')
     return data
   })
 }
@@ -2027,7 +2029,7 @@ export function fetchAdminRouteSourcePolicy(routeId: string): Promise<SourcePoli
     const { data, error } = await api.GET('/admin/routes/{routeId}/source-policy', {
       params: { path: { routeId } },
     })
-    if (!data) throw toApiError(error, '라우트 출발지 정책을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '라우트 출발지 정책을 불러오지 못했어요.')
     return data
   })
 }
@@ -2040,7 +2042,7 @@ export function updateAdminRouteSourcePolicy(
     const { data, error } = await api.PUT('/admin/routes/{routeId}/source-policy', {
       params: { path: { routeId } }, body,
     })
-    if (!data) throw toApiError(error, '라우트 출발지 정책을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '라우트 출발지 정책을 저장하지 못했어요.')
     return data
   })
 }
@@ -2056,7 +2058,7 @@ export function fetchAdminCertificates(params: {
     const { data, error } = await api.GET('/admin/certificates', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '인증서 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '인증서 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2064,7 +2066,7 @@ export function fetchAdminCertificates(params: {
 export function resyncRoutes(): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/routes/resync')
-    if (!data) throw toApiError(error, '라우트 재동기화를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '라우트 재동기화를 접수하지 못했어요.')
     return data
   })
 }
@@ -2085,7 +2087,7 @@ export function fetchAdminTasks(params: {
     const { data, error } = await api.GET('/admin/tasks', {
       params: { query: { ...rest, status: status ? [status] : undefined } },
     })
-    if (!data) throw toApiError(error, '작업 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '작업 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2095,7 +2097,7 @@ export function retryAdminTask(taskId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/tasks/{taskId}/retry', {
       params: { path: { taskId } },
     })
-    if (!data) throw toApiError(error, '작업 재시도를 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '작업 재시도를 접수하지 못했어요.')
     return data
   })
 }
@@ -2105,7 +2107,7 @@ export function retryAdminTask(taskId: string): Promise<MessageResponse> {
 export function fetchSettings(): Promise<SettingView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/settings')
-    if (!data) throw toApiError(error, '운영 설정을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '운영 설정을 불러오지 못했어요.')
     return data
   })
 }
@@ -2116,7 +2118,7 @@ export function updateSetting(key: string, value: unknown): Promise<SettingView>
       params: { path: { key } },
       body: { value },
     })
-    if (!data) throw toApiError(error, '설정을 수정하지 못했습니다.')
+    if (!data) throw toApiError(error, '설정을 수정하지 못했어요.')
     return data
   })
 }
@@ -2126,7 +2128,7 @@ export function updateSetting(key: string, value: unknown): Promise<SettingView>
 export function fetchAdminSummary(params: { orgId?: string } = {}): Promise<OrgDashboardSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/summary', { params: { query: params } })
-    if (!data) throw toApiError(error, '대시보드 요약을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '대시보드 요약을 불러오지 못했어요.')
     return data
   })
 }
@@ -2134,7 +2136,7 @@ export function fetchAdminSummary(params: { orgId?: string } = {}): Promise<OrgD
 export function fetchSystemSummary(): Promise<SystemDashboardSummary> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/system-summary')
-    if (!data) throw toApiError(error, '시스템 요약을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '시스템 요약을 불러오지 못했어요.')
     return data
   })
 }
@@ -2148,7 +2150,7 @@ export function fetchAdminNodeMetrics(
     const { data, error } = await api.GET('/admin/nodes/{nodeId}/metrics', {
       params: { path: { nodeId }, query: { timeframe } },
     })
-    if (!data) throw toApiError(error, '노드 사용량 데이터를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '노드 사용량 데이터를 불러오지 못했어요.')
     return data
   })
 }
@@ -2165,7 +2167,7 @@ export function fetchCapacityTrend(
     const { data, error } = await api.GET('/admin/capacity-trend', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '할당 추이를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '할당 추이를 불러오지 못했어요.')
     return data
   })
 }
@@ -2178,7 +2180,7 @@ export function fetchMailDeliveries(params: {
 } = {}): Promise<MailDeliveryPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/mail-deliveries', { params: { query: params } })
-    if (!data) throw toApiError(error, '메일 발송 이력을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '메일 발송 이력을 불러오지 못했어요.')
     return data
   })
 }
@@ -2186,7 +2188,7 @@ export function fetchMailDeliveries(params: {
 export function fetchMailDelivery(deliveryId: string): Promise<MailDeliveryDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/mail-deliveries/{deliveryId}', { params: { path: { deliveryId } } })
-    if (!data) throw toApiError(error, '메일 발송 상세를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '메일 발송 상세를 불러오지 못했어요.')
     return data
   })
 }
@@ -2194,7 +2196,7 @@ export function fetchMailDelivery(deliveryId: string): Promise<MailDeliveryDetai
 export function resendMailDelivery(deliveryId: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/mail-deliveries/{deliveryId}/resend', { params: { path: { deliveryId } } })
-    if (!data) throw toApiError(error, '메일 재발송을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '메일 재발송을 접수하지 못했어요.')
     return data
   })
 }
@@ -2202,7 +2204,7 @@ export function resendMailDelivery(deliveryId: string): Promise<MessageResponse>
 export function fetchRequestMailSelection(requestId: string): Promise<RequestMailSelectionResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/requests/{requestId}/notification-selection', { params: { path: { requestId } } })
-    if (!data) throw toApiError(error, '신청 알림 선정 기록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 알림 선정 기록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2218,7 +2220,7 @@ export function fetchAdminNotifications(params: {
     const { data, error } = await api.GET('/admin/notifications', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '알림 발송 로그를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '알림 발송 로그를 불러오지 못했어요.')
     return data
   })
 }
@@ -2228,7 +2230,7 @@ export function resendAdminNotification(notificationId: string): Promise<Message
     const { data, error } = await api.POST('/admin/notifications/{notificationId}/resend', {
       params: { path: { notificationId } },
     })
-    if (!data) throw toApiError(error, '알림 재발송을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '알림 재발송을 접수하지 못했어요.')
     return data
   })
 }
@@ -2239,7 +2241,7 @@ export function retryRequestRecipient(requestId: string, recipientId: string): P
     const { data, error } = await api.POST('/admin/requests/{requestId}/recipients/{recipientId}/retry', {
       params: { path: { requestId, recipientId } },
     })
-    if (!data) throw toApiError(error, '다시 시도하지 못했습니다.')
+    if (!data) throw toApiError(error, '다시 시도하지 못했어요.')
     return data
   })
 }
@@ -2249,7 +2251,7 @@ export function fetchAdminWorkspaces(
 ): Promise<AdminWorkspaceOption[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/workspaces', { params: { query: params } })
-    if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '워크스페이스 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2259,7 +2261,7 @@ export function fetchAdminWorkspace(workspaceId: string): Promise<AdminWorkspace
     const { data, error } = await api.GET('/admin/workspaces/{workspaceId}', {
       params: { path: { workspaceId } },
     })
-    if (!data) throw toApiError(error, '워크스페이스 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '워크스페이스 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -2272,7 +2274,7 @@ export function fetchAnnouncements(params: {
     const { data, error } = await api.GET('/admin/announcements', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '발송한 알림 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '발송한 알림 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2282,7 +2284,7 @@ export function createAnnouncement(
 ): Promise<AnnouncementView> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/announcements', { body })
-    if (!data) throw toApiError(error, '알림을 발송하지 못했습니다.')
+    if (!data) throw toApiError(error, '알림을 발송하지 못했어요.')
     return data
   })
 }
@@ -2290,7 +2292,7 @@ export function createAnnouncement(
 export function previewAnnouncement(body: AnnouncementCreateRequest): Promise<AnnouncementPreview> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/announcements/preview', { body })
-    if (!data) throw toApiError(error, '알림 발송 대상을 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '알림 발송 대상을 확인하지 못했어요.')
     return data
   })
 }
@@ -2298,7 +2300,7 @@ export function previewAnnouncement(body: AnnouncementCreateRequest): Promise<An
 export function fetchAnnouncement(announcementId: string): Promise<AnnouncementDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/announcements/{announcementId}', { params: { path: { announcementId } } })
-    if (!data) throw toApiError(error, '발송건을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '발송건을 불러오지 못했어요.')
     return data
   })
 }
@@ -2315,7 +2317,7 @@ export function fetchDriftFindings(params: {
     const { data, error } = await api.GET('/admin/drift-findings', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, '드리프트 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '드리프트 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2329,7 +2331,7 @@ export function resolveDriftFinding(
       params: { path: { findingId } },
       body: note ? { note } : {},
     })
-    if (!data) throw toApiError(error, '드리프트를 해결 처리하지 못했습니다.')
+    if (!data) throw toApiError(error, '드리프트를 해결 처리하지 못했어요.')
     return data
   })
 }
@@ -2344,7 +2346,7 @@ export function fetchIpAllocations(params: {
     const { data, error } = await api.GET('/admin/ip-allocations', {
       params: { query: params },
     })
-    if (!data) throw toApiError(error, 'IP 할당 현황을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'IP 할당 현황을 불러오지 못했어요.')
     return data
   })
 }
@@ -2365,7 +2367,7 @@ export function fetchAuditLogs(params: {
 } = {}): Promise<AuditLogPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/audit', { params: { query: params } })
-    if (!data) throw toApiError(error, '감사 로그를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '감사 로그를 불러오지 못했어요.')
     return data
   })
 }
@@ -2379,7 +2381,7 @@ export function fetchMyActivity(params: {
 } = {}): Promise<ActivityPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/me/activity', { params: { query: params } })
-    if (!data) throw toApiError(error, '활동 이력을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '활동 이력을 불러오지 못했어요.')
     return data
   })
 }
@@ -2393,7 +2395,7 @@ export function fetchNotifications(params: {
 } = {}): Promise<NotificationPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/notifications', { params: { query: params } })
-    if (!data) throw toApiError(error, '알림 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '알림 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2401,7 +2403,7 @@ export function fetchNotifications(params: {
 export function fetchUnreadCount(): Promise<UnreadCountResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/notifications/unread-count')
-    if (!data) throw toApiError(error, '읽지 않은 알림 수를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '읽지 않은 알림 수를 불러오지 못했어요.')
     return data
   })
 }
@@ -2411,7 +2413,7 @@ export function markNotificationRead(notificationId: string): Promise<Notificati
     const { data, error } = await api.POST('/notifications/{notificationId}/read', {
       params: { path: { notificationId } },
     })
-    if (!data) throw toApiError(error, '알림을 읽음 처리하지 못했습니다.')
+    if (!data) throw toApiError(error, '알림을 읽음 처리하지 못했어요.')
     return data
   })
 }
@@ -2419,7 +2421,26 @@ export function markNotificationRead(notificationId: string): Promise<Notificati
 export function markAllNotificationsRead(): Promise<{ updatedCount: number }> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/notifications/read-all')
-    if (!data) throw toApiError(error, '알림을 모두 읽음 처리하지 못했습니다.')
+    if (!data) throw toApiError(error, '알림을 모두 읽음 처리하지 못했어요.')
+    return data
+  })
+}
+
+/** The personal flag is unknown until a successful current-reader response. */
+export function fetchMyNotificationPreferences(signal?: AbortSignal): Promise<NotificationPreferences> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/me/notification-preferences', { signal })
+    if (!data) throw toApiError(error, '메일 설정을 불러오지 못했어요.')
+    if (typeof data.usageMailEnabled !== 'boolean') throw new ApiError(null, '메일 설정 응답을 확인하지 못했어요.')
+    return data
+  })
+}
+
+export function updateMyNotificationPreferences(body: UpdateNotificationPreferences): Promise<NotificationPreferences> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.PUT('/me/notification-preferences', { body })
+    if (!data) throw toApiError(error, '메일 설정을 저장하지 못했어요.')
+    if (typeof data.usageMailEnabled !== 'boolean') throw new ApiError(null, '메일 설정 응답을 확인하지 못했어요.')
     return data
   })
 }
@@ -2432,7 +2453,7 @@ export function changeMyPassword(body: {
 }): Promise<AuthTokenResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.PUT('/me/password', { body })
-    if (!data) throw toApiError(error, '비밀번호를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '비밀번호를 변경하지 못했어요.')
     return data
   })
 }
@@ -2448,7 +2469,7 @@ export function withdrawMyAccount(body: {
 }): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/me/withdraw', { body })
-    if (!data) throw toApiError(error, '회원 탈퇴를 처리하지 못했습니다.')
+    if (!data) throw toApiError(error, '회원 탈퇴를 처리하지 못했어요.')
     return data
   })
 }
@@ -2458,7 +2479,7 @@ export function withdrawMyAccount(body: {
 export function beginMfaSetup(password: string): Promise<MfaSetupResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/me/mfa/totp', { body: { password } })
-    if (!data) throw toApiError(error, '2단계 인증 등록을 시작하지 못했습니다.')
+    if (!data) throw toApiError(error, '2단계 인증 등록을 시작하지 못했어요.')
     return data
   })
 }
@@ -2466,7 +2487,7 @@ export function beginMfaSetup(password: string): Promise<MfaSetupResponse> {
 export function activateMfa(code: string): Promise<MfaRecoveryCodesResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/me/mfa/totp/activate', { body: { code } })
-    if (!data) throw toApiError(error, '2단계 인증을 활성화하지 못했습니다.')
+    if (!data) throw toApiError(error, '2단계 인증을 활성화하지 못했어요.')
     return data
   })
 }
@@ -2478,7 +2499,7 @@ export function disableMfa(body: {
 }): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/me/mfa/disable', { body })
-    if (!data) throw toApiError(error, '2단계 인증을 해제하지 못했습니다.')
+    if (!data) throw toApiError(error, '2단계 인증을 해제하지 못했어요.')
     return data
   })
 }
@@ -2489,7 +2510,7 @@ export function regenerateRecoveryCodes(body: {
 }): Promise<MfaRecoveryCodesResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/me/mfa/recovery-codes', { body })
-    if (!data) throw toApiError(error, '복구 코드를 재발급하지 못했습니다.')
+    if (!data) throw toApiError(error, '복구 코드를 재발급하지 못했어요.')
     return data
   })
 }
@@ -2499,7 +2520,7 @@ export function resetUserMfa(userId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/users/{userId}/mfa-reset', {
       params: { path: { userId } },
     })
-    if (!data) throw toApiError(error, '2단계 인증을 초기화하지 못했습니다.')
+    if (!data) throw toApiError(error, '2단계 인증을 초기화하지 못했어요.')
     return data
   })
 }
@@ -2518,7 +2539,7 @@ export type DepartmentView = Schemas['DepartmentView']
 export function fetchProfileOptions(): Promise<ProfileOptionsResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/meta/profile-options')
-    if (!data) throw toApiError(error, '직책·소속 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '직책과 소속 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2528,7 +2549,7 @@ export function updateMyProfile(
 ): Promise<Schemas['UserProfileResponse']> {
   return guardNetwork(async () => {
     const { data, error } = await api.PUT('/me/profile', { body })
-    if (!data) throw toApiError(error, '프로필을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '프로필을 저장하지 못했어요.')
     return data
   })
 }
@@ -2543,7 +2564,7 @@ export function unlinkIdentity(provider: Schemas['IdentityProvider']): Promise<v
     const { error } = await api.DELETE('/me/identities/{provider}', {
       params: { path: { provider } },
     })
-    if (error) throw toApiError(error, '연동을 해제하지 못했습니다.')
+    if (error) throw toApiError(error, '연동을 해제하지 못했어요.')
   })
 }
 
@@ -2552,7 +2573,7 @@ export function unlinkIdentity(provider: Schemas['IdentityProvider']): Promise<v
 export function fetchCurrentTerms(): Promise<TermsVersionView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/meta/terms')
-    if (!data) throw toApiError(error, '약관 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '동의할 문서를 불러오지 못했어요.')
     return data
   })
 }
@@ -2562,7 +2583,7 @@ export function fetchTermsDocument(docType: TermsDocType): Promise<TermsDocument
     const { data, error } = await api.GET('/meta/terms/{docType}', {
       params: { path: { docType } },
     })
-    if (!data) throw toApiError(error, '약관 본문을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '문서를 불러오지 못했어요.')
     return data
   })
 }
@@ -2570,7 +2591,7 @@ export function fetchTermsDocument(docType: TermsDocType): Promise<TermsDocument
 export function fetchMyConsents(): Promise<ConsentView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/me/consents')
-    if (!data) throw toApiError(error, '동의 이력을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '동의 이력을 불러오지 못했어요.')
     return data
   })
 }
@@ -2578,7 +2599,7 @@ export function fetchMyConsents(): Promise<ConsentView[]> {
 export function acceptConsents(consents: ConsentInput[]): Promise<ConsentView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/me/consents', { body: { consents } })
-    if (!data) throw toApiError(error, '약관 동의를 기록하지 못했습니다.')
+    if (!data) throw toApiError(error, '동의 내용을 저장하지 못했어요.')
     return data
   })
 }
@@ -2586,7 +2607,7 @@ export function acceptConsents(consents: ConsentInput[]): Promise<ConsentView[]>
 export function requestPasswordReset(email: string): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/auth/password-reset', { body: { email } })
-    if (!data) throw toApiError(error, '비밀번호 재설정 요청을 처리하지 못했습니다.')
+    if (!data) throw toApiError(error, '비밀번호 재설정 요청을 처리하지 못했어요.')
     return data
   })
 }
@@ -2597,7 +2618,7 @@ export function confirmPasswordReset(body: {
 }): Promise<MessageResponse> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/auth/password-reset/confirm', { body })
-    if (!data) throw toApiError(error, '비밀번호를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '비밀번호를 변경하지 못했어요.')
     return data
   })
 }
@@ -2613,7 +2634,7 @@ export function fetchAdminUsers(params: {
 }): Promise<UserAdminPage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/users', { params: { query: params } })
-    if (!data) throw toApiError(error, '사용자 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사용자 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2623,7 +2644,7 @@ export function fetchAdminUser(userId: string): Promise<UserAdminDetail> {
     const { data, error } = await api.GET('/admin/users/{userId}', {
       params: { path: { userId } },
     })
-    if (!data) throw toApiError(error, '사용자 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사용자 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -2631,7 +2652,7 @@ export function fetchAdminUser(userId: string): Promise<UserAdminDetail> {
 export function fetchAdminOsImages(): Promise<AdminOsImage[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/os-images')
-    if (!data) throw toApiError(error, 'OS 이미지 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'OS 이미지 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2645,7 +2666,7 @@ export function updateAdminOsImage(
       params: { path: { imageId } },
       body,
     })
-    if (!data) throw toApiError(error, 'OS 이미지 상태를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, 'OS 이미지 상태를 변경하지 못했어요.')
     return data
   })
 }
@@ -2654,7 +2675,7 @@ export function updateAdminOsImage(
 export function fetchAdminRequestPeriods(): Promise<AdminRequestPeriod[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/request-periods')
-    if (!data) throw toApiError(error, '사용 기간 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사용 기간 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2664,7 +2685,7 @@ export function createAdminRequestPeriod(
 ): Promise<AdminRequestPeriod> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/request-periods', { body })
-    if (!data) throw toApiError(error, '사용 기간을 만들지 못했습니다.')
+    if (!data) throw toApiError(error, '사용 기간을 만들지 못했어요.')
     return data
   })
 }
@@ -2678,7 +2699,7 @@ export function updateAdminRequestPeriod(
       params: { path: { periodId } },
       body,
     })
-    if (!data) throw toApiError(error, '사용 기간을 수정하지 못했습니다.')
+    if (!data) throw toApiError(error, '사용 기간을 수정하지 못했어요.')
     return data
   })
 }
@@ -2687,7 +2708,7 @@ export function updateAdminRequestPeriod(
 export function fetchAdminVmFlavors(): Promise<VmFlavor[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/vm-flavors')
-    if (!data) throw toApiError(error, '사양 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '사양 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2695,7 +2716,7 @@ export function fetchAdminVmFlavors(): Promise<VmFlavor[]> {
 export function createAdminVmFlavor(body: CreateVmFlavor): Promise<VmFlavor> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/vm-flavors', { body })
-    if (!data) throw toApiError(error, '사양을 만들지 못했습니다.')
+    if (!data) throw toApiError(error, '사양을 만들지 못했어요.')
     return data
   })
 }
@@ -2709,7 +2730,7 @@ export function updateAdminVmFlavor(
       params: { path: { flavorId } },
       body,
     })
-    if (!data) throw toApiError(error, '사양을 수정하지 못했습니다.')
+    if (!data) throw toApiError(error, '사양을 수정하지 못했어요.')
     return data
   })
 }
@@ -2723,7 +2744,7 @@ export function updateAdminNode(
       params: { path: { nodeId } },
       body,
     })
-    if (!data) throw toApiError(error, '노드 상태를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '노드 상태를 변경하지 못했어요.')
     return data
   })
 }
@@ -2731,7 +2752,7 @@ export function updateAdminNode(
 export function fetchAdminOrgs(): Promise<OrgDetail[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/orgs')
-    if (!data) throw toApiError(error, '기관 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2739,7 +2760,7 @@ export function fetchAdminOrgs(): Promise<OrgDetail[]> {
 export function fetchSupportOrgs(): Promise<{ id: string; name: string; status: 'ACTIVE' | 'DISABLED' }[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/support-orgs')
-    if (!data) throw toApiError(error, '지원 조회 기관 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '지원 조회 기관 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2750,7 +2771,7 @@ export function createOrg(body: {
 }): Promise<OrgDetail> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/orgs', { body })
-    if (!data) throw toApiError(error, '기관을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.')
+    if (!data) throw toApiError(error, '기관을 만들지 못했어요. 잠시 후 다시 시도해 주세요.')
     return data
   })
 }
@@ -2764,7 +2785,7 @@ export function updateOrg(
       params: { path: { orgId } },
       body,
     })
-    if (!data) throw toApiError(error, '기관 정보를 수정하지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 정보를 수정하지 못했어요.')
     return data
   })
 }
@@ -2774,7 +2795,7 @@ export function forceReleaseDomain(domainId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/domains/{domainId}/force-release', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '도메인을 강제 해제하지 못했습니다.')
+    if (!data) throw toApiError(error, '도메인을 강제 해제하지 못했어요.')
     return data
   })
 }
@@ -2789,7 +2810,7 @@ export function forceReleaseDomain(domainId: string): Promise<MessageResponse> {
 export function fetchAdminDomainRoots(): Promise<AdminDomainRootView[]> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/domain-roots')
-    if (!data) throw toApiError(error, '루트 도메인 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '루트 도메인 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -2803,7 +2824,7 @@ export function updateAdminDomainRoot(
       params: { path: { rootDomain } },
       body,
     })
-    if (!data) throw toApiError(error, '승인 정책을 바꾸지 못했습니다.')
+    if (!data) throw toApiError(error, '승인 정책을 바꾸지 못했어요.')
     return data
   })
 }
@@ -2814,7 +2835,7 @@ export function fetchAdminDomainRecords(domainId: string): Promise<DnsRecordSet[
     const { data, error } = await api.GET('/admin/domains/{domainId}/records', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '레코드를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '레코드를 불러오지 못했어요.')
     return data
   })
 }
@@ -2828,7 +2849,7 @@ export function updateAdminDomainRenewal(
       params: { path: { domainId } },
       body,
     })
-    if (!data) throw toApiError(error, '사용 기한을 바꾸지 못했습니다.')
+    if (!data) throw toApiError(error, '사용 기한을 바꾸지 못했어요.')
     return data
   })
 }
@@ -2838,7 +2859,7 @@ export function verifyAdminDomain(domainId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/domains/{domainId}/verify', {
       params: { path: { domainId } },
     })
-    if (!data) throw toApiError(error, '재검증을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '재검증을 접수하지 못했어요.')
     return data
   })
 }
@@ -2848,7 +2869,7 @@ export function applyAdminRoute(routeId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/routes/{routeId}/apply', {
       params: { path: { routeId } },
     })
-    if (!data) throw toApiError(error, '라우트 재적용을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, '라우트 재적용을 접수하지 못했어요.')
     return data
   })
 }
@@ -2858,7 +2879,7 @@ export function fetchAdminVm(vmId: string): Promise<VmDetail> {
     const { data, error } = await api.GET('/admin/vms/{vmId}', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 정보를 불러오지 못했어요.')
     return data
   })
 }
@@ -2871,7 +2892,7 @@ export function fetchAdminVmEvents(
     const { data, error } = await api.GET('/admin/vms/{vmId}/events', {
       params: { path: { vmId }, query: params },
     })
-    if (!data) throw toApiError(error, 'VM 이벤트를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 이벤트를 불러오지 못했어요.')
     return data
   })
 }
@@ -2881,7 +2902,7 @@ export function adminStartVm(vmId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/vms/{vmId}/start', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 시작 요청을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 시작 요청을 접수하지 못했어요.')
     return data
   })
 }
@@ -2891,7 +2912,7 @@ export function adminShutdownVm(vmId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/vms/{vmId}/shutdown', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 종료 요청을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 종료 요청을 접수하지 못했어요.')
     return data
   })
 }
@@ -2901,7 +2922,7 @@ export function adminRebootVm(vmId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/vms/{vmId}/reboot', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 재부팅 요청을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 재부팅 요청을 접수하지 못했어요.')
     return data
   })
 }
@@ -2911,7 +2932,7 @@ export function adminForceStopVm(vmId: string): Promise<MessageResponse> {
     const { data, error } = await api.POST('/admin/vms/{vmId}/force-stop', {
       params: { path: { vmId } },
     })
-    if (!data) throw toApiError(error, 'VM 강제 종료 요청을 접수하지 못했습니다.')
+    if (!data) throw toApiError(error, 'VM 강제 종료 요청을 접수하지 못했어요.')
     return data
   })
 }
@@ -2925,7 +2946,7 @@ export function updateVmGatewayBlock(
       params: { path: { vmId } },
       body,
     })
-    if (!data) throw toApiError(error, '차단 상태를 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '차단 상태를 변경하지 못했어요.')
     return data
   })
 }
@@ -2939,7 +2960,7 @@ export function updateUserRole(
       params: { path: { userId } },
       body,
     })
-    if (!data) throw toApiError(error, '사용자 역할을 변경하지 못했습니다.')
+    if (!data) throw toApiError(error, '사용자 역할을 변경하지 못했어요.')
     return data
   })
 }
@@ -2960,7 +2981,7 @@ export function updateUserProfile(
       params: { path: { userId } },
       body,
     })
-    if (!data) throw toApiError(error, '프로필을 정정하지 못했습니다.')
+    if (!data) throw toApiError(error, '프로필을 정정하지 못했어요.')
     return data
   })
 }
@@ -2977,7 +2998,7 @@ export function grantOrgRole(
       params: { path: { userId, orgId } },
       body: { permission, expectedRevision },
     })
-    if (!data) throw toApiError(error, '기관 역할을 부여하지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 역할을 부여하지 못했어요.')
     return data
   })
 }
@@ -3001,7 +3022,7 @@ export function updateOrgRequestMail(
         body: { enabled, expectedRevision },
       },
     )
-    if (!data) throw toApiError(error, '신청 접수 메일 설정을 바꾸지 못했습니다.')
+    if (!data) throw toApiError(error, '신청 접수 메일 설정을 바꾸지 못했어요.')
     return data
   })
 }
@@ -3012,7 +3033,7 @@ export function revokeOrgRole(userId: string, orgId: string, expectedRevision: n
     const { data, error } = await api.DELETE('/admin/users/{userId}/org-roles/{orgId}', {
       params: { path: { userId, orgId }, query: { expectedRevision, expectedPermissionRevision } },
     })
-    if (!data) throw toApiError(error, '기관 역할을 회수하지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 역할을 회수하지 못했어요.')
     return data
   })
 }
@@ -3022,7 +3043,7 @@ export function fetchOrgOperations(orgId: string, requesterId?: string): Promise
     const { data, error } = await api.GET('/admin/orgs/{orgId}/operations', {
       params: { path: { orgId }, query: { requesterId } },
     })
-    if (!data) throw toApiError(error, '기관 운영 설정을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 운영 설정을 불러오지 못했어요.')
     return data
   })
 }
@@ -3032,7 +3053,7 @@ export function previewOrgOperations(orgId: string, body: SaveOrgOperations): Pr
     const { data, error } = await api.POST('/admin/orgs/{orgId}/operations/preview', {
       params: { path: { orgId } }, body,
     })
-    if (!data) throw toApiError(error, '기관 운영 변경안을 확인하지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 운영 변경안을 확인하지 못했어요.')
     return data
   })
 }
@@ -3042,7 +3063,7 @@ export function saveOrgOperations(orgId: string, body: SaveOrgOperations): Promi
     const { data, error } = await api.PUT('/admin/orgs/{orgId}/operations', {
       params: { path: { orgId } }, body,
     })
-    if (!data) throw toApiError(error, '기관 운영 설정을 저장하지 못했습니다.')
+    if (!data) throw toApiError(error, '기관 운영 설정을 저장하지 못했어요.')
     return data
   })
 }
@@ -3053,7 +3074,7 @@ export function disableUser(userId: string, reason: string): Promise<UserAdminDe
       params: { path: { userId } },
       body: { reason },
     })
-    if (!data) throw toApiError(error, '사용자를 비활성화하지 못했습니다.')
+    if (!data) throw toApiError(error, '사용자를 비활성화하지 못했어요.')
     return data
   })
 }
@@ -3063,7 +3084,7 @@ export function enableUser(userId: string): Promise<UserAdminDetail> {
     const { data, error } = await api.POST('/admin/users/{userId}/enable', {
       params: { path: { userId } },
     })
-    if (!data) throw toApiError(error, '사용자를 활성화하지 못했습니다.')
+    if (!data) throw toApiError(error, '사용자를 활성화하지 못했어요.')
     return data
   })
 }
@@ -3079,7 +3100,7 @@ export function startGoogleOauth(
 ): Promise<components['schemas']['OauthStartResponse']> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/auth/oauth/google/start', { body })
-    if (!data) throw toApiError(error, '구글 로그인을 시작하지 못했습니다.')
+    if (!data) throw toApiError(error, '구글 로그인을 시작하지 못했어요.')
     return data
   })
 }
@@ -3098,7 +3119,7 @@ export type NoticeUpdateRequest = Schemas['NoticeUpdateRequest']
 export function fetchNotices(params: { page?: number; size?: number; popup?: boolean }): Promise<NoticePage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/notices', { params: { query: params } })
-    if (!data) throw toApiError(error, '공지사항을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '공지사항을 불러오지 못했어요.')
     return data
   })
 }
@@ -3108,7 +3129,7 @@ export function fetchNotice(noticeId: string): Promise<NoticeView> {
     const { data, error } = await api.GET('/notices/{noticeId}', {
       params: { path: { noticeId } },
     })
-    if (!data) throw toApiError(error, '공지사항을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '공지사항을 불러오지 못했어요.')
     return data
   })
 }
@@ -3120,7 +3141,7 @@ export function fetchAdminNotices(params: {
 }): Promise<AdminNoticePage> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/notices', { params: { query: params } })
-    if (!data) throw toApiError(error, '공지사항 목록을 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '공지사항 목록을 불러오지 못했어요.')
     return data
   })
 }
@@ -3128,7 +3149,7 @@ export function fetchAdminNotices(params: {
 export function fetchAdminNotice(noticeId: string): Promise<AdminNoticeView> {
   return guardNetwork(async () => {
     const { data, error } = await api.GET('/admin/notices/{noticeId}', { params: { path: { noticeId } } })
-    if (!data) throw toApiError(error, '관리 공지 상세를 불러오지 못했습니다.')
+    if (!data) throw toApiError(error, '관리 공지 상세를 불러오지 못했어요.')
     return data
   })
 }
@@ -3136,7 +3157,7 @@ export function fetchAdminNotice(noticeId: string): Promise<AdminNoticeView> {
 export function createAdminNotice(body: NoticeCreateRequest): Promise<AdminNoticeView> {
   return guardNetwork(async () => {
     const { data, error } = await api.POST('/admin/notices', { body })
-    if (!data) throw toApiError(error, '공지사항을 등록하지 못했습니다.')
+    if (!data) throw toApiError(error, '공지사항을 등록하지 못했어요.')
     return data
   })
 }
@@ -3150,7 +3171,7 @@ export function updateAdminNotice(
       params: { path: { noticeId } },
       body,
     })
-    if (!data) throw toApiError(error, '공지사항을 수정하지 못했습니다.')
+    if (!data) throw toApiError(error, '공지사항을 수정하지 못했어요.')
     return data
   })
 }
@@ -3160,7 +3181,7 @@ export function deleteAdminNotice(noticeId: string): Promise<void> {
     const { error } = await api.DELETE('/admin/notices/{noticeId}', {
       params: { path: { noticeId } },
     })
-    if (error) throw toApiError(error, '공지사항을 삭제하지 못했습니다.')
+    if (error) throw toApiError(error, '공지사항을 삭제하지 못했어요.')
   })
 }
 
@@ -3183,7 +3204,7 @@ export function uploadAdminNoticeImage(
       body: form as never,
       bodySerializer: (body: unknown) => body as FormData,
     })
-    if (!data) throw toApiError(error, '이미지를 업로드하지 못했습니다.')
+    if (!data) throw toApiError(error, '이미지를 업로드하지 못했어요.')
     return data
   })
 }
@@ -3193,6 +3214,6 @@ export function deleteAdminNoticeImage(noticeId: string, imageId: string): Promi
     const { error } = await api.DELETE('/admin/notices/{noticeId}/images/{imageId}', {
       params: { path: { noticeId, imageId } },
     })
-    if (error) throw toApiError(error, '이미지를 삭제하지 못했습니다.')
+    if (error) throw toApiError(error, '이미지를 삭제하지 못했어요.')
   })
 }

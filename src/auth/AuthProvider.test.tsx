@@ -406,7 +406,7 @@ describe('External login profile replacement', () => {
     expect(replacementSignal?.aborted).toBe(false)
     expect(auth.user).toMatchObject(regularProfileB)
     await act(async () => {
-      const rejected = expect(replacement).rejects.toThrow('사용자 정보를 불러오지 못했습니다.')
+      const rejected = expect(replacement).rejects.toThrow('사용자 정보를 불러오지 못했어요.')
       profile.resolve({ error: {} } as never)
       await rejected
     })

@@ -69,7 +69,7 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
 
     renderApp(`/admin/llm/accounts/${uuid(412)}?org=${uuid(1)}`)
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      '현재 관리 범위에서 이 OpenRouter 사업 계정을 찾을 수 없습니다.',
+      '현재 관리 범위에서 이 OpenRouter 사업 계정을 찾을 수 없어요.',
     )
     expect(screen.queryByRole('heading', { name: '테스트 유료 모델 사업' })).not.toBeInTheDocument()
   })
@@ -83,12 +83,12 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
     await user.type(dialog.getByLabelText('사업 계정 이름'), '신규 교육 사업')
     await user.type(dialog.getByLabelText(/계속하려면 이름/), '다른 이름')
     await user.click(dialog.getByRole('button', { name: '등록' }))
-    expect(dialog.getByText('사업 계정 이름과 정확히 같아야 합니다.')).toBeInTheDocument()
+    expect(dialog.getByText('사업 계정 이름과 정확히 같아야 해요.')).toBeInTheDocument()
 
     await user.clear(dialog.getByLabelText(/계속하려면 이름/))
     await user.type(dialog.getByLabelText(/계속하려면 이름/), '신규 교육 사업')
     await user.click(dialog.getByRole('button', { name: '등록' }))
-    expect(await screen.findByText('신규 교육 사업 사업 계정을 등록했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('신규 교육 사업 사업 계정을 등록했어요.')).toBeInTheDocument()
   })
 
   test('SYS narrowed scope의 계정 등록은 현재 기관으로 고정되고 다른 기관 picker를 만들지 않는다', async () => {
@@ -102,7 +102,7 @@ describe('OpenRouter 사업 계정 목록·권한', () => {
     await user.type(dialog.getByLabelText('사업 계정 이름'), 'SYS 범위 고정 사업')
     await user.type(dialog.getByLabelText(/계속하려면 이름/), 'SYS 범위 고정 사업')
     await user.click(dialog.getByRole('button', { name: '등록' }))
-    expect(await screen.findByText('SYS 범위 고정 사업 사업 계정을 등록했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('SYS 범위 고정 사업 사업 계정을 등록했어요.')).toBeInTheDocument()
     expect(openRouterAccountStore.find((account) => account.name === 'SYS 범위 고정 사업')).toMatchObject({
       orgId: uuid(1),
       orgName: '정보컴퓨터공학부 실습지원센터',
@@ -149,7 +149,7 @@ describe('OpenRouter account credits 관측', () => {
     expect(screen.queryByRole('button', { name: /갱신|새로 고침/ })).not.toBeInTheDocument()
   })
 
-  test('STALE 실패는 마지막 성공과 시도를 보존하고 forecast·paired reset 이유를 말한다', async () => {
+  test('retains stale observed balances and reset reasons after a failed check', async () => {
     server.use(refreshSuccessHandler('access-sys-admin', sysAdminUser))
     renderApp(`/admin/llm/accounts/${uuid(411)}`)
 
@@ -160,10 +160,9 @@ describe('OpenRouter account credits 관측', () => {
     expect(screen.getByText('잔액').closest('div')).toHaveTextContent('-$1.25')
     expect(screen.getByText('잔액 소진 예상').closest('div')).toHaveTextContent('초기화')
     expect(screen.getByText('미관리 지출').closest('div')).toHaveTextContent('초기화')
-    expect(screen.getByText('Credits 마지막 성공').closest('div')!
+    expect(screen.getByText('금액 관측').closest('div')!
       .querySelector('time[datetime="2026-08-31T00:28:00+09:00"]')).not.toBeNull()
-    expect(screen.getByText('Credits 마지막 시도').closest('div')!
-      .querySelector('time[datetime="2026-08-31T01:20:00+09:00"]')).not.toBeNull()
+    expect(screen.queryByText('Credits 마지막 시도')).not.toBeInTheDocument()
   })
 
   test('UNKNOWN null은 0으로 표시하지 않고 실제 0 관측과 구분한다', async () => {
@@ -236,7 +235,7 @@ describe('OpenRouter account credits 관측', () => {
     await screen.findByText('$90.00')
     await user.click(screen.getByRole('button', { name: '정보 변경' }))
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '저장' }))
-    expect(await screen.findByText('OpenRouter 사업 계정 정보를 변경했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('OpenRouter 사업 계정 정보를 변경했어요.')).toBeInTheDocument()
     expect(screen.getByText('잔액').closest('div')).toHaveTextContent('$90.00')
     expect(screen.queryByText('$1.00')).not.toBeInTheDocument()
     releaseRefetch()
@@ -300,7 +299,7 @@ describe('OpenRouter credential lifecycle', () => {
     await user.click(stage.getByRole('button', { name: '검증 후 대기 등록' }))
 
     expect(screen.queryByDisplayValue(secret)).not.toBeInTheDocument()
-    expect(await screen.findByText('관리용 키를 확인해 교체 대기로 등록했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('관리용 키를 확인해 교체 대기로 등록했어요.')).toBeInTheDocument()
     expect(screen.getByText('교체 대기')).toBeInTheDocument()
     expect(document.body).not.toHaveTextContent(secret)
     expect(JSON.stringify(openRouterAccountStore)).not.toContain(secret)
@@ -317,7 +316,7 @@ describe('OpenRouter credential lifecycle', () => {
     await user.type(register.getByLabelText(/계속하려면 이름/), '테스트 유료 모델 사업')
     await user.click(register.getByRole('button', { name: '검증 후 등록' }))
 
-    expect(await screen.findByText('관리용 키를 확인해 활성화했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('관리용 키를 확인해 활성화했어요.')).toBeInTheDocument()
     expect(screen.getByText('사용 중')).toBeInTheDocument()
     expect(screen.queryByText('교체 대기')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '대기 중인 키 활성화' })).not.toBeInTheDocument()
@@ -346,11 +345,11 @@ describe('OpenRouter credential lifecycle', () => {
     const activate = within(screen.getByRole('dialog', { name: '대기 중인 관리용 키 활성화' }))
     await user.type(activate.getByLabelText(/계속하려면 이름/), 'AI 교육 사업 A')
     await user.click(activate.getByRole('button', { name: '활성화' }))
-    expect(await screen.findByText('대기 중이던 관리용 키를 활성화했습니다.')).toBeInTheDocument()
+    expect(await screen.findByText('대기 중이던 관리용 키를 활성화했어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '교체 되돌리기' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '이전 키 정리' })).not.toBeInTheDocument()
     expect(
-      screen.getByText('새 키로 키 대사가 한 번 성공해야 이전 키를 정리할 수 있습니다.'),
+      screen.getByText('새 키로 키 대사가 한 번 성공해야 이전 키를 정리할 수 있어요.'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '관리용 키 교체' })).not.toBeInTheDocument()
   })

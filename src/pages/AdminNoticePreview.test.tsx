@@ -91,7 +91,7 @@ describe('Notice exact targets, windows and preview', () => {
     let calls = 0
     server.use(http.get('*/api/v1/admin/notices/:noticeId', () => { calls += 1 }))
     system('/admin/notices?selected=bad')
-    await screen.findByText('공지 ID가 올바르지 않습니다.')
+    await screen.findByText('공지 ID가 올바르지 않아요.')
     expect(calls).toBe(0)
     expect(screen.queryByRole('button', { name: '등록' })).not.toBeInTheDocument()
   })
@@ -151,7 +151,7 @@ describe('Notice exact targets, windows and preview', () => {
     await user.type(within(drawer).getByLabelText('제목'), '너무 긴 본문')
     fireEvent.change(within(drawer).getByLabelText('본문'), { target: { value: '가'.repeat(20_001) } })
     await user.click(within(drawer).getByRole('button', { name: '등록' }))
-    expect(await within(drawer).findByText('본문은 20,000자 이하여야 합니다.')).toBeInTheDocument()
+    expect(await within(drawer).findByText('본문은 20,000자 이하로 입력해 주세요.')).toBeInTheDocument()
     expect(writes).toBe(0)
   })
 
@@ -178,7 +178,7 @@ describe('Notice exact targets, windows and preview', () => {
     await within(editor).findByText('저장됨')
     fireEvent.change(within(editor).getByLabelText('게시 시작'), { target: { value: '2099-01-01T00:00' } })
     await user.click(within(editor).getByRole('button', { name: '저장' }))
-    await within(editor).findByText(/게시 예정 설정/)
+    await within(editor).findByText(/공지를 저장했어요. 게시 상태: 게시 예정/)
     await user.click(screen.getByRole('link', { name: '목록으로 돌아가기' }))
     const reading = await screen.findByRole('dialog', { name: '공지 상세' })
     await user.click(await within(reading).findByRole('link', { name: '공지 수정' }))
@@ -221,7 +221,7 @@ describe('Notice exact targets, windows and preview', () => {
     await within(next).findByText('콘솔 기능 업데이트')
     await waitFor(() => expect(finished).toBe(true))
     expect(screen.getByRole('dialog')).toBe(next)
-    expect(screen.queryByText('공지를 수정했습니다.')).not.toBeInTheDocument()
+    expect(screen.queryByText('공지를 수정했어요.')).not.toBeInTheDocument()
     expect(within(next).queryByText('저장됨')).not.toBeInTheDocument()
   })
 

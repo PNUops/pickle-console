@@ -11,7 +11,7 @@ export function GpuAllocationTable({ rows, admin = false, orgId }: { rows: GpuAl
   </TR></THead><TBody>{rows.map((row) => <TR key={row.id}>
     <TD>{row.accessLimited ? <>
       <span>{row.name}</span>
-      <p className="text-xs text-neutral-500">접근 권한이 없습니다{row.ownerNames?.length ? ` · ${row.ownerNames.join(', ')}` : ''}</p>
+      <p className="text-xs text-neutral-500">접근 권한이 없어요{row.ownerNames?.length ? ` · ${row.ownerNames.join(', ')}` : ''}</p>
       {row.accessManageAllowed && <Link className="text-primary-700 hover:underline" to={consolePaths.gpuAccess(row.id)}>접근 권한 관리</Link>}
     </> : <Link className="font-medium text-primary-700 hover:underline" to={admin ? adminPaths.gpuDetail(row.id, orgId) : consolePaths.gpuDetail(row.id)}>{row.name}</Link>}</TD>
     <TD><GpuStatusBadge status={row.status} /></TD>

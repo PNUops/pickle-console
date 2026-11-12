@@ -53,7 +53,7 @@ export function SourcePolicyForm({
   return (
     <form onSubmit={submit} className="space-y-4" noValidate aria-label="공개 접속 정책">
       {error && <Alert variant="danger">{error}</Alert>}
-      <FormField label="허용할 출발지" description="IP 또는 CIDR을 한 줄에 하나씩 입력하세요." error={validation}>
+      <FormField label="허용할 출발지" description="IP 또는 CIDR을 한 줄에 하나씩 입력해 주세요." error={validation}>
         <Textarea
           value={value.cidrsText}
           onChange={(event) => onChange({ ...value, cidrsText: event.target.value })}
@@ -83,23 +83,23 @@ export function SourcePolicyForm({
         </Button>
         <p className="text-xs text-foreground-muted">
           {campusPresetCidrs == null
-            ? '확인된 교내 주소 목록이 없어 선택할 수 없습니다.'
-            : '현재 교내 주소를 입력 목록에 복사합니다. 이후 변경은 자동 반영되지 않습니다.'}
+            ? '확인된 교내 주소 목록이 없어 선택할 수 없어요.'
+            : '현재 교내 주소를 입력 목록에 복사해요. 이후 변경은 자동 반영되지 않아요.'}
         </p>
       </div>
-      {denyAll && canEdit && <Alert variant="warning">이대로 저장하면 새 연결을 모두 차단합니다.</Alert>}
+      {denyAll && canEdit && <Alert variant="warning">이대로 저장하면 새 연결을 모두 차단해요.</Alert>}
       {permitsPublicSources && canEdit && (
         <Alert variant="warning">
-          0.0.0.0/0 또는 ::/0은 해당 주소 종류의 모든 출발지를 허용합니다.
+          0.0.0.0/0 또는 ::/0은 해당 주소 종류의 모든 출발지를 허용해요.
         </Alert>
       )}
       {canEdit ? (
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" loading={busy} disabled={submitBlocked}>출발지 정책 저장</Button>
-          <p className="text-xs text-foreground-muted">변경은 새 연결부터 적용됩니다.</p>
+          <p className="text-xs text-foreground-muted">변경은 새 연결부터 적용돼요.</p>
         </div>
       ) : (
-        <PermissionNotice>소유자와 편집자만 변경할 수 있습니다.</PermissionNotice>
+        <PermissionNotice>소유자와 편집자만 변경할 수 있어요.</PermissionNotice>
       )}
     </form>
   )

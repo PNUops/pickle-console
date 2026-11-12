@@ -111,7 +111,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     renderApp(`/admin/requests/${uuid(204)}?org=${uuid(1)}`)
 
     expect(
-      await screen.findByText('선택한 관리 범위의 신청이 아닙니다'),
+      await screen.findByText('선택한 관리 범위의 신청이 아니에요'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '신청 상세' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: '신청 목록으로 돌아가기' })).toHaveAttribute(
@@ -168,7 +168,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     renderDetail(uuid(201))
 
     expect(
-      await screen.findByText('승인 참고 정보를 불러오지 못했습니다'),
+      await screen.findByText('승인 참고 정보를 불러오지 못했어요'),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '승인하기' })).toBeInTheDocument()
   })
@@ -188,7 +188,7 @@ describe('관리자 신청 상세 — 직접 입력 신청', () => {
 
     await screen.findByRole('heading', { name: '신청 상세' })
     expect(screen.getByText('직접 입력')).toBeInTheDocument()
-    expect(screen.getByText('준비된 사양을 쓰지 않는 신청입니다')).toBeInTheDocument()
+    expect(screen.getByText('준비된 사양을 쓰지 않는 신청이에요')).toBeInTheDocument()
     expect(
       screen.getByText('Spring Boot와 PostgreSQL을 함께 띄웁니다'),
     ).toBeInTheDocument()
@@ -223,9 +223,7 @@ describe('승인 폼', () => {
     expect(within(dialog).getByText('배치: 자동 배치')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    expect(
-      await screen.findByText('승인 내용이 저장되었습니다. VM 생성 진행과 실제 완료는 가상머신 상세에서 확인해 주세요.'),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
     expect(await screen.findByText('검토 결과')).toBeInTheDocument()
 
     expect(approveBodies).toHaveLength(1)
@@ -258,7 +256,7 @@ describe('승인 폼', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    expect(await screen.findByText(/이미 처리된 신청입니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/이미 처리된 신청이에요/)).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('검토 결정')).not.toBeInTheDocument())
     expect(approveBodies).toHaveLength(0)
   })
@@ -283,11 +281,7 @@ describe('승인 폼', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    expect(
-      await screen.findByText(
-        '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
     await waitFor(() =>
       expect(openRouterAccountListQueries.length).toBeGreaterThan(before),
     )
@@ -343,7 +337,7 @@ describe('결정 폼 — OS 이미지 조회 실패', () => {
 
     await screen.findByRole('heading', { name: '신청 상세' })
     expect(
-      await screen.findByText('OS 이미지 목록을 불러오지 못했습니다'),
+      await screen.findByText('OS 이미지 목록을 불러오지 못했어요'),
     ).toBeInTheDocument()
 
     // 재시도하면 기본 핸들러(정상 응답)로 복구되어 결정 폼이 나타난다.
@@ -382,9 +376,7 @@ describe('반려 폼', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 반려' })
     await user.click(within(dialog).getByRole('button', { name: '반려 확정' }))
 
-    expect(
-      await screen.findByText('반려 결정과 사유를 저장했습니다. 알림 전달 완료는 별도로 확인해야 합니다.'),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('반려했어요.')).toHaveLength(2))
     expect(rejectBodies).toEqual([
       {
         requestId: uuid(201),

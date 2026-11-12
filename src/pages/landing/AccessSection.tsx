@@ -16,7 +16,7 @@ const usageOptions = [
   {
     icon: 'terminal',
     title: '가상머신 접속',
-    description: 'VM별로 발급받은 SSH 개인키로 접속합니다. 브라우저 웹 터미널에서도 셸을 열 수 있습니다.',
+    description: 'VM의 SSH 개인키로 접속해요. 브라우저의 웹 터미널도 사용할 수 있어요.',
     code: sshExample,
     codeLabel: 'SSH',
     guide: '/docs/vm/connect',
@@ -25,7 +25,7 @@ const usageOptions = [
   {
     icon: 'chip',
     title: 'LLM API 호출',
-    description: '발급한 키와 base URL, 모델 이름을 설정해 호출합니다. OpenAI 호환 SDK에서도 같은 정보를 사용합니다.',
+    description: '키와 base URL, 모델 이름을 설정해요. OpenAI 호환 SDK에서도 사용할 수 있어요.',
     code: llmExample,
     codeLabel: 'curl',
     guide: '/docs/llm/connect',
@@ -50,7 +50,7 @@ export function AccessSection() {
             익숙한 도구 그대로
           </h2>
           <p className="mt-4 text-base leading-relaxed text-neutral-600 sm:text-lg">
-            SSH와 웹 터미널로 서버에 접속하고, OpenAI 호환 API로 모델을 호출합니다.
+            SSH와 웹 터미널, OpenAI 호환 API를 사용해요.
           </p>
         </div>
 

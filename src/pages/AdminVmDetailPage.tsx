@@ -99,7 +99,7 @@ function AdminVmDetailPageContent() {
   const activeTab = tabs.some((tab) => tab.id === rawTab) ? rawTab! : 'overview'
 
   if (!idValid) {
-    return <Alert variant="danger">잘못된 VM 주소입니다.</Alert>
+    return <Alert variant="danger">VM 주소가 올바르지 않아요.</Alert>
   }
   if (detail.isPending) {
     return (
@@ -115,7 +115,7 @@ function AdminVmDetailPageContent() {
   const vm = detail.data
   if (activeOrgId != null && vm.orgId !== activeOrgId) {
     return (
-      <Alert variant="danger" title="선택한 관리 범위의 가상머신이 아닙니다">
+      <Alert variant="danger" title="선택한 관리 범위의 가상머신이 아니에요">
         <Link to={adminPaths.vms(activeOrgId)} className="font-medium underline">
           가상머신 목록으로 돌아가기
         </Link>
@@ -168,7 +168,7 @@ function AdminVmDetailPageContent() {
       />
 
       <TabPanel id="overview" active={activeTab === 'overview'} className="space-y-6">
-        {!metadataVisible && <Alert>이 업무에는 명령에 필요한 대상 정보만 제공됩니다. 전체 VM 정보는 별도 조회 업무가 필요합니다.</Alert>}
+        {!metadataVisible && <Alert>명령에 필요한 대상 정보만 보여 줘요. 전체 VM 정보를 보려면 별도 조회 업무가 필요해요.</Alert>}
         {metadataVisible && <Card className="p-5">
           <dl className="grid grid-cols-1 gap-x-8 gap-y-2 text-sm sm:grid-cols-3">
             <Field label="이름" value={vm.name} />
@@ -256,7 +256,7 @@ const POWER_ACTIONS: {
     enabledFor: (status) => status === 'STOPPED',
     placement: 'button',
     variant: 'primary',
-    confirm: 'VM을 시작할까요? 만료된 VM은 먼저 기간을 연장해야 합니다.',
+    confirm: 'VM을 시작할까요? 만료된 VM은 먼저 기간을 연장해야 해요.',
   },
   {
     key: 'shutdown',
@@ -265,7 +265,7 @@ const POWER_ACTIONS: {
     enabledFor: (status) => status === 'RUNNING',
     placement: 'button',
     variant: 'secondary',
-    confirm: '정상 종료(ACPI)를 요청할까요? 정지 보호 설정과 무관하게 수행됩니다.',
+    confirm: '정상 종료(ACPI)를 요청할까요? 중지 보호 설정이 켜져 있어도 요청할 수 있어요.',
   },
   {
     key: 'reboot',
@@ -274,7 +274,7 @@ const POWER_ACTIONS: {
     enabledFor: (status) => status === 'RUNNING',
     placement: 'button',
     variant: 'secondary',
-    confirm: '재부팅을 요청할까요? 정지 보호 설정과 무관하게 수행됩니다.',
+    confirm: '재부팅을 요청할까요? 중지 보호 설정이 켜져 있어도 요청할 수 있어요.',
   },
   {
     key: 'forceStop',
@@ -284,7 +284,7 @@ const POWER_ACTIONS: {
     placement: 'menu',
     variant: 'danger',
     confirm:
-      '전원을 강제로 차단할까요? 정지 보호 설정과 무관하게 수행되며, 저장되지 않은 데이터는 유실될 수 있습니다.',
+      '전원을 강제로 차단할까요? 중지 보호 설정이 켜져 있어도 요청할 수 있고, 저장하지 않은 데이터는 유실될 수 있어요.',
   },
 ]
 
@@ -309,7 +309,7 @@ function PowerSection({
     },
     onError: async (err) => {
       setConfirmTarget(null)
-      setError(toApiError(err, '전원 요청을 접수하지 못했습니다.').message)
+      setError(toApiError(err, '전원 요청을 접수하지 못했어요.').message)
       // 상태 불일치 409는 화면이 뒤처진 것일 수 있으니 상세를 다시 불러온다.
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
     },
@@ -332,7 +332,7 @@ function PowerSection({
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">전원 제어 (관리자 개입)</h3>
       <p className="text-sm text-neutral-500">
-        접수 전건이 감사 기록에 남습니다.
+        접수된 전원 요청은 감사 기록에 남아요.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <div className="flex flex-wrap gap-2">
@@ -402,7 +402,7 @@ function PeriodSection({
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">기간 연장</h3>
       <p className="text-sm text-neutral-500">
-        만료로 중지된 VM은 연장 후 다시 시작할 수 있습니다.
+        만료로 중지된 VM은 기간을 연장한 뒤 다시 시작할 수 있어요.
       </p>
       <Button variant="secondary" onClick={() => setOpen(true)}>
         기간 연장
@@ -472,7 +472,7 @@ function EventsSection({ vmId }: { vmId: string }) {
     return <Alert variant="danger">{events.error.message}</Alert>
   }
   if (events.data.content.length === 0) {
-    return <Card className="p-8 text-center text-sm text-neutral-500">이벤트가 없습니다.</Card>
+    return <Card className="p-8 text-center text-sm text-neutral-500">표시할 이벤트가 없어요.</Card>
   }
   return (
     <>

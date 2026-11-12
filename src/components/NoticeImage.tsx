@@ -66,7 +66,7 @@ export function NoticeImage({
           className,
         )}
       >
-        이미지를 불러오지 못했습니다.
+        이미지를 불러오지 못했어요.
       </p>
     )
   }

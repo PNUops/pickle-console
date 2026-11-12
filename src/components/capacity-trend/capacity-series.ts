@@ -45,7 +45,7 @@ function describeMovement(
   const trough = Math.min(...values)
 
   if (last !== first) {
-    const direction = last > first ? '늘었습니다' : '줄었습니다'
+    const direction = last > first ? '늘었어요' : '줄었어요'
     const extremes: string[] = []
     if (trough < Math.min(first, last)) extremes.push(`최소 ${format(trough)}`)
     if (peak > Math.max(first, last)) extremes.push(`최대 ${format(peak)}`)
@@ -53,7 +53,7 @@ function describeMovement(
     return `${lead} ${format(first)}에서 ${format(last)}로 ${direction}${tail}.`
   }
   if (peak !== trough) {
-    return `${lead} ${format(trough)}에서 ${format(peak)} 사이를 오간 뒤 ${format(last)}로 돌아왔습니다.`
+    return `${lead} ${format(trough)}에서 ${format(peak)} 사이를 오간 뒤 ${format(last)}로 돌아왔어요.`
   }
   return null
 }
@@ -78,8 +78,8 @@ export function hasAllocation(points: CapacityTrendPoint[]): boolean {
 }
 
 export function allocationSummary(points: CapacityTrendPoint[]): string {
-  if (points.length === 0) return `최근 ${TREND_DAYS}일 동안 기록된 할당 변화가 없습니다.`
-  if (!hasAllocation(points)) return `최근 ${TREND_DAYS}일 동안 할당된 자원이 없습니다.`
+  if (points.length === 0) return `최근 ${TREND_DAYS}일 동안 기록된 할당량이 없어요.`
+  if (!hasAllocation(points)) return `최근 ${TREND_DAYS}일 동안의 기록에는 할당된 자원이 없어요.`
   const sentences: string[] = []
   const vcpu = describeMovement(
     `최근 ${TREND_DAYS}일 동안 할당 vCPU가`,
@@ -93,6 +93,6 @@ export function allocationSummary(points: CapacityTrendPoint[]): string {
     formatMemory,
   )
   if (memory != null) sentences.push(memory)
-  if (sentences.length === 0) return `최근 ${TREND_DAYS}일 동안 할당량 변화가 없습니다.`
+  if (sentences.length === 0) return `최근 ${TREND_DAYS}일 동안의 기록에서 vCPU와 메모리 할당량은 변하지 않았어요.`
   return sentences.join(' ')
 }

@@ -26,7 +26,7 @@ test('shows readable model connections without treating them as actual routes', 
   const table = within(await screen.findByRole('table', { name: '모델과 공급원 구성 연결' }))
   expect(table.getByRole('row', { name: /campus\/example.*Synthetic primary.*제공되지 않음/ })).toBeInTheDocument()
   expect(table.getByRole('row', { name: /campus\/other.*Synthetic primary.*미설정/ })).toBeInTheDocument()
-  expect(screen.getByText(/전체 모델 목록이나 실제 요청 처리 경로가 아닙니다/)).toBeInTheDocument()
+  expect(screen.getByText(/전체 모델 목록이나 실제 요청 경로를 뜻하지는 않아요/)).toBeInTheDocument()
 })
 
 function statusUpstream(name: string, ref: string): LlmUpstreamStatus {
@@ -179,9 +179,9 @@ describe('관리자 LLM 서비스 상태', () => {
     )
     renderApp('/admin/llm/status')
 
-    expect(await screen.findByRole('heading', { name: '표시할 LLM 서비스가 없습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '표시할 LLM 서비스가 없어요' })).toBeInTheDocument()
     expect(
-      screen.getByText('선택한 기관이 소유하거나 연결된 공용 서비스가 없습니다.'),
+      screen.getByText('선택한 기관이 소유하거나 연결된 공용 서비스가 없어요.'),
     ).toBeInTheDocument()
     expect(screen.queryByText(/실제 요청에 사용/)).not.toBeInTheDocument()
   })
@@ -260,10 +260,10 @@ describe('관리자 LLM 서비스 상태', () => {
     )
     renderApp('/admin/llm/status')
 
-    expect(await screen.findByText('전송 대기열을 지금 값으로 확인할 수 없습니다')).toBeInTheDocument()
+    expect(await screen.findByText('전송 대기열의 현재 상태를 확인할 수 없어요')).toBeInTheDocument()
     expect(screen.getByText('0건 · 0 B')).toBeInTheDocument()
     expect(screen.getByText('마지막 관측 기준')).toBeInTheDocument()
-    expect(screen.getByText(/0건으로 보여도 지금 비어 있다는 뜻은 아닙니다/)).toBeInTheDocument()
+    expect(screen.getByText(/0건으로 보여도 현재 대기열이 비었다는 뜻은 아니에요/)).toBeInTheDocument()
     const counters = screen.getByRole('table', {
       name: '게이트웨이가 재시작된 뒤로 쌓인 진단 수치',
     })
@@ -291,7 +291,7 @@ describe('관리자 LLM 서비스 상태', () => {
     renderApp('/admin/llm/status')
 
     expect(await screen.findByText('0건 · 0 B')).toBeInTheDocument()
-    expect(screen.queryByText('전송 대기열을 지금 값으로 확인할 수 없습니다')).not.toBeInTheDocument()
+    expect(screen.queryByText('전송 대기열의 현재 상태를 확인할 수 없어요')).not.toBeInTheDocument()
     expect(screen.queryByText('마지막 관측 기준')).not.toBeInTheDocument()
     const counters = screen.getByRole('table', {
       name: '게이트웨이가 재시작된 뒤로 쌓인 진단 수치',
@@ -410,7 +410,7 @@ describe('관리자 LLM 서비스 지표', () => {
     expect(await screen.findByText('Upstream 귀속 범위')).toBeInTheDocument()
     expect(screen.getByText('최종 결과 timeout·upstream error')).toBeInTheDocument()
     expect(screen.getByText('성공 요청 end-to-end 지연')).toBeInTheDocument()
-    expect(screen.getByText(/중간 시도의 서비스와 retry·fallback 경로는/)).toBeInTheDocument()
+    expect(screen.getByText(/중간 시도의 서비스와 retry, fallback 경로는/)).toBeInTheDocument()
     expect(screen.getByText('Gateway 처리 여유 부족')).toBeInTheDocument()
     expect(screen.queryByText(/uptime/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/ttft/i)).not.toBeInTheDocument()
@@ -454,10 +454,10 @@ describe('관리자 LLM 서비스 지표', () => {
       ),
     )
     const empty = renderApp('/admin/llm/status?tab=metrics')
-    expect(await screen.findByRole('heading', { name: '집계할 upstream 요청이 없습니다' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '로컬 거절이 없습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '집계할 upstream 요청이 없어요' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '표시할 로컬 거절이 없어요' })).toBeInTheDocument()
     expect(screen.getAllByText('표본 없음')).toHaveLength(3)
-    expect(screen.queryByText(/계산에서 빠집니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/계산에서 빠져요/)).not.toBeInTheDocument()
     empty.unmount()
 
     server.use(

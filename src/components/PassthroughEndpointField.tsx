@@ -31,7 +31,7 @@ import {
  * there are several here.
  */
 const GRANT_DESCRIPTION =
-  '체크한 기능만 열립니다. 비워 두면 하나도 열리지 않습니다. 비우면 제한이 풀리는 위 두 모델 목록과 읽는 방향이 반대입니다. Chat 밖의 기능은 유료 모델에서만 동작합니다.'
+  '체크한 기능만 사용할 수 있어요. 비워 두면 모두 차단돼요. Chat 밖의 기능은 유료 모델에서만 동작해요.'
 
 export function PassthroughEndpointField({
   label,

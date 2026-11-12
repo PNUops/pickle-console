@@ -22,7 +22,7 @@ class ErrorBoundaryView extends Component<ErrorBoundaryProps, ErrorBoundaryState
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     // 화면은 안내로 대체되므로, 원인은 콘솔에만 남긴다.
-    console.error(`[${this.props.label}] 패널을 불러오지 못했습니다.`, error, info)
+    console.error(`[${this.props.label}] 패널을 불러오지 못했어요.`, error, info)
   }
 
   render(): ReactNode {
@@ -33,8 +33,7 @@ class ErrorBoundaryView extends Component<ErrorBoundaryProps, ErrorBoundaryState
         role="status"
         className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600"
       >
-        {this.props.label} 화면을 불러오지 못했습니다. 페이지를 새로고침하면 다시
-        시도합니다.
+        {this.props.label} 화면을 불러오지 못했어요. 페이지를 새로고침해 주세요.
       </div>
     )
   }

@@ -31,7 +31,7 @@ describe('로그인', () => {
     await submitLogin(regularUser.email, USER_PASSWORD)
 
     expect(await screen.findByRole('heading', { name: '대시보드' })).toBeInTheDocument()
-    expect(screen.getByText(/홍길동님, 환영합니다/)).toBeInTheDocument()
+    expect(screen.getByText('홍길동님, 환영해요.')).toBeInTheDocument()
   })
 
   test('기관 관리자는 로그인 후 /admin 대시보드로 이동한다', async () => {

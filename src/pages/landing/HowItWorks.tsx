@@ -6,10 +6,10 @@ export function HowItWorks() {
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-20">
         <p className="text-sm font-semibold text-primary-700">이용 절차</p>
         <h2 id="how-it-works-title" className="mt-3 text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
-          네 단계면 리소스가 준비됩니다
+          신청부터 사용까지
         </h2>
         <p className="mt-4 text-base text-neutral-600">
-          신청서 하나로 시작합니다. 승인되는 순간 나머지는 플랫폼이 알아서 합니다.
+          필요한 리소스를 신청하고, 승인 결과를 확인해요.
         </p>
         <ol className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (

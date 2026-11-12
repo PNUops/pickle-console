@@ -21,8 +21,8 @@ describe('model catalogue diagnostics', () => {
 
     expect(await screen.findByText('공급자 갱신 실패')).toBeInTheDocument()
     expect(screen.getByText('HTTP_503')).toBeInTheDocument()
-    expect(screen.getByText('연속 실패 2회')).toBeInTheDocument()
-    expect(screen.getByText('아직 성공한 공급자 목록이 없습니다.')).toBeInTheDocument()
+    expect(screen.queryByText('갱신을 시도한 기록도 없어요.')).not.toBeInTheDocument()
+    expect(screen.getByText('모델 목록을 갱신한 성공 기록이 없어요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장된 목록 다시 조회' })).toBeInTheDocument()
   })
 })
@@ -35,14 +35,13 @@ test('keeps the last successful catalogue and timestamps after a failed GET', as
   renderApp('/admin/llm/models')
   await screen.findByText('openai/o1-pro')
   const supplier = screen.getByText('마지막 공급자 성공').nextElementSibling?.textContent
-  const fetched = screen.getByText('마지막 콘솔 조회 성공').nextElementSibling?.textContent
   openRouterCatalogueStore.fail = true
   await user.click(screen.getByRole('button', { name: '저장된 목록 다시 조회' }))
   await screen.findByText(/저장된 목록 조회 실패:/)
   expect(screen.getByText('openai/o1-pro')).toBeInTheDocument()
   expect(screen.getByText('마지막 공급자 성공').nextElementSibling?.textContent).toBe(supplier)
-  expect(screen.getByText('마지막 콘솔 조회 성공').nextElementSibling?.textContent).toBe(fetched)
-  expect(screen.getByText(/마지막으로 조회한 자료를 유지합니다/)).toBeInTheDocument()
+  expect(screen.queryByText('마지막 콘솔 조회 성공')).not.toBeInTheDocument()
+  expect(screen.getByText('이전 조회 값이에요.')).toBeInTheDocument()
   openRouterCatalogueStore.fail = false
   await user.click(screen.getByRole('button', { name: '저장된 목록 다시 조회' }))
   await waitFor(() => expect(screen.queryByText(/저장된 목록 조회 실패:/)).not.toBeInTheDocument())

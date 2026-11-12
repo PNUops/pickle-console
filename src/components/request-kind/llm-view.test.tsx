@@ -156,17 +156,15 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(screen.getByLabelText('부여 동시 요청 수')).toHaveValue(null)
     // 그래도 희망값은 보인다.
     expect(
-      screen.getByText('신청 희망값 1,000. 비우면 서비스 기본값이 적용됩니다.'),
+      screen.getByText('신청 희망값 1,000. 비우면 서비스 기본값이 적용돼요.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('신청 희망값 50K (5만 토큰). 비우면 서비스 기본값이 적용됩니다.'),
+      screen.getByText('신청 희망값 50K (5만 토큰). 비우면 서비스 기본값이 적용돼요.'),
     ).toBeInTheDocument()
-    // 동시 요청 수만은 신청에 대응하는 항목이 없다는 사실을 화면이 말한다.
-    expect(
-      screen.getByText(
-        '신청서에 대응하는 항목이 없어 승인자만 정합니다. 비우면 서비스 기본값이 적용됩니다.',
-      ),
-    ).toBeInTheDocument()
+    // An omitted concurrency value uses the service default.
+    expect(screen.getByLabelText('부여 동시 요청 수')).toHaveAccessibleDescription(
+      '비우면 서비스 기본값이 적용돼요.',
+    )
     // 신청서에도 승인 화면에도 시작일 칸이 없다. 고를 것이 없기 때문이고, 부여
     // 기간의 시작은 키가 발급되는 날이다. 칸이 사라져도 본문은 그 날짜를 계속
     // 실어 보낸다 — 그쪽은 제출 본문을 통째로 대조하는 테스트가 지킨다.
@@ -177,13 +175,14 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     renderDetail()
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    expect(
-      screen.getAllByText(
-        '신청자가 희망값을 적지 않았습니다. 비우면 서비스 기본값이 적용됩니다.',
-      ),
-    ).toHaveLength(1)
-    expect(screen.getByText('희망값 없음. 비우면 서비스 기본값이 적용됩니다.')).toBeInTheDocument()
-    expect(screen.getByText('희망값 없음. 비우면 일일 한도가 없습니다. 0이면 토큰을 사용할 수 없습니다.')).toBeInTheDocument()
+    for (const label of ['부여 분당 요청 수', '부여 분당 토큰 수']) {
+      expect(screen.getByLabelText(label)).toHaveAccessibleDescription(
+        '희망값 없음. 비우면 서비스 기본값이 적용돼요.',
+      )
+    }
+    expect(screen.getByLabelText('부여 일일 토큰 수')).toHaveAccessibleDescription(
+      '희망값 없음. 비우면 일일 한도가 없어요. 0이면 토큰을 사용할 수 없어요.',
+    )
   })
 
   test('전부 비운 채로 승인하면 기본 한도로 부여된다', async () => {
@@ -197,11 +196,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     expect(within(within(dialog).getByRole('row', { name: /분당 요청 수 \(키당\)/ })).getByText('서비스 기본값')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
-    expect(
-      await screen.findByText(
-        '신청을 승인했습니다. 신청자가 LLM API 키를 발급받을 수 있습니다.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
     // 네 항목이 모두 비어 있어도 llmKey 자체는 실려 나간다 (계약이 요구한다).
     expect(approved).toEqual([
       {
@@ -255,7 +250,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     expect(
-      await screen.findByText('리셋 창을 두려면 0보다 큰 금액 한도가 필요합니다.'),
+      await screen.findByText('리셋 창을 두려면 0보다 큰 금액 한도가 필요해요.'),
     ).toBeInTheDocument()
     expect(approved).toHaveLength(0)
   })
@@ -316,7 +311,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     expect(
-      await screen.findByText('모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요합니다.'),
+      await screen.findByText('모델 허용 목록을 두려면 0보다 큰 금액 한도가 필요해요.'),
     ).toBeInTheDocument()
     expect(approved).toHaveLength(0)
   })
@@ -362,7 +357,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
     expect(dialog.getByText(/기능 권한 부여 안 됨/)).toBeInTheDocument()
     expect(dialog.getByRole('button', { name: '승인 확정' })).toBeDisabled()
-    await user.click(dialog.getByRole('checkbox', { name: 'Chat 없이 승인합니다' }))
+    await user.click(dialog.getByRole('checkbox', { name: 'Chat 없이 승인해요' }))
     await user.click(dialog.getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')
@@ -381,7 +376,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
 
     const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
     expect(dialog.getByText(/기능 권한 Chat, 웹 검색, 이미지 생성/)).toBeInTheDocument()
-    expect(dialog.queryByRole('checkbox', { name: 'Chat 없이 승인합니다' })).not.toBeInTheDocument()
+    expect(dialog.queryByRole('checkbox', { name: 'Chat 없이 승인해요' })).not.toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')
@@ -457,7 +452,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     expect(
-      await screen.findByText(/자체 서빙 모델이라 이 목록의 대상이 아닙니다/),
+      await screen.findByText(/이 목록에는 유료 모델 이름을 적어 주세요/),
     ).toBeInTheDocument()
     expect(approved).toHaveLength(0)
   })
@@ -474,7 +469,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     )
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '5')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
-    expect(await screen.findByText('관리용 키까지 확인된 활성 사업 계정이 필요합니다.')).toBeInTheDocument()
+    expect(await screen.findByText('관리용 키까지 확인된 활성 사업 계정이 필요해요.')).toBeInTheDocument()
     expect(approved).toHaveLength(0)
   })
 
@@ -490,7 +485,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     await user.type(screen.getByLabelText('부여 금액 한도 (USD)'), '3')
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = within(await screen.findByRole('dialog', { name: '신청 승인' }))
-    expect(dialog.getByText(/발급 뒤 바꿀 수 없습니다/)).toBeInTheDocument()
+    expect(dialog.getByText(/발급 뒤 바꿀 수 없어요/)).toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '승인 확정' }))
     expect(approved[0].llmKey?.openrouterAccountId).toBe(uuid(410))
   })
@@ -507,7 +502,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
     )
     const approved = renderDetail({}, {}, true)
 
-    expect(await screen.findByText('사업 계정 목록을 불러오지 못했습니다')).toBeInTheDocument()
+    expect(await screen.findByText('사업 계정 목록을 불러오지 못했어요')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '반려' }))
     expect(screen.getByLabelText('반려 사유')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '승인' }))
@@ -571,7 +566,7 @@ describe('LLM API 키 신청 — 승인 폼', () => {
       screen.getByText('동시 요청 수는 100 이하로 입력해 주세요.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('분당 토큰 수는 분당 요청 수보다 작을 수 없습니다.'),
+      screen.getByText('분당 토큰 수는 분당 요청 수보다 작을 수 없어요.'),
     ).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(approved).toHaveLength(0)
@@ -730,7 +725,7 @@ describe('유료 모델 선택기', () => {
     await screen.findByRole('heading', { name: '신청 상세' })
     await user.type(screen.getByLabelText('유료 모델 허용·차단'), '-openai/*gpt*')
 
-    expect(await screen.findByText(/미리보기를 멈췄습니다/)).toBeInTheDocument()
+    expect(await screen.findByText(/입력 오류를 고치면 미리보기를 볼 수 있어요/)).toBeInTheDocument()
   })
 
   test('별칭은 벤더 프리픽스에 안 덮인다고 표시한다', async () => {
@@ -782,7 +777,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/60개 중 40개를 보고 있습니다/)
+    await screen.findByText(/60개 중 40개를 보고 있어요/)
   })
 
   test('오래된 목록이라고 말한다', async () => {
@@ -793,7 +788,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/목록이 오래됐습니다/)
+    await screen.findByText(/모델 목록이 오래됐어요/)
   })
 
   test('한 번도 못 가져온 목록과 오래된 목록을 구분해 말한다', async () => {
@@ -806,7 +801,7 @@ describe('유료 모델 선택기', () => {
     renderDetail({})
 
     await screen.findByRole('heading', { name: '신청 상세' })
-    await screen.findByText(/아직 성공한 공급자 목록이 없습니다/)
+    await screen.findByText(/모델 목록을 갱신한 성공 기록이 없어요/)
   })
 })
 
@@ -848,7 +843,7 @@ describe('초과 배정 경고', () => {
     const confirm = within(dialog).getByRole('button', { name: '승인 확정' })
     expect(confirm).toBeDisabled()
 
-    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했습니다'))
+    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했어요'))
     expect(confirm).toBeEnabled()
   })
 
@@ -868,7 +863,7 @@ describe('초과 배정 경고', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했습니다'))
+    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했어요'))
     expect(within(dialog).getByRole('button', { name: '승인 확정' })).toBeEnabled()
 
     await user.click(within(dialog).getByRole('button', { name: '돌아가기' }))
@@ -878,7 +873,7 @@ describe('초과 배정 경고', () => {
 
     const reopened = await screen.findByRole('dialog', { name: '신청 승인' })
     expect(within(reopened).getByRole('button', { name: '승인 확정' })).toBeDisabled()
-    expect(within(reopened).getByLabelText('초과 배정임을 확인했습니다')).not.toBeChecked()
+    expect(within(reopened).getByLabelText('초과 배정임을 확인했어요')).not.toBeChecked()
   })
 
   test('a bulk request weighs the limit once per recipient still waiting for a key', async () => {
@@ -916,13 +911,11 @@ describe('초과 배정 경고', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     expect(within(dialog).getByRole('button', { name: '승인 확정' })).toBeDisabled()
-    expect(within(dialog).getByText(/평문 키는 대상자가 각자 발급받습니다/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/평문 키는 대상자가 각자 발급받아요/)).toBeInTheDocument()
     expect(within(dialog).queryByText(/신청자가 직접/)).not.toBeInTheDocument()
-    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했습니다'))
+    await user.click(within(dialog).getByLabelText('초과 배정임을 확인했어요'))
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
-    expect(
-      await screen.findByText('신청을 승인했습니다. 대상자별 LLM API 키가 차례로 만들어집니다.'),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
   })
 
   test('the same limit on an ordinary request stays within the balance', async () => {
@@ -934,7 +927,7 @@ describe('초과 배정 경고', () => {
     await user.selectOptions(screen.getByLabelText('OpenRouter 사업 계정'), uuid(410))
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).queryByLabelText('초과 배정임을 확인했습니다')).not.toBeInTheDocument()
+    expect(within(dialog).queryByLabelText('초과 배정임을 확인했어요')).not.toBeInTheDocument()
   })
 
   /** 넘지 않으면 경고도 확인도 없다. 평범한 승인이 느려지면 안 된다. */
@@ -948,7 +941,7 @@ describe('초과 배정 경고', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
 
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
-    expect(within(dialog).queryByLabelText('초과 배정임을 확인했습니다')).not.toBeInTheDocument()
+    expect(within(dialog).queryByLabelText('초과 배정임을 확인했어요')).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
 
     await screen.findByText('검토 결과')
@@ -1009,7 +1002,7 @@ describe('signed paid-model policy editor', () => {
     await user.click(rules)
     await user.paste('+openai/*\n-')
     expect(screen.getByText(/2행: 부호 뒤에/)).toBeInTheDocument()
-    expect(screen.getByText(/미리보기를 멈췄습니다/)).toBeInTheDocument()
+    expect(screen.getByText(/입력 오류를 고치면 미리보기를 볼 수 있어요/)).toBeInTheDocument()
     const picker = within(await screen.findByRole('list', { name: '카탈로그 유료 모델' }))
     await user.click(picker.getByRole('button', { name: 'openai/o1-pro 차단 목록에 추가' }))
     expect(rules).toHaveValue('+openai/*\n-\n-openai/o1-pro')

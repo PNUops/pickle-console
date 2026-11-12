@@ -111,7 +111,7 @@ describe('Account credential issuer session races', () => {
     expect(getAccessToken()).toBeNull()
     expect(auth.status).toBe('unauthenticated')
     expect(screen.queryByRole('heading', { name: 'Home' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/비밀번호를 변경했습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/비밀번호를 변경했어요/)).not.toBeInTheDocument()
   })
 
   test.each(issuers)('skips a queued %s issuer after logout', async (issuer) => {
@@ -159,7 +159,7 @@ describe('Account credential issuer session races', () => {
 
     expect(auth.user?.id).toBe(regularUserB.id)
     expect(getAccessToken()).toBe('access-user-b')
-    expect(screen.queryByText(/비밀번호를 변경했습니다/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/비밀번호를 변경했어요/)).not.toBeInTheDocument()
   })
 
   test('recovers an expired password request through refresh without holding the cookie queue', async () => {
@@ -173,7 +173,7 @@ describe('Account credential issuer session races', () => {
     const submit = await prepare('password')
     await submit()
 
-    await screen.findByText(/비밀번호를 변경했습니다/)
+    await screen.findByText(/비밀번호를 변경했어요/)
     await waitFor(() => expect(passwordCalls).toBe(2))
     expect(getAccessToken()).toBe('access-user')
     expect(auth.status).toBe('authenticated')

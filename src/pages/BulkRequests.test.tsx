@@ -69,7 +69,7 @@ describe('bulk request wizard for a workspace owner', () => {
     await user.click(screen.getByRole('radio', { name: /이번 학기/ }))
 
     const group = await waitFor(() => recipientsFieldset())
-    expect(within(group).getByText('고르지 않으면 본인에게 신청합니다.')).toBeInTheDocument()
+    expect(within(group).getByText('고르지 않으면 본인에게 신청해요.')).toBeInTheDocument()
     await user.click(await within(group).findByRole('checkbox', { name: /김철수/ }))
     await user.click(await within(group).findByRole('checkbox', { name: /jiwoo\.han@pusan\.ac\.kr/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
@@ -86,7 +86,7 @@ describe('bulk request wizard for a workspace owner', () => {
     await user.click(await screen.findByRole('button', { name: '다음' }))
 
     await user.click(await screen.findByRole('button', { name: '신청 제출' }))
-    expect(await screen.findByText('신청이 접수되었습니다')).toBeInTheDocument()
+    expect(await screen.findByText('신청이 접수됐어요')).toBeInTheDocument()
     const body = createdRequestBodies.at(-1)!
     expect(body.recipients).toEqual([{ userId: uuid(57) }, { invitationId: uuid(3101) }])
     expect(body.vm?.desiredSlug).toBeNull()
@@ -140,7 +140,7 @@ describe('bulk request wizard for a workspace owner', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
     await user.click(await screen.findByRole('button', { name: '신청 제출' }))
 
-    await screen.findByText('신청이 접수되었습니다')
+    await screen.findByText('신청이 접수됐어요')
     expect(createdRequestBodies.at(-1)).not.toHaveProperty('recipients')
   })
 
@@ -161,17 +161,17 @@ describe('bulk request wizard for a workspace owner', () => {
     expect(within(group).getByRole('checkbox', { name: /이영희/ })).toBeChecked()
     const registered = within(group).getByRole('checkbox', { name: /202312346 최수진/ })
     expect(registered).toBeChecked()
-    expect(registered.closest('label')).toHaveTextContent('제출하면 구성원으로 추가됩니다.')
+    expect(registered.closest('label')).toHaveTextContent('제출하면 구성원으로 추가돼요.')
     const fresh = within(group).getByRole('checkbox', { name: /202399999 한새봄/ })
     expect(fresh).toBeChecked()
-    expect(fresh.closest('label')).toHaveTextContent('가입하면 만들어집니다.')
+    expect(fresh.closest('label')).toHaveTextContent('가입 대기')
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     expect(
       await screen.findByText('3명 (이영희, 202312346 최수진, 202399999 한새봄)'),
     ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '신청 제출' }))
-    expect(await screen.findByText('신청이 접수되었습니다')).toBeInTheDocument()
+    expect(await screen.findByText('신청이 접수됐어요')).toBeInTheDocument()
     expect(createdRequestBodies.at(-1)!.recipients).toEqual([
       { userId: uuid(58) },
       { studentNo: '202312346' },
@@ -197,7 +197,7 @@ describe('bulk request wizard for a workspace owner', () => {
 
     expect(
       screen.getByText(
-        '대상자는 한 번에 200명까지 지정할 수 있습니다. 명단을 더하면 201명으로 1명이 많습니다.',
+        '대상자는 한 번에 200명까지 지정할 수 있어요. 명단을 더하면 201명으로 1명이 많아요.',
       ),
     ).toBeInTheDocument()
     expect(within(recipientsFieldset()).queryByRole('checkbox', { name: /202300000/ })).not.toBeInTheDocument()
@@ -335,7 +335,7 @@ describe('bulk request from the administration area', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '제출하고 승인' }))
 
-    expect(await screen.findByText('신청을 승인했습니다')).toBeInTheDocument()
+    expect(await screen.findByText('신청을 승인했어요')).toBeInTheDocument()
     const body = createdRequestBodies.at(-1)!
     expect(body.recipients).toEqual([{ userId: uuid(42) }])
     expect(body.approval?.vm?.grantedVcpu).toBe(2)
@@ -361,7 +361,7 @@ describe('bulk request from the administration area', () => {
     await user.click(screen.getByRole('button', { name: '제출하고 승인' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     const confirmation = within(dialog)
-    expect(confirmation.getByText(/제출 전 미리보기입니다/)).toBeInTheDocument()
+    expect(confirmation.getByText(/제출 전 미리보기예요/)).toBeInTheDocument()
     expect(confirmation.getByText(/신청 대상 3명.*조회된 구성원 대상 0명.*가입 대기 1명.*조건 미확인 2명/)).toBeInTheDocument()
     await user.click(confirmation.getByText('실제 대상 확인 (3명)'))
     expect(confirmation.getByText('202312346 최수진 / 제출 시 구성원 추가 예정 / 서버 재확인')).toBeInTheDocument()
@@ -369,7 +369,7 @@ describe('bulk request from the administration area', () => {
     expect(createdRequestBodies).toHaveLength(0)
     await user.click(within(dialog).getByRole('button', { name: '제출하고 승인' }))
 
-    expect(await screen.findByText('신청을 승인했습니다')).toBeInTheDocument()
+    expect(await screen.findByText('신청을 승인했어요')).toBeInTheDocument()
     const body = createdRequestBodies.at(-1)!
     expect(body.recipients).toHaveLength(3)
     expect(body.recipients).toEqual(
@@ -404,7 +404,7 @@ describe('bulk request from the administration area', () => {
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '제출하고 승인' }))
 
-    expect(await screen.findByText('신청을 승인했습니다')).toBeInTheDocument()
+    expect(await screen.findByText('신청을 승인했어요')).toBeInTheDocument()
     const body = createdRequestBodies.at(-1)!
     expect(body.type).toBe('LLM_API_KEY')
     expect(body.recipients).toEqual([{ userId: uuid(42) }])
@@ -527,7 +527,7 @@ describe('recipients on the administrator request detail', () => {
     expect(screen.queryByLabelText('호스트 이름 확정')).not.toBeInTheDocument()
   })
 
-  test('approving a bulk VM request says each VM is created in turn', async () => {
+  test('shows the saved approval for a bulk VM request', async () => {
     const user = userEvent.setup()
     adminRequestStore.push({
       ...adminRequestStore[0],
@@ -541,11 +541,7 @@ describe('recipients on the administrator request detail', () => {
     await user.click(screen.getByRole('button', { name: '승인하기' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
     await user.click(within(dialog).getByRole('button', { name: '승인 확정' }))
-    expect(
-      await screen.findByText(
-        '승인 내용이 저장되었습니다. 대상자별 등록 상태와 VM 상세에서 실제 생성 결과를 확인해 주세요.',
-      ),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText('승인했어요.')).toHaveLength(2))
   })
 })
 

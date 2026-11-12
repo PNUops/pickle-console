@@ -67,16 +67,13 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="type-section-title">잔액과 사용액</h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            금액과 키 대사는 각각 따로 읽으므로 갱신 시각이 다를 수 있습니다.
-          </p>
         </div>
         <CreditsFreshnessBadge freshness={credits.freshness} />
       </div>
 
       {credits.error && (
         <MessageBar variant="warning" title="최근 credits 확인 실패">
-          {errorLabel}. 마지막 성공 값은 아래에 그대로 보존되어 있습니다.
+          {errorLabel}. 이전 조회 값이에요.
         </MessageBar>
       )}
       <DescriptionList
@@ -99,8 +96,6 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
             description: <ObservationMoment value={credits.forecastWindowStartedAt} />,
           },
           { term: '금액 관측', description: <ObservationMoment value={credits.observedAt} /> },
-          { term: 'Credits 마지막 성공', description: <ObservationMoment value={credits.lastSuccessAt} /> },
-          { term: 'Credits 마지막 시도', description: <ObservationMoment value={credits.lastAttemptAt} /> },
         ]}
       />
 
@@ -120,8 +115,6 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
                   : '계산 전',
             },
             { term: '비교 기준 시점', description: <ObservationMoment value={credits.unmanagedBaselineAt} /> },
-            { term: '계정 사용액 읽은 때', description: <ObservationMoment value={credits.pairedCreditsObservedAt} /> },
-            { term: '키 사용액 읽은 때', description: <ObservationMoment value={credits.pairedKeysObservedAt} /> },
           ]}
         />
       </div>
@@ -141,7 +134,6 @@ export function AccountCreditsSection({ credits }: { credits: OpenRouterAccountC
           className="mt-3"
           items={[
             { term: 'Key 대사 마지막 성공', description: <ObservationMoment value={credits.keysLastSuccessAt} /> },
-            { term: 'Key 대사 마지막 시도', description: <ObservationMoment value={credits.keysLastAttemptAt} /> },
           ]}
         />
       </div>
@@ -162,7 +154,7 @@ export function KeyCreditObservation({
   }
   return (
     <div className="min-w-40 text-xs">
-      <span className="block">Limit window 사용 {formatUsd(llmKey.creditUsage)}</span>
+      <span className="block">누적 금액 사용 {formatUsd(llmKey.creditUsage)}</span>
       <span className="block text-foreground-muted">
         잔여 한도 {formatUsd(llmKey.creditLimitRemaining)}
       </span>
@@ -173,10 +165,10 @@ export function KeyCreditObservation({
 
 const ALLOCATION_NOTES: Record<AllocationVerdict, string | null> = {
   WITHIN: null,
-  EXCEEDED: '남은 배정이 잔액을 넘습니다. 먼저 쓰는 사람이 잔액을 소진하면 나머지 키는 호출이 실패합니다.',
-  NO_BALANCE: '잔액이 0입니다. 지금 이 계정의 키는 호출이 곧바로 실패합니다.',
-  NEGATIVE_BALANCE: '이미 잔액을 넘겨 쓴 상태입니다. 충전 전에는 이 계정의 키가 동작하지 않습니다.',
-  UNKNOWN: '잔액을 아직 관측하지 못해 초과 여부를 판단할 수 없습니다.',
+  EXCEEDED: '남은 배정이 잔액을 넘어요.',
+  NO_BALANCE: '계정 잔액이 0이에요.',
+  NEGATIVE_BALANCE: '계정 잔액이 음수예요.',
+  UNKNOWN: '잔액을 아직 관측하지 못해 초과 여부를 판단할 수 없어요.',
 }
 
 /**
@@ -199,7 +191,7 @@ export function AccountAllocationSection({
     <section className="space-y-4 rounded-panel border border-stroke-subtle bg-surface-card p-4">
       <h2 className="text-sm font-semibold text-foreground-primary">배정 현황</h2>
       <BudgetGauge
-        label="남은 배정 대비 잔액"
+        label="남은 배정(추정) 대비 잔액"
         usedLabel={formatUsd(judgement.remaining)}
         limitLabel={judgement.balance == null ? null : formatUsd(judgement.balance)}
         ratio={
@@ -225,13 +217,13 @@ export function AccountAllocationSection({
             term: '배정 합계',
             description: `${formatUsd(judgement.committed)} (키 ${allocation.committedKeyCount}개)`,
           },
-          { term: '남은 배정', description: formatUsd(judgement.remaining) },
+          { term: '남은 배정(추정)', description: formatUsd(judgement.remaining) },
           { term: '사용액', description: formatUsd(allocation.committedUsage) },
           ...(judgement.windowCommitment > 0
             ? [
                 {
                   term: '창마다 다시 채워지는 몫',
-                  description: `${formatUsd(judgement.windowCommitment)}. 배정 합계에 포함되어 있고 리셋 창마다 한도가 되살아납니다.`,
+                  description: formatUsd(judgement.windowCommitment),
                 },
               ]
             : []),
@@ -239,7 +231,7 @@ export function AccountAllocationSection({
             ? [
                 {
                   term: '발급 대기',
-                  description: `${allocation.awaitingProvisionKeyCount}개. 승인은 났고 아직 발급되지 않았으며 배정 합계에는 이미 들어 있습니다.`,
+                  description: `${allocation.awaitingProvisionKeyCount}개`,
                 },
               ]
             : []),
@@ -247,18 +239,12 @@ export function AccountAllocationSection({
             ? [
                 {
                   term: '사용액 미보고',
-                  description: `${allocation.usageUnreportedKeyCount}개. 그만큼의 남은 배정은 실측이 아니라 한도 전액으로 셉니다.`,
+                  description: `${allocation.usageUnreportedKeyCount}개 포함`,
                 },
               ]
             : []),
         ]}
       />
-      {credits.unmanagedSpend != null ? (
-        <p className="text-xs text-foreground-secondary">
-          이 잔액에서는 Pickle이 발급하지 않은 키의 지출 {formatUsd(credits.unmanagedSpend)}도 함께
-          빠져나갔습니다. 위 두 수에는 들어 있지 않습니다.
-        </p>
-      ) : null}
     </section>
   )
 }
@@ -284,7 +270,7 @@ export function AllocationWarning({
   return (
     <MessageBar
       variant={judgement.state === 'UNKNOWN' ? 'info' : 'warning'}
-      title={judgement.state === 'UNKNOWN' ? '잔액을 확인하지 못했습니다' : '초과 배정'}
+      title={judgement.state === 'UNKNOWN' ? '잔액을 확인하지 못했어요' : '초과 배정'}
     >
       <div className="space-y-1">
         <p>{note}</p>
@@ -301,12 +287,12 @@ export function AllocationWarning({
           </li>
           {judgement.committed !== judgement.remaining ? (
             <li className="text-foreground-secondary">
-              배정 합계는 {formatUsd(judgement.committed)}입니다.
+              배정 합계: {formatUsd(judgement.committed)}
             </li>
           ) : null}
           {judgement.windowCommitment > 0 ? (
             <li className="text-foreground-secondary">
-              이 중 {formatUsd(judgement.windowCommitment)}는 리셋 창마다 다시 채워집니다.
+              이 중 {formatUsd(judgement.windowCommitment)}는 리셋 창마다 다시 채워져요.
             </li>
           ) : null}
         </ul>

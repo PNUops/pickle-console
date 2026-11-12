@@ -29,7 +29,7 @@ describe('관리자 LLM API 키 목록', () => {
     expect(screen.getAllByRole('button', { name: '40K, 정확값 보기' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'AI 교육 사업 A' }).length).toBeGreaterThan(0)
     expect(screen.getAllByText('미결합').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Limit window 사용 $2.50').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('누적 금액 사용 $2.50').length).toBeGreaterThan(0)
     expect(screen.getAllByText('잔여 한도 $2.50').length).toBeGreaterThan(0)
     expect(document.querySelectorAll('time[datetime="2026-08-31T00:27:30+09:00"]').length)
       .toBeGreaterThan(0)
@@ -114,7 +114,7 @@ describe('관리자 LLM API 키 목록', () => {
       ),
     )
     const empty = renderApp('/admin/llm/keys')
-    expect(await screen.findByRole('heading', { name: '표시할 LLM API 키가 없습니다' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '표시할 LLM API 키가 없어요' })).toBeInTheDocument()
     empty.unmount()
 
     server.use(
@@ -185,7 +185,7 @@ describe('AdminLlmKeysPage row selection', () => {
     }
     const toolbar = screen.getByRole('toolbar', { name: '선택한 항목 동작' })
     expect(toolbar).toHaveTextContent('200개 선택됨')
-    expect(screen.getByText('한 번에 200개까지 선택할 수 있습니다.')).toBeInTheDocument()
+    expect(screen.getByText('한 번에 200개까지 선택할 수 있어요.')).toBeInTheDocument()
   })
 
   test('renders no selection for viewer roles', async () => {

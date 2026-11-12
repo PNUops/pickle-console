@@ -65,7 +65,7 @@ export function AccountPage() {
   // 결과가 달라진다.
   useEffect(() => {
     if (!linked) return
-    toast.success('구글 계정을 연동했습니다.')
+    toast.success('구글 계정을 연동했어요.')
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
@@ -101,7 +101,7 @@ export function AccountPage() {
         <CardContent className="divide-y divide-neutral-100">
           <PasswordChangeSection hasPassword={user.hasPassword} email={user.email} />
           <LinkedAccountsSection identities={user.identities} hasPassword={user.hasPassword} />
-          <TwoFactorSection enabled={user.mfaEnabled} hasPassword={user.hasPassword} />
+          <TwoFactorSection key={`${user.id}:${getSessionGeneration()}`} enabled={user.mfaEnabled} hasPassword={user.hasPassword} />
         </CardContent>
       </Card>
       <WithdrawSection
@@ -157,11 +157,11 @@ function ProfileSection({ user }: { user: UserProfile }) {
       setOpen(null)
       setError(null)
       setFieldErrors({})
-      toast.success('프로필을 저장했습니다.')
+      toast.success('프로필을 저장했어요.')
       await refreshProfile()
     },
     onError: (err) => {
-      const apiError = toApiError(err, '프로필을 저장하지 못했습니다.')
+      const apiError = toApiError(err, '프로필을 저장하지 못했어요.')
       const mapped = fieldErrorsOf(apiError.problem)
       setFieldErrors(mapped)
       setError(Object.keys(mapped).length > 0 ? null : apiError.message)
@@ -326,11 +326,11 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
       setError(null)
       setFieldErrors({})
       setOpen(false)
-      toast.success('비밀번호를 변경했습니다. 다른 기기의 세션은 로그아웃됩니다.')
+      toast.success('비밀번호를 변경했어요. 다른 기기의 세션은 로그아웃돼요.')
     },
     onError: (err, input) => {
       if (input.generation !== getSessionGeneration()) return
-      const apiError = toApiError(err, '비밀번호를 변경하지 못했습니다.')
+      const apiError = toApiError(err, '비밀번호를 변경하지 못했어요.')
       const fields = fieldErrorsOf(apiError.problem)
       setFieldErrors(fields)
       // 현재 비밀번호 불일치(403)·기타 오류는 상단 Alert로.
@@ -349,7 +349,7 @@ function PasswordChangeSection({ hasPassword, email }: { hasPassword: boolean; e
       return
     }
     if (newPassword !== confirmPassword) {
-      setFieldErrors({ confirmPassword: '새 비밀번호가 일치하지 않습니다.' })
+      setFieldErrors({ confirmPassword: '새 비밀번호가 일치하지 않아요.' })
       return
     }
     change.mutate({ currentPassword, newPassword, generation: getSessionGeneration() })
@@ -433,8 +433,8 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
   const toast = useToast()
   const copy = () => {
     void navigator.clipboard?.writeText(codes.join('\n')).then(
-      () => toast.success('복구 코드를 클립보드에 복사했습니다.'),
-      () => toast.error('복사에 실패했습니다. 코드를 직접 저장해 주세요.'),
+      () => toast.success('복구 코드를 복사했어요.'),
+      () => toast.error('복사에 실패했어요. 코드를 직접 저장해 주세요.'),
     )
   }
   const download = () => {
@@ -448,9 +448,8 @@ function RecoveryCodes({ codes }: { codes: string[] }) {
   }
   return (
     <div className="space-y-3">
-      <Alert variant="warning" title="복구 코드는 지금 한 번만 표시됩니다">
-        인증 앱을 사용할 수 없을 때 로그인·해제에 사용합니다. 안전한 곳에 보관해 주세요. 각 코드는
-        한 번만 쓸 수 있습니다.
+      <Alert variant="warning" title="복구 코드는 지금 한 번만 표시돼요">
+        인증 앱을 쓸 수 없을 때 로그인과 2단계 인증 해제에 사용해요. 각 코드는 한 번만 쓸 수 있으니 안전하게 보관해 주세요.
       </Alert>
       <ul className="grid grid-cols-2 gap-2 rounded-md bg-neutral-50 p-4 font-mono text-sm">
         {codes.map((code) => (
@@ -483,15 +482,15 @@ function PasswordSetupSection({ email }: { email: string }) {
 
   const mail = useMutation({
     mutationFn: () => requestPasswordReset(email),
-    onSuccess: () => toast.success('비밀번호 설정 메일을 보냈습니다. 메일함을 확인해 주세요.'),
-    onError: (err) => toast.error(toApiError(err, '메일을 보내지 못했습니다.').message),
+    onSuccess: () => toast.success('비밀번호 설정 메일을 요청했어요. 메일함을 확인해 주세요.'),
+    onError: (err) => toast.error(toApiError(err, '메일을 보내지 못했어요.').message),
   })
 
   return (
     <SettingRow
       label="비밀번호"
       description="설정되지 않음"
-      note="구글 계정으로만 로그인할 수 있습니다. 메일로 받은 링크에서 비밀번호를 설정하면 두 가지 모두로 로그인합니다."
+      note="메일로 받은 링크에서 비밀번호를 설정하면 비밀번호로도 로그인할 수 있어요."
       action={
         <Button
           size="sm"
@@ -530,16 +529,16 @@ function LinkedAccountsSection({
   const link = useMutation({
     mutationFn: () => startGoogleOauth({ purpose: 'LINK' }),
     onSuccess: (started) => navigateExternal(started.authorizationUrl),
-    onError: (err) => toast.error(toApiError(err, '연동을 시작하지 못했습니다.').message),
+    onError: (err) => toast.error(toApiError(err, '연동을 시작하지 못했어요.').message),
   })
 
   const unlink = useMutation({
     mutationFn: (provider: LinkedIdentity['provider']) => unlinkIdentity(provider),
     onSuccess: async () => {
-      toast.success('연동을 해제했습니다.')
+      toast.success('연동을 해제했어요.')
       await refreshProfile()
     },
-    onError: (err) => toast.error(toApiError(err, '연동을 해제하지 못했습니다.').message),
+    onError: (err) => toast.error(toApiError(err, '연동을 해제하지 못했어요.').message),
   })
 
   const [open, setOpen] = useState(false)
@@ -563,8 +562,7 @@ function LinkedAccountsSection({
         {identities.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-neutral-600">
-              연동된 외부 계정이 없습니다. 구글 계정을 붙이면 비밀번호 없이도 로그인할 수
-              있습니다.
+              Google 계정을 연동하면 비밀번호 없이 로그인할 수 있어요.
             </p>
             <GoogleAuthButton
               label="continue"
@@ -598,7 +596,7 @@ function LinkedAccountsSection({
         )}
         {lastMethod && (
           <p className="mt-3 text-sm text-neutral-500">
-            유일한 로그인 수단이라 해제할 수 없습니다. 먼저 비밀번호를 설정해 주세요.
+            유일한 로그인 수단이라 해제할 수 없어요. 먼저 비밀번호를 설정해 주세요.
           </p>
         )}
       </Modal>
@@ -637,8 +635,8 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
   const copySecret = (secret: string | undefined) => {
     if (!secret) return
     void navigator.clipboard?.writeText(secret).then(
-      () => toast.success('설정 키를 클립보드에 복사했습니다.'),
-      () => toast.error('복사에 실패했습니다. 키를 직접 입력해 주세요.'),
+      () => toast.success('설정 키를 복사했어요.'),
+      () => toast.error('복사에 실패했어요. 키를 직접 입력해 주세요.'),
     )
   }
 
@@ -670,7 +668,7 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
       setCode('')
       setStep('activate')
     },
-    onError: (err) => setError(toApiError(err, '등록을 시작하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '등록을 시작하지 못했어요.').message),
   })
 
   const activate = useMutation({
@@ -681,10 +679,10 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
       setStep('recovery')
       await refreshProfile()
     },
-    onError: (err) => setError(toApiError(err, '인증 코드를 확인하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '인증 코드를 확인하지 못했어요.').message),
   })
 
-  if (enabled) {
+  if (enabled && step !== 'recovery') {
     // 등록된 상태의 두 동작은 EnrolledPanel 이 이미 자기 모달로 가지고 있다. 그것을
     // 다시 모달 안에 넣으면 모달 위에 모달이 서고 포커스 트랩이 둘이 된다.
     //
@@ -697,7 +695,7 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
         note={
           hasPassword
             ? undefined
-            : '복구 코드 재발급과 해제는 비밀번호 확인을 거칩니다. 비밀번호를 먼저 설정해 주세요.'
+            : '복구 코드 재발급과 해제에는 비밀번호가 필요해요. 먼저 비밀번호를 설정해 주세요.'
         }
         action={<EnrolledPanel hasPassword={hasPassword} />}
       />
@@ -705,8 +703,7 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
   }
 
   const close = () => {
-    // 복구 코드를 띄운 상태에서는 닫히지 않는다(dismissible=false). 여기 오는 길은
-    // 「저장했습니다」뿐이다.
+    // Recovery-code dialogs are not dismissible; storage acknowledgment resets the wizard.
     resetWizard()
   }
 
@@ -714,11 +711,11 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
     <>
       <SettingRow
         label="2단계 인증"
-        description="사용 안 함"
+        description={enabled ? '사용 중' : '사용 안 함'}
         note={
           hasPassword
-            ? '인증 앱(TOTP)으로 로그인에 한 단계를 더합니다.'
-            : '등록은 비밀번호 확인을 거칩니다. 비밀번호를 먼저 설정해 주세요.'
+            ? '인증 앱(TOTP)으로 로그인에 한 단계를 더해요.'
+            : '비밀번호를 설정한 뒤 등록할 수 있어요.'
         }
         action={
           <Button
@@ -739,9 +736,9 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
       >
         {step === 'recovery' && recoveryCodes ? (
           <div className="space-y-4">
-            <p className="text-sm text-neutral-700">2단계 인증이 활성화되었습니다.</p>
+            <p className="text-sm text-neutral-700">2단계 인증이 활성화됐어요.</p>
             <RecoveryCodes codes={recoveryCodes} />
-            <Button onClick={resetWizard}>저장했습니다</Button>
+            <Button onClick={resetWizard}>보관했어요</Button>
           </div>
         ) : step === 'password' ? (
           <form
@@ -800,8 +797,8 @@ function TwoFactorSection({ enabled, hasPassword }: { enabled: boolean; hasPassw
                 </div>
               )}
               <p className="text-neutral-500">
-                스캔할 수 없으면 아래 설정 키를 인증 앱에 직접 입력합니다. 앱이 물어보면
-                알고리즘 SHA-1, 6자리, 30초를 고릅니다.
+                스캔할 수 없으면 아래 설정 키를 인증 앱에 직접 입력해요. 앱이 물어보면
+                알고리즘 SHA-1, 6자리, 30초를 골라요.
               </p>
               <div className="flex items-center gap-2 rounded-md bg-neutral-50 p-3">
                 <div className="min-w-0 flex-1 font-mono text-xs break-all">
@@ -877,10 +874,10 @@ function EnrolledPanel({ hasPassword }: { hasPassword: boolean }) {
       disableMfa({ password, ...(useRecovery ? { recoveryCode: recovery.trim() } : { code }) }),
     onSuccess: async () => {
       closeAll()
-      toast.success('2단계 인증을 해제했습니다.')
+      toast.success('2단계 인증을 해제했어요.')
       await refreshProfile()
     },
-    onError: (err) => setError(toApiError(err, '2단계 인증을 해제하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '2단계 인증을 해제하지 못했어요.').message),
   })
 
   const regen = useMutation({
@@ -888,9 +885,9 @@ function EnrolledPanel({ hasPassword }: { hasPassword: boolean }) {
     onSuccess: (data: MfaRecoveryCodesResponse) => {
       setNewCodes(data.recoveryCodes)
       setError(null)
-      toast.success('복구 코드를 재발급했습니다. 기존 코드는 더 이상 사용할 수 없습니다.')
+      toast.success('복구 코드를 재발급했어요. 기존 코드는 더 이상 사용할 수 없어요.')
     },
-    onError: (err) => setError(toApiError(err, '복구 코드를 재발급하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '복구 코드를 재발급하지 못했어요.').message),
   })
 
   return (
@@ -922,7 +919,7 @@ function EnrolledPanel({ hasPassword }: { hasPassword: boolean }) {
         dismissible={newCodes === null}
         footer={
           newCodes ? (
-            <Button onClick={closeAll}>저장했습니다</Button>
+            <Button onClick={closeAll}>보관했어요</Button>
           ) : (
             <>
               <Button variant="secondary" onClick={closeAll}>
@@ -946,7 +943,7 @@ function EnrolledPanel({ hasPassword }: { hasPassword: boolean }) {
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-neutral-600">
-              재발급하면 기존 복구 코드는 모두 무효화됩니다.
+              재발급하면 기존 복구 코드는 모두 무효화돼요.
             </p>
             {error && <Alert variant="danger">{error}</Alert>}
             <FormField label="비밀번호" required>
@@ -1061,9 +1058,9 @@ function WithdrawSection({
       // 서버가 세션을 종료했으므로 클라이언트 상태도 비우고 랜딩으로 보낸다.
       await logout()
       navigate('/', { replace: true })
-      toast.success('탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.')
+      toast.success('회원 탈퇴를 마쳤어요.')
     },
-    onError: (err) => setError(toApiError(err, '회원 탈퇴를 처리하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '회원 탈퇴를 처리하지 못했어요.').message),
   })
 
   const close = () => {
@@ -1085,11 +1082,11 @@ function WithdrawSection({
       <CardContent>
         <SettingRow
           label="계정 삭제"
-          description="로그인과 SSH 접속이 즉시 차단됩니다."
+          description="로그인과 SSH 접속이 즉시 차단돼요."
           note={
             hasPassword
-              ? '개인 워크스페이스를 제외하고 마지막 소유자이면 리소스 유무와 관계없이 탈퇴할 수 없습니다. 다른 구성원을 소유자로 지정하거나 워크스페이스를 삭제해 주세요. 개인 워크스페이스에 남은 VM도 먼저 정리해야 합니다.'
-              : '탈퇴는 비밀번호 확인을 거칩니다. 비밀번호를 먼저 설정해 주세요.'
+              ? '개인 워크스페이스를 제외하고 마지막 소유자이면 리소스 유무와 관계없이 탈퇴할 수 없어요. 다른 구성원을 소유자로 지정하거나 워크스페이스를 삭제해 주세요. 개인 워크스페이스에 남은 VM도 먼저 정리해야 해요.'
+              : '탈퇴하려면 먼저 비밀번호를 설정해 주세요.'
           }
           action={
             <Button
@@ -1128,11 +1125,11 @@ function WithdrawSection({
         }
       >
         <div className="space-y-4">
-          <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
-            탈퇴 후에는 계정을 복구하거나 같은 이메일로 재가입할 수 없습니다.
+          <Alert variant="danger" title="되돌릴 수 없는 작업이에요">
+            탈퇴 후에는 계정을 복구하거나 같은 이메일로 재가입할 수 없어요.
           </Alert>
           {error && <Alert variant="danger">{error}</Alert>}
-          <FormField label={`계속하려면 이메일(${email})을 정확히 입력하세요`} required>
+          <FormField label={`계속하려면 이메일(${email})을 정확히 입력해 주세요`} required>
             <Input
               value={typedEmail}
               onChange={(event) => setTypedEmail(event.target.value)}

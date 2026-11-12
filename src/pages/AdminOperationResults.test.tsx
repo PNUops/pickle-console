@@ -37,7 +37,7 @@ test.each(sysRoles)('$role reads stored guards; only SYS_ADMIN edits', async (ro
   expect(!!drawer.queryByRole('button', { name: '가드 편집' })).toBe(role.role === 'SYS_ADMIN')
   expect(!!drawer.queryByRole('button', { name: '정지' })).toBe(role.role !== 'SYS_VIEWER')
   expect(drawer.getByText('반영 보고됨')).toBeInTheDocument()
-  expect(drawer.getByText(/실제 서비스 접속 성공이나 새로 저장한 연결 가드/)).toBeInTheDocument()
+  expect(drawer.queryByText(/실제 서비스 접속 성공이나 새로 저장한 연결 가드/)).not.toBeInTheDocument()
 })
 
 test.each(orgRoles)('$role cannot enter the SYS network surface', async (role) => {
@@ -78,7 +78,7 @@ test('guard edits are canceled without saving, and errors stay inside the editor
   await user.type(editor.getByLabelText('동시 연결 상한'), '256')
   await user.click(editor.getByRole('button', { name: '가드 저장' }))
   expect(await editor.findByText('합성 저장 실패')).toBeInTheDocument()
-  expect(screen.queryByText(/연결 가드가 저장되었습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/연결 가드를 저장했어요/)).not.toBeInTheDocument()
 })
 
 test('mapping deletion acknowledgment is not removal completion', async () => {
@@ -90,7 +90,7 @@ test('mapping deletion acknowledgment is not removal completion', async () => {
   await user.click(screen.getByRole('button', { name: '삭제' }))
   await user.click(within(await screen.findByRole('dialog', { name: '포트 매핑 삭제' })).getByRole('button', { name: '삭제' }))
   expect(await screen.findByText('작업 접수')).toBeInTheDocument()
-  expect(screen.getByText(/이 응답만으로 실제 연결 정리 완료/)).toBeInTheDocument()
+  expect(screen.getByText(/응답만으로 실제 연결 정리 완료/)).toBeInTheDocument()
   expect(screen.queryByText('삭제 완료')).not.toBeInTheDocument()
 })
 
@@ -103,7 +103,7 @@ test('revoked campus address is historical and its status is a manual record', a
   await user.click(await screen.findByRole('button', { name: 'shop-app' }))
   const drawer = within(await screen.findByRole('dialog', { name: '캠퍼스 IP 신청 상세' }))
   expect(drawer.getByText('이전 할당 주소')).toBeInTheDocument()
-  expect(drawer.getByText(/실제 외부 연결 상태를 자동으로 측정한 결과는 아닙니다/)).toBeInTheDocument()
+  expect(drawer.getByText(/실제 외부 연결 상태를 자동으로 측정한 결과는 아니에요/)).toBeInTheDocument()
   expect(drawer.queryByRole('button', { name: '회수' })).not.toBeInTheDocument()
 })
 
@@ -118,8 +118,8 @@ test('bulk registration links use the actual organization from a global request'
   const table = await screen.findByRole('table', { name: '대상자' })
   expect(within(table).getByText('자원 등록됨')).toBeInTheDocument()
   expect(within(table).getByRole('link', { name: '상세 보기' })).toHaveAttribute('href', `/admin/vms/${uuid(8801)}?org=${uuid(2)}`)
-  expect(screen.getByText(/VM 프로비저닝 완료를 뜻하지 않습니다/)).toBeInTheDocument()
-  expect(screen.getByText(/승인과 부여 내용이 저장되었습니다/)).toBeInTheDocument()
+  expect(screen.getByText(/VM 프로비저닝 완료를 뜻하지 않아요/)).toBeInTheDocument()
+  expect(screen.getByText('승인했어요.')).toBeInTheDocument()
 })
 
 test('loading then list failure shows no stale result or edit form', async () => {
@@ -162,7 +162,7 @@ test('a delayed decision result cannot appear on another cached request', async 
   await screen.findByText('개인 실험용 서버')
   await act(async () => { finish(); await gate })
   await waitFor(() => expect(client.isMutating()).toBe(0))
-  expect(screen.queryByText(/승인 내용이 저장되었습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/승인했어요/)).not.toBeInTheDocument()
   expect(screen.getByText('개인 실험용 서버')).toBeInTheDocument()
 })
 
@@ -196,7 +196,7 @@ test('a late guard save cannot report success over another mapping', async () =>
   await act(async () => { finish(); await gate })
   await waitFor(() => expect(client.isMutating()).toBe(0))
   expect(next.getByText('stuck-vm')).toBeInTheDocument()
-  expect(screen.queryByText(/연결 가드가 저장되었습니다/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/연결 가드를 저장했어요/)).not.toBeInTheDocument()
 })
 
 test('a dismissed delete request cannot close a newly selected mapping', async () => {
@@ -233,7 +233,7 @@ test.each([sysManagerUser, sysViewerUser, orgViewerUser])('$role context errors 
   server.use(refreshSuccessHandler(`access-${role.role.toLowerCase().replace('_', '-')}`, role),
     http.get('*/api/v1/admin/requests/:id/context', () => HttpResponse.json({ status: 503, detail: '합성 참고 조회 실패' }, { status: 503 })))
   renderApp(`/admin/requests/${uuid(201)}`)
-  await screen.findByText('승인 참고 정보를 불러오지 못했습니다')
-  expect(screen.queryByText('참고 정보 없이도 승인 또는 반려할 수 있습니다.')).not.toBeInTheDocument()
+  await screen.findByText('승인 참고 정보를 불러오지 못했어요')
+  expect(screen.queryByText('참고 정보 없이도 승인하거나 반려할 수 있어요.')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '승인하기' })).not.toBeInTheDocument()
 })

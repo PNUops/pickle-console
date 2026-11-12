@@ -103,7 +103,7 @@ export const RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
 export const LLM_KEY_RESOURCE_ROLE_HINTS: Record<ResourceRole, string> = {
   OWNER: '발급·재발급, 접근 권한 관리, 폐기까지',
   EDITOR: '이름과 본문 기록 설정 변경까지',
-  MEMBER: '키 상세 조회 — 평문은 발급한 사람만 봅니다',
+  MEMBER: '키 상세 조회(평문은 발급한 사람만 봐요)',
   VIEWER: '키 상세 조회',
 }
 
@@ -151,7 +151,7 @@ export type AdminBulkChangeResult = components['schemas']['AdminBulkChangeResult
  * forward: the vendor fixes that key's expiry when it is issued. The bulk form
  * always carries this line; the single dialog only for a connected key.
  */
-export const PAID_KEY_EXPIRY_NOTE = '유료 모델 키는 만료일을 앞당기는 것만 할 수 있습니다.'
+export const PAID_KEY_EXPIRY_NOTE = '유료 모델 키는 만료일을 앞당기는 것만 할 수 있어요.'
 
 /** Why one target of a bulk change was not changed. */
 export const BULK_CHANGE_REASON_LABELS: Record<AdminBulkChangeReason, string> = {

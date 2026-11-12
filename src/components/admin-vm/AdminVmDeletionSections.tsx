@@ -39,11 +39,11 @@ function DeletionStatus({ deletion, deleted }: { deletion: NonNullable<VmDetail[
   return (
     <Alert
       variant={deletion.cancelable ? 'warning' : 'danger'}
-      title={deletion.cancelable ? '삭제 예약됨' : '삭제가 진행 중입니다'}
+      title={deletion.cancelable ? '삭제 예약됨' : '삭제 요청 접수'}
     >
       <p>{formatDateTime(deletion.scheduledFor)} 파기 예정</p>
       {deletion.reason && <p>사유: {deletion.reason}</p>}
-      {!deletion.cancelable && <p>이미 파기가 시작됐거나 강제 삭제라 취소할 수 없습니다.</p>}
+      {!deletion.cancelable && <p>현재 삭제 요청은 취소할 수 없어요.</p>}
     </Alert>
   )
 }
@@ -75,12 +75,12 @@ function ScheduleDeleteForm({
       setFieldErrors({})
       setDate('')
       setReason('')
-      onDone('삭제 예약을 접수했습니다. 사용자에게 사유가 포함된 통보 메일이 발송됩니다.')
+      onDone('삭제 예약을 접수했어요.')
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await invalidateResourceLists(queryClient)
     },
     onError: (err) => {
-      const apiError = toApiError(err, '삭제 예약을 접수하지 못했습니다.')
+      const apiError = toApiError(err, '삭제 예약을 접수하지 못했어요.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       setError(apiError.message)
     },
@@ -105,12 +105,11 @@ function ScheduleDeleteForm({
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">삭제 예약</h3>
       <p className="text-sm text-neutral-500">
-        접수 즉시 사용자에게 통보 메일이 발송됩니다. 파기가 시작되기 전까지는 취소할 수
-        있습니다.
+        VM 소유자와 워크스페이스 소유자 중 활성 계정에 알림을 남기고 메일 발송을 요청해요. 파기가 시작되기 전까지는 취소할 수 있어요.
       </p>
       {date && isShortNotice(date) && (
         <Alert variant="warning">
-          권장 통보 기간(7일)보다 이른 파기 예정일입니다.
+          권장 통보 기간(7일)보다 이른 파기 예정일이에요.
         </Alert>
       )}
       {error && Object.keys(fieldErrors).length === 0 && (
@@ -136,7 +135,7 @@ function ScheduleDeleteForm({
             rows={2}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="사용자 통보 메일에 그대로 포함됩니다."
+            placeholder="사유는 사용자 알림과 메일에 포함돼요."
           />
         </FormField>
         <Button
@@ -170,15 +169,14 @@ function CancelDeleteAction({
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
       await invalidateResourceLists(queryClient)
     },
-    onError: (err) => setError(toApiError(err, '접수된 삭제를 취소하지 못했습니다.').message),
+    onError: (err) => setError(toApiError(err, '삭제 요청을 취소하지 못했어요.').message),
   })
 
   return (
     <section className="space-y-3 rounded-lg border border-neutral-200 p-4">
       <h3 className="text-sm font-semibold text-neutral-800">대기 중인 삭제 취소</h3>
       <p className="text-sm text-neutral-500">
-        본인 삭제를 취소하면 VM은 중지됨 상태로 남고(시작은 사용자가 수행), 관리자 삭제를
-        취소하면 현재 전원 상태가 유지됩니다.
+        본인 삭제를 취소하면 중지됨 상태로 돌아가요. 시작은 사용자가 직접 해야 해요. 관리자 삭제를 취소하면 현재 전원 상태를 유지해요.
       </p>
       {error && <Alert variant="danger">{error}</Alert>}
       <Button
@@ -214,7 +212,7 @@ function ForceDeleteAction({
     },
     onError: async (err) => {
       // Preserve the entered name and show the error inside the open confirmation.
-      setError(toApiError(err, '강제 삭제를 접수하지 못했습니다.').message)
+      setError(toApiError(err, '강제 삭제를 접수하지 못했어요.').message)
       // Refetch metadata after a name or state conflict without retrying the mutation.
       await queryClient.invalidateQueries({ queryKey: ['admin', 'vms'] })
     },
@@ -224,7 +222,7 @@ function ForceDeleteAction({
     <section className="space-y-3 rounded-lg border border-danger-200 p-4">
       <h3 className="text-sm font-semibold text-danger-700">강제 삭제</h3>
       <p className="text-sm text-neutral-500">
-        보안 사고 등 비상 상황에서 씁니다.
+        보안 사고 등 비상 상황에서 사용해요.
       </p>
       {error && !open && <Alert variant="danger">{error}</Alert>}
       <Button
@@ -246,9 +244,8 @@ function ForceDeleteAction({
         // Send the entered name; the server performs the exact-name confirmation.
         onConfirm={(typedName) => destroy.mutate(typedName)}
       >
-        <Alert variant="danger" title="되돌릴 수 없는 작업입니다">
-          유예 없이 즉시 강제 종료 후 파기되며, 데이터는 복구할 수 없습니다. 기관
-          관리자와 사용자에게 통지되고 감사 기록이 남습니다.
+        <Alert variant="danger" title="되돌릴 수 없어요">
+          유예 기간 없이 파기를 요청해요. 필요하면 VM을 강제로 종료해요. 삭제한 데이터는 복구할 수 없어요. VM 소유자와 워크스페이스 소유자 중 활성 계정에 알림을 남기고 감사에도 기록해요.
         </Alert>
         {error && <Alert variant="danger">{error}</Alert>}
       </ConfirmNameModal>

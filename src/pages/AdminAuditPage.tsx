@@ -57,7 +57,7 @@ function isKnownRole(role: string): role is UserRole {
 /** 감사 로그 — 관리자가 행위자·동작·기간으로 활동 기록을 추적한다. */
 export function AdminAuditPage() {
   const { user } = useAuth()
-  const { activeOrgId, activeOrg, tier, options } = useAdminScope()
+  const { activeOrgId, tier, options } = useAdminScope()
   const canReadActive = activeOrgId == null ? hasAnyWork(user, ['institution.audit.read'], SYS_READERS)
     : hasWork(user, 'institution.audit.read', { orgId: activeOrgId }, SYS_READERS)
   // Audit sources are evaluated against the verified immutable target institution.
@@ -109,8 +109,8 @@ export function AdminAuditPage() {
   if (!canReadActive || !targetAllowed) {
     return (
       <EmptyState
-        title="이 기관의 감사 로그를 볼 수 없습니다"
-        description="감사 기록 조회 업무가 있는 기관 범위를 선택하세요."
+        title="이 기관의 감사 로그를 볼 수 없어요"
+        description="조회할 기관 범위와 대상 조건을 확인해 주세요."
       />
     )
   }
@@ -119,9 +119,6 @@ export function AdminAuditPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">감사 로그</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {activeOrg?.name ?? '허용된 기관'}의 활동 기록입니다. 현재 부여된 감사 조회 업무와 검증된 기록 대상 기관을 적용합니다.
-        </p>
       </div>
 
       <FilterBar
@@ -199,7 +196,7 @@ export function AdminAuditPage() {
       {logs.isError && <Alert variant="danger">{logs.error.message}</Alert>}
       {logs.isSuccess && logs.data.content.length === 0 && (
         <Card className="p-8 text-center text-sm text-neutral-500">
-          조건에 맞는 기록이 없습니다.
+          조건에 맞는 기록이 없어요.
         </Card>
       )}
       {logs.isSuccess && logs.data.content.length > 0 && (
@@ -283,7 +280,7 @@ export function AdminAuditPage() {
 }
 
 function AuditDetail({ detail, orgId }: { detail: unknown; orgId?: string | null }) {
-  if (detail == null) return <p className="text-sm text-neutral-500">추가 기록이 없습니다.</p>
+  if (detail == null) return <p className="text-sm text-neutral-500">추가 기록이 없어요.</p>
   const object = typeof detail === 'object' && detail !== null ? detail as Record<string, unknown> : null
   return <div className="space-y-4">{object && typeof object.reason === 'string' && <p className="text-sm">변경 사유: {object.reason || '기록 없음'}</p>}
     {object && ['before', 'after'].map((key) => {
@@ -291,7 +288,7 @@ function AuditDetail({ detail, orgId }: { detail: unknown; orgId?: string | null
       if (typeof value !== 'object' || value === null) return null
       const snapshot = value as Record<string, unknown>
       return <section key={key} className="space-y-2"><h3 className="font-semibold">{key === 'before' ? '변경 전' : '변경 후'}</h3>
-        <p className="text-sm">설정 버전: {String(snapshot.revision ?? '—')} · 메일 방식: {String(snapshot.mailMode ?? '—')}</p>
+        <p className="text-sm">메일 방식: {String(snapshot.mailMode ?? '—')}</p>
         {Array.isArray(snapshot.members) && <Table><THead><TR><TH>사용자 ID</TH><TH>기관 역할</TH><TH>메일 지정</TH></TR></THead><TBody>{snapshot.members.map((member, index) => {
           const row = member as Record<string, unknown>
           const userId = typeof row.userId === 'string' ? row.userId : ''

@@ -54,7 +54,7 @@ const FIELD_LABELS: Record<string, string> = {
 function targetPortError(raw: string): string | null {
   if (!/^\d+$/.test(raw.trim())) return '포트 번호를 입력해 주세요.'
   const port = Number(raw.trim())
-  if (port < 1 || port > 65535) return '포트는 1–65535 범위여야 합니다.'
+  if (port < 1 || port > 65535) return '포트는 1–65535 범위여야 해요.'
   return null
 }
 
@@ -90,18 +90,18 @@ export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-neutral-600">
-          VM 내부 포트를 외부에 공개합니다.
+          VM 내부 포트를 외부에 공개해요.
         </p>
 
         {sshHost ? (
-          <Alert variant="info" title="본인만 접속한다면 SSH 로컬 포워딩으로 충분합니다">
+          <Alert variant="info" title="SSH 로컬 포워딩 (본인 접속용)">
             <code className="block overflow-x-auto rounded-md bg-neutral-900 px-3 py-2 font-mono text-xs text-neutral-100">
               {`ssh -L <로컬포트>:localhost:<VM포트> ${vm.hostname}@${sshHost}`}
             </code>
           </Alert>
         ) : (
           <Alert variant="warning">
-            SSH 게이트웨이 주소가 준비되지 않아 로컬 포워딩 명령을 표시할 수 없습니다.
+            SSH 게이트웨이 주소를 확인할 수 없어 로컬 포워딩 명령을 표시하지 못해요.
           </Alert>
         )}
 
@@ -109,7 +109,7 @@ export function VmPortForwardingSection({ vm }: { vm: VmDetail }) {
           <CreateForwardingForm vm={vm} />
         ) : (
           <p className="text-sm text-neutral-500">
-            포트포워딩 생성·삭제는 이 VM의 소유자·편집자만 할 수 있습니다.
+            포트포워딩 생성과 삭제는 이 VM의 소유자나 편집자만 할 수 있어요.
           </p>
         )}
 
@@ -138,12 +138,12 @@ function CreateForwardingForm({ vm }: { vm: VmDetail }) {
       setFieldErrors({})
       setTargetPort('')
       toast.success(
-        `포트포워딩을 만들었습니다. 공인 포트 ${created.publicPort}이(가) 곧 열립니다.`,
+        `포트포워딩을 등록했어요. 공인 포트: ${created.publicPort}`,
       )
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
     onError: (err) => {
-      const apiError = toApiError(err, '포트포워딩을 만들지 못했습니다.')
+      const apiError = toApiError(err, '포트포워딩을 만들지 못했어요.')
       setFieldErrors(fieldErrorsOf(apiError.problem))
       setError(apiError.message)
     },
@@ -165,7 +165,7 @@ function CreateForwardingForm({ vm }: { vm: VmDetail }) {
     <form onSubmit={submit} className="space-y-4" noValidate>
       {!creatable && (
         <Alert variant="warning">
-          실행 중이고 내부 IP가 할당된 VM만 포트포워딩을 만들 수 있습니다.
+          실행 중이고 내부 IP가 할당된 VM만 포트포워딩을 만들 수 있어요.
         </Alert>
       )}
       <ErrorSummary
@@ -188,7 +188,7 @@ function CreateForwardingForm({ vm }: { vm: VmDetail }) {
           label="대상 포트"
           required
           error={fieldErrors.targetPort}
-          description="VM 내부에서 열려 있는 포트 (1–65535). 공인 포트는 자동 할당됩니다."
+          description="VM 내부에서 열려 있는 포트 (1–65535). 공인 포트는 자동 할당돼요."
         >
           <Input
             inputMode="numeric"
@@ -233,7 +233,7 @@ function ForwardingList({
       await queryClient.invalidateQueries({ queryKey: ['vms', vm.id] })
     },
     onError: async (err) => {
-      const apiError = toApiError(err, '포트포워딩 삭제를 접수하지 못했습니다.')
+      const apiError = toApiError(err, '포트포워딩 삭제를 접수하지 못했어요.')
       setError(apiError.message)
       // 이미 서버에서 사라진 매핑(404)이면 목록을 다시 불러와 낡은 행을 정리한다.
       if (apiError.problem?.status === 404) {
@@ -251,7 +251,7 @@ function ForwardingList({
   }
   if (query.isError) return <Alert variant="danger">{query.error.message}</Alert>
   if (query.data.length === 0) {
-    return <p className="py-2 text-sm text-neutral-500">설정된 포트포워딩이 없습니다.</p>
+    return <p className="py-2 text-sm text-neutral-500">설정된 포트포워딩이 없어요.</p>
   }
 
   return (
@@ -305,8 +305,7 @@ function ForwardingList({
         ))}
       </ul>
       <p className="text-xs text-neutral-500">
-        활성화 대기 중에는 relay 확인 전까지 전달되지 않습니다. 정지됨 상태는 관리자에게 문의해 주세요.
-        삭제 진행 중인 매핑에는 작업을 다시 요청할 수 없습니다.
+        정지된 포트는 관리자에게 문의해 주세요.
       </p>
     </div>
   )

@@ -1,16 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import {
-  fetchNotifications,
-  fetchUnreadCount,
-  markAllNotificationsRead,
-  markNotificationRead,
-} from '../api/queries'
 import type { components } from '../api/schema'
 import { Alert, PopoverPanel, Spinner, usePopover } from './ui'
 import { cn } from '../lib/cn'
 import { formatDateTime } from '../lib/format'
 import { useNotificationNavigation } from '../lib/use-notification-navigation'
+import { useNotificationActions, useNotificationList, useNotificationReader, useNotificationUnread, usageNotificationPath, USAGE_ALERT_EVENT, type NotificationReader } from '../lib/notification-reader'
 
 type NotificationView = components['schemas']['NotificationView']
 
@@ -19,36 +13,35 @@ type NotificationView = components['schemas']['NotificationView']
  * 팝오버를 연다(항목 클릭=읽음 처리+이동, 모두 읽음, 알림함 전체 보기).
  */
 export function NotificationBell({ to }: { to: string }) {
+  const reader = useNotificationReader()
+  return <ReaderNotificationBell key={reader?.account} reader={reader} to={to} />
+}
+
+function ReaderNotificationBell({ to, reader }: { to: string; reader: NotificationReader | null }) {
   const { openNotification, navigationError } = useNotificationNavigation()
-  const queryClient = useQueryClient()
   const { open, toggle, close, rootRef, triggerRef } = usePopover()
 
-  const unread = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: fetchUnreadCount,
-    refetchInterval: 30_000,
-    staleTime: 25_000,
-  })
-  const count = unread.data?.unreadCount ?? 0
+  const unread = useNotificationUnread(reader)
+  const count = unread.count
+  const recent = useNotificationList(reader, { page: 0, size: 5 }, open)
 
-  // 최근 5건 — 팝오버가 열렸을 때만 조회(대시보드 최근 알림과 쿼리키 공유).
-  const recent = useQuery({
-    queryKey: ['notifications', { page: 0, size: 5 }],
-    queryFn: () => fetchNotifications({ page: 0, size: 5 }),
-    enabled: open,
-  })
-
-  const markRead = useMutation({
-    mutationFn: markNotificationRead,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
-  })
-  const markAll = useMutation({
-    mutationFn: markAllNotificationsRead,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
-  })
+  const { markRead, markAll, error, isCurrentReader, reportError } = useNotificationActions(reader)
 
   async function onItemClick(notification: NotificationView) {
-    if (!notification.readAt) markRead.mutate(notification.id)
+    if (notification.event === USAGE_ALERT_EVENT) {
+      try {
+        const fresh = await markRead.mutateAsync({ id: notification.id, reader })
+        if (!isCurrentReader(reader)) return
+        const destination = usageNotificationPath(fresh)
+        if (!destination) {
+          reportError('알림 연결 정보를 확인하지 못했어요. 다시 조회해 주세요.', reader)
+          return
+        }
+        if (await openNotification(destination)) close()
+      } catch { /* The owned mutation exposes the current reader error. */ }
+      return
+    }
+    if (!notification.readAt) markRead.mutate({ id: notification.id, reader })
     if (await openNotification(notification.linkPath)) close()
   }
 
@@ -58,7 +51,7 @@ export function NotificationBell({ to }: { to: string }) {
         ref={triggerRef}
         type="button"
         onClick={toggle}
-        aria-label={`읽지 않은 알림 ${count}개`}
+        aria-label={count == null ? unread.isError ? '알림, 읽지 않은 수 확인 실패' : '알림, 읽지 않은 수 확인 중' : `읽지 않은 알림 ${count}개`}
         aria-haspopup="dialog"
         aria-expanded={open}
         className="relative cursor-pointer rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-primary-600"
@@ -70,7 +63,7 @@ export function NotificationBell({ to }: { to: string }) {
             d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"
           />
         </svg>
-        {count > 0 && (
+        {count != null && count > 0 && (
           <span
             aria-hidden="true"
             className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger-600 px-1 text-[10px] font-bold text-white"
@@ -82,12 +75,14 @@ export function NotificationBell({ to }: { to: string }) {
 
       <PopoverPanel open={open} aria-label="알림" className="w-80 sm:w-96">
         {navigationError && <Alert variant="danger">{navigationError}</Alert>}
+        {error && <Alert variant="danger">{error}</Alert>}
+        {recent.showingLegacySnapshot && <p className="px-4 py-2 text-xs text-neutral-500">일부 알림은 이전 조회 결과예요.</p>}
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
           <span className="text-sm font-semibold text-neutral-900">알림</span>
           <button
             type="button"
-            onClick={() => markAll.mutate()}
-            disabled={markAll.isPending || count === 0}
+            onClick={() => markAll.mutate({ reader })}
+            disabled={markAll.isPending || count == null || count === 0}
             className="cursor-pointer rounded text-xs font-medium text-primary-700 hover:text-primary-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-default disabled:text-neutral-400"
           >
             모두 읽음
@@ -101,13 +96,13 @@ export function NotificationBell({ to }: { to: string }) {
         )}
         {recent.isError && (
           <p className="px-4 py-6 text-center text-sm text-neutral-500">
-            알림을 불러오지 못했습니다.
+            알림을 불러오지 못했어요.
           </p>
         )}
-        {recent.isSuccess && recent.data.content.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-neutral-500">알림이 없습니다.</p>
+        {recent.currentResponse && recent.data?.content.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-neutral-500">알림이 없어요.</p>
         )}
-        {recent.isSuccess && recent.data.content.length > 0 && (
+        {recent.data && recent.data.content.length > 0 && (
           <ul className="max-h-96 divide-y divide-neutral-100 overflow-y-auto">
             {recent.data.content.map((notification) => {
               const isUnread = notification.readAt == null

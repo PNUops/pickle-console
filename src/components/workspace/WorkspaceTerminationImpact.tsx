@@ -57,11 +57,10 @@ export function WorkspaceTerminationImpactBody({ read, invitationId, targetLabel
   const { impact, targets, resources, page, resourcePage, loading, error, stale, load } = read
   return (
       <div className="space-y-4 [overflow-wrap:anywhere]">
-        <Alert variant="info">현재 종료 영향을 조회합니다. 이 조회로 신청이나 대상자가 취소되거나 리소스가 생성되지 않습니다. 실제 변경 시점의 상태는 달라질 수 있습니다.</Alert>
         {targetLabel && <p className="text-sm font-medium">대상 초대: {targetLabel}</p>}
         {loading && <Spinner label="종료 영향 불러오는 중" />}
         {error && <Alert variant="danger">{error}</Alert>}
-        {stale && <Alert variant="warning">대상이나 상태, 권한 또는 남은 리소스가 바뀌어 이전 페이지와 합칠 수 없습니다. 전체 영향을 다시 조회해 주세요.</Alert>}
+        {stale && <Alert variant="warning">대상이나 상태, 권한 정보 또는 남은 리소스가 바뀌어 이전 페이지와 합칠 수 없어요. 전체 영향을 다시 조회해 주세요.</Alert>}
         {(error || stale) && <Button variant="secondary" disabled={loading} onClick={() => void load()}>전체 영향 다시 조회</Button>}
         {impact && <>
           <div className="space-y-1 text-sm">
@@ -74,14 +73,13 @@ export function WorkspaceTerminationImpactBody({ read, invitationId, targetLabel
           <WorkspaceTerminationImpactSummary impact={impact} />
           <section className="space-y-2" aria-label="삭제를 막는 실제 리소스 목록">
             <h3 className="font-semibold">실제 리소스 ({resources.length} / {impact.blockingResources.totalElements}개)</h3>
-            <p className="text-sm">저장 상태는 실제 외부 적용이나 접속 성공을 뜻하지 않습니다. 도메인 갱신·해제·예약 기한은 별도 관측 정보입니다.</p>
-            {resources.length === 0 ? <p className="text-sm">{impact.blockingResources.totalElements === 0 ? '이 종료 작업을 막는 실제 리소스가 없습니다.' : '전체 수와 리소스 목록을 함께 확인하지 못했습니다. 전체 영향을 다시 조회해 주세요.'}</p>
+            {resources.length === 0 ? <p className="text-sm">{impact.blockingResources.totalElements === 0 ? '이 종료 작업을 막는 실제 리소스가 없어요.' : '전체 수와 리소스 목록을 함께 확인하지 못했어요. 전체 영향을 다시 조회해 주세요.'}</p>
               : <ul className="space-y-3">{resources.map((resource) => <TerminationResource key={`${resource.type}:${resource.id}`} resource={resource} admin={admin} source={source} />)}</ul>}
             {resourcePage + 1 < impact.blockingResources.totalPages && <Button variant="secondary" loading={loading} disabled={stale} onClick={() => void load('resources')}>다음 리소스 더 보기</Button>}
           </section>
           <section className="space-y-2" aria-label="실제 영향 대상">
             <h3 className="font-semibold">신청과 대상자 ({targets.length} / {impact.targets.totalElements}건)</h3>
-            {targets.length === 0 ? <p className="text-sm">{impact.targets.totalElements === 0 ? '현재 연결된 종료 대상이나 실패 이력이 없습니다.' : '전체 수와 대상 목록을 함께 확인하지 못했습니다. 전체 영향을 다시 조회해 주세요.'}</p>
+            {targets.length === 0 ? <p className="text-sm">{impact.targets.totalElements === 0 ? '현재 연결된 종료 대상이나 실패 이력이 없어요.' : '전체 수와 대상 목록을 함께 확인하지 못했어요. 전체 영향을 다시 조회해 주세요.'}</p>
               : <ul className="space-y-3">{targets.map((target) => <TerminationTarget key={`${target.kind}:${target.recipientId ?? target.requestId}`} target={target} admin={admin} source={source} />)}</ul>}
             {page + 1 < impact.targets.totalPages && <Button variant="secondary" loading={loading} disabled={stale} onClick={() => void load('targets')}>다음 대상 더 보기</Button>}
           </section>
@@ -101,7 +99,7 @@ function TerminationResource({ resource, admin, source }: { resource: BlockingRe
     <p>{resourceTypeEntry(resource.type).label} · {resource.orgName ?? '기관 정보 미표시'}</p>
     <p>저장 상태: {state}</p>
     <p>리소스 ID: <code>{resource.id}</code></p>
-    {gpuHidden ? <p>이 빌드에서는 GPU 조회 화면을 제공하지 않습니다. 정확한 ID로 운영자에게 확인해 주세요.</p> : !resource.resourceReadable && <p>현재 권한에서는 상세를 열 수 없습니다.</p>}
+    {gpuHidden ? <p>현재 화면에서는 GPU 상세를 열 수 없어요. 리소스 ID로 운영자에게 확인해 주세요.</p> : !resource.resourceReadable && <p>현재 권한으로는 상세를 열 수 없어요.</p>}
   </li>
 }
 
@@ -122,9 +120,9 @@ export function WorkspaceTerminationImpactSummary({ impact }: { impact: Impact }
   const counts = impact.summary
   return <div className="space-y-3 text-sm">
     {impact.executable
-      ? <Alert variant="info">현재 조회된 조건에서는 {impact.action === 'DELETE_WORKSPACE' ? '워크스페이스 삭제' : '초대 취소'}가 가능합니다. 아직 실행한 결과는 아닙니다.</Alert>
-      : <Alert variant="warning">{impact.blockedReason === 'PERSONAL' ? '개인 워크스페이스는 이 경로로 삭제할 수 없습니다.' : impact.blockedReason === 'REMAINING_RESOURCES' ? '남은 실제 리소스를 먼저 정리해야 워크스페이스를 삭제할 수 있습니다.' : '현재 조건에서는 이 종료 작업을 실행할 수 없습니다.'}</Alert>}
-    <p>아래 자동 정리는 종료 작업이 성공할 때 함께 반영됩니다. 차단 조건이 있으면 신청과 대상자도 종료되지 않습니다.</p>
+      ? <Alert variant="info">현재 조회된 조건에서는 {impact.action === 'DELETE_WORKSPACE' ? '워크스페이스 삭제' : '초대 취소'}가 가능해요. 아직 실행한 결과는 아니에요.</Alert>
+      : <Alert variant="warning">{impact.blockedReason === 'PERSONAL' ? '개인 워크스페이스는 이 경로로 삭제할 수 없어요.' : impact.blockedReason === 'REMAINING_RESOURCES' ? '남은 실제 리소스를 먼저 정리해야 워크스페이스를 삭제할 수 있어요.' : '현재 조건에서는 이 종료 작업을 실행할 수 없어요.'}</Alert>}
+    <p>종료 작업이 성공하면 아래의 자동 종료 대상도 함께 정리해요. 차단 조건이 있으면 신청과 대상자는 종료하지 않아요.</p>
     <dl className="grid grid-cols-1 gap-2 rounded border border-stroke-subtle p-3 sm:grid-cols-2">
       <Count label="취소될 승인 대기 신청" value={counts.submittedRequests} unit="건" />
       <Count label="자동 종료될 대상자" value={counts.closingRecipients} unit="명" />
@@ -137,7 +135,7 @@ export function WorkspaceTerminationImpactSummary({ impact }: { impact: Impact }
     {impact.recipientCounts.length > 0 && <ul className="space-y-1" aria-label="상태별 대상자 수">{impact.recipientCounts.map((item) => <li key={`${item.requestStatus}:${item.recipientStatus}`}>
       {REQUEST_STATUS_LABELS[item.requestStatus]} / {requestRecipientStatusLabel(item.requestStatus, item.recipientStatus, true)}: {item.count}명 · {item.willClose ? '자동 종료 대상' : '실패 이력 유지'}
     </li>)}</ul>}
-    <p>실패 이력은 생성 대기와 다르며 이 종료 작업으로 자동 취소되지 않습니다. 승인 이력과 이미 등록된 리소스의 처리 결과는 별도로 유지됩니다.</p>
+    <p>실패 이력은 생성 대기와 달라 이 작업으로 자동 취소하지 않아요. 승인 이력과 이미 등록된 리소스의 처리 결과는 별도로 유지돼요.</p>
     {impact.resourceBlockers.some((blocker) => blocker.count > 0) && <section aria-label="남은 실제 리소스" className="space-y-1">
       <h3 className="font-semibold">삭제를 막는 실제 리소스</h3>
       <ul>{impact.resourceBlockers.filter((blocker) => blocker.count > 0).map((blocker) => <li key={blocker.type}>{resourceTypeEntry(blocker.type).label}: {blocker.count}개</li>)}</ul>
