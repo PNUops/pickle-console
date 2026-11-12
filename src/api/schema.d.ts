@@ -1097,6 +1097,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/llm/usage/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 LLM 활용 성과
+         * @description 권한 범위에 보관 중인 요청과 토큰, 이용 기관과 워크스페이스, 키 수와 추이를 읽어요. 기간을 생략하면 보관 중인 전체 일별 기록을 집계해요. 개인 이용자 수와 비용은 제공하지 않아요.
+         */
+        get: operations["getAdminLlmPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/mail-deliveries": {
         parameters: {
             query?: never;
@@ -1420,6 +1440,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["updateAdminOsImage"];
+        trace?: never;
+    };
+    "/admin/performance/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 플랫폼 활용 규모
+         * @description 자동 수집한 최신 장비 사양을 읽어요. SYS_ADMIN은 현재 계정과 워크스페이스, 승인 신청과 등록 이력의 전역 집계도 읽어요.
+         */
+        get: operations["getAdminPerformanceOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/port-mappings": {
@@ -5364,6 +5404,33 @@ export interface components {
             /** @description 키 소유자가 보는 것과 같은 응답, 같은 계산 */
             trend: components["schemas"]["InstitutionAdminLlmTrendResponse"];
         };
+        AdminLlmPerformanceResponse: {
+            consumers: components["schemas"]["LlmPerformanceConsumers"];
+            /**
+             * Format: int32
+             * @description 7, 30, 90일 중 선택한 기간이에요. null이면 보관 중인 전체 기간이에요.
+             */
+            days?: number | null;
+            /**
+             * Format: date
+             * @description 전체 기간에서는 권한 범위에 남아 있는 첫 기록 일자예요. 기록이 없으면 null이에요.
+             */
+            from?: string | null;
+            gatewayReportState: components["schemas"]["LlmGatewayReportState"];
+            granularity: components["schemas"]["LlmPerformanceGranularity"];
+            models: components["schemas"]["LlmPerformanceModelUsage"][];
+            /** Format: int64 */
+            otherModelRequests: number;
+            population: components["schemas"]["LlmPerformancePopulation"];
+            /** Format: date-time */
+            rollupLastSuccessAt?: string | null;
+            timezone: string;
+            /** Format: date */
+            to: string;
+            totals: components["schemas"]["LlmPerformanceTotals"];
+            trend: components["schemas"]["LlmPerformanceTrendPoint"][];
+            usageQueueReportState: components["schemas"]["LlmGatewayReportState"];
+        };
         AdminLlmUsageResponse: {
             /** @description 같은 기간의 모델별과 경로별 사용량, 기능 권한의 사용 현황이에요. */
             breakdown: components["schemas"]["LlmUsageBreakdownResponse"];
@@ -5492,6 +5559,10 @@ export interface components {
             status: components["schemas"]["CatalogStatus"];
             /** Format: int32 */
             version: number;
+        };
+        AdminPerformanceOverviewResponse: {
+            business?: components["schemas"]["PerformanceOverviewBusiness"] | null;
+            hardware?: components["schemas"]["PerformanceOverviewHardware"] | null;
         };
         AdminPortMappingResponse: {
             applyState: components["schemas"]["PortForwardApplyState"];
@@ -8428,6 +8499,90 @@ export interface components {
              */
             lastSuccessAt?: string | null;
         };
+        LlmPerformanceConsumer: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            inputTokens: number;
+            name: string;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: int64 */
+            requests: number;
+        };
+        LlmPerformanceConsumers: {
+            items: components["schemas"]["LlmPerformanceConsumer"][];
+            level: components["schemas"]["LlmUsageConsumerLevel"];
+            /**
+             * Format: int64
+             * @description 상위 목록 밖의 다른 귀속 소비처에 기록된 요청 수예요.
+             */
+            otherRequests: number;
+            /** Format: int64 */
+            totalItems: number;
+            /**
+             * Format: int64
+             * @description 키나 기관, 워크스페이스에 연결되지 않아 소비처 목록에 포함하지 못한 요청 수예요.
+             */
+            unattributedRequests: number;
+        };
+        /** @enum {string} */
+        LlmPerformanceGranularity: "DAY" | "MONTH";
+        LlmPerformanceModelUsage: {
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            publicModelName?: string | null;
+            /** Format: int64 */
+            requests: number;
+        };
+        /** @description 선택 기간에 요청이 기록된 기관과 워크스페이스, 키 수예요. 개인 이용자 수가 아니에요. */
+        LlmPerformancePopulation: {
+            /** Format: int64 */
+            institutionCount: number;
+            /** Format: int64 */
+            keyCount: number;
+            /** Format: int64 */
+            workspaceCount: number;
+        };
+        LlmPerformanceTotals: {
+            /**
+             * Format: int64
+             * @description 입력 토큰에 이미 포함된 캐시 입력 토큰이에요.
+             */
+            cachedInputTokens: number;
+            /** Format: int64 */
+            estimatedRequests: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            /**
+             * Format: int64
+             * @description 출력 토큰에 이미 포함된 추론 토큰이에요.
+             */
+            reasoningTokens: number;
+            /** Format: int64 */
+            requests: number;
+            /** Format: int64 */
+            streamedRequests: number;
+            /**
+             * Format: int64
+             * @description 성공한 요청에 기록된 모델 이름의 종류 수예요.
+             */
+            usedModelCount: number;
+        };
+        LlmPerformanceTrendPoint: {
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: date */
+            periodStart: string;
+            /** Format: int64 */
+            requests: number;
+        };
         LlmServedModelUsageResponse: {
             /**
              * Format: int64
@@ -9951,6 +10106,60 @@ export interface components {
             role: string;
             /** Format: uuid */
             workspaceId: string;
+        };
+        PerformanceOverviewAsset: {
+            /** Format: int32 */
+            cpuCores: number;
+            cpuModel: string;
+            /** Format: int32 */
+            cpuThreads: number;
+            displayModel: string;
+            gpus: components["schemas"]["PerformanceOverviewGpu"][];
+            /** Format: int64 */
+            memoryMiB: number;
+        };
+        PerformanceOverviewBusiness: {
+            /** Format: int64 */
+            approvedRequests: number;
+            approvedRequestsByKind: {
+                [key: string]: number;
+            };
+            /** Format: int64 */
+            currentWorkspaces: number;
+            /** Format: int64 */
+            registeredAccounts: number;
+            /** Format: int64 */
+            registeredDomains: number;
+            /** Format: int64 */
+            vmRegistrations: number;
+            workspacesByKind: {
+                [key: string]: number;
+            };
+        };
+        PerformanceOverviewGpu: {
+            /** Format: int32 */
+            count: number;
+            /** Format: int64 */
+            dedicatedMemoryMiB?: number | null;
+            model: string;
+            sharedMemory?: boolean | null;
+            /** Format: int64 */
+            unifiedMemoryMiB?: number | null;
+        };
+        PerformanceOverviewHardware: {
+            assets: components["schemas"]["PerformanceOverviewAsset"][];
+            /** Format: int64 */
+            cpuCores: number;
+            /** Format: int64 */
+            cpuThreads: number;
+            /** Format: int64 */
+            dedicatedGpuMemoryMiB?: number | null;
+            /** Format: int64 */
+            gpuDevices: number;
+            /** Format: int64 */
+            memoryMiB: number;
+            /** Format: int64 */
+            physicalHosts: number;
         };
         /** @enum {string} */
         PortForwardApplyState: "PENDING" | "ACTIVE" | "FAILED";
@@ -13622,6 +13831,40 @@ export interface operations {
             };
         };
     };
+    getAdminLlmPerformance: {
+        parameters: {
+            query?: {
+                orgId?: string;
+                workspaceId?: string;
+                /** @description 7, 30, 90 중 선택해요. 생략하면 전체 기간이에요. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminLlmPerformanceResponse"];
+                };
+            };
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     listAdminMailDeliveries: {
         parameters: {
             query?: {
@@ -14442,6 +14685,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AdminOsImageResponse"];
+                };
+            };
+            /** @description 오류: 상태 코드와 무관하게 Problem 형태 */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getAdminPerformanceOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminPerformanceOverviewResponse"];
                 };
             };
             /** @description 오류: 상태 코드와 무관하게 Problem 형태 */

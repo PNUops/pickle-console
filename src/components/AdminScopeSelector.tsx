@@ -1,5 +1,7 @@
 import { Building24Regular } from '@fluentui/react-icons'
 import { USER_ROLE_LABELS } from '../lib/labels'
+import { useAuth } from '../auth/auth-context'
+import { isSysTier } from '../auth/permissions'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { Select } from './ui'
 
@@ -9,6 +11,7 @@ import { Select } from './ui'
  */
 export function AdminScopeSelector() {
   const scope = useAdminScope()
+  const { user } = useAuth()
   const value = scope.activeOrgId ?? ''
 
   return (
@@ -24,7 +27,7 @@ export function AdminScopeSelector() {
         disabled={scope.resolving || scope.options.length === 0}
         onChange={(event) => scope.setActiveOrgId(event.target.value || undefined)}
       >
-        {!scope.requiresSelection && <option value="">{scope.tier === 'system' || scope.globalSupport ? '전체 플랫폼' : '기관 필터 없음'}</option>}
+        {!scope.requiresSelection && <option value="">{user && isSysTier(user.role) ? '전체 플랫폼' : '기관 필터 없음'}</option>}
         {scope.tier === 'org' && scope.requiresSelection && (
           <option value="" disabled>
             {scope.options.length === 0 ? '관리 기관이 없어요' : '기관을 골라 주세요'}

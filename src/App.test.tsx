@@ -52,7 +52,7 @@ test('shows resource introductions, usage, sharing and the preserved process', a
 test.each([
   [null, '로그인', '/login'],
   ['access-user', '콘솔로 이동', '/console'],
-  ['access-sys-admin', '콘솔로 이동', '/admin'],
+  ['access-sys-admin', '콘솔로 이동', '/admin/performance'],
 ] as const)('keeps two hero actions and an internal guide link for %s', async (token, action, destination) => {
   if (token) server.use(refreshSuccessHandler(token))
   renderApp('/')
