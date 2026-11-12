@@ -36,8 +36,8 @@ test.each(administratorTokens)('%s keeps the administrator home after default lo
   server.use(refreshSuccessHandler(token, ACCESS_TOKENS[token]))
   renderApp('/login')
 
-  await screen.findByRole('heading', { name: '관리자 대시보드' })
-  expect(currentPath().split('?')[0]).toBe('/admin')
+  await screen.findByRole('heading', { name: '활용 성과' })
+  expect(currentPath().split('?')[0]).toBe('/admin/performance')
 })
 
 test.each(administratorTokens)('%s switches both consoles without exchanging the session', async (token) => {
@@ -66,8 +66,8 @@ test.each(administratorTokens)('%s switches both consoles without exchanging the
   expect(currentPath()).toBe('/console/account')
   await user.click(screen.getByRole('button', { name: `${profile.name} 계정 메뉴` }))
   await user.click(screen.getByRole('button', { name: '관리자 콘솔' }))
-  await screen.findByRole('heading', { name: '관리자 대시보드' })
-  expect(currentPath().split('?')[0]).toBe('/admin')
+  await screen.findByRole('heading', { name: '활용 성과' })
+  expect(currentPath().split('?')[0]).toBe('/admin/performance')
   expect(refresh).toHaveBeenCalledTimes(1)
   expect(login).not.toHaveBeenCalled()
   expect(logout).not.toHaveBeenCalled()
@@ -119,7 +119,7 @@ test('a personal workspace deep link remains distinct from the administrator ins
   expect(screen.getByRole('link', { name: '리소스 신청' })).toHaveAttribute('href', `/console/${uuid(12)}/requests/new`)
   await userEvent.click(screen.getByRole('button', { name: '이시스템 계정 메뉴' }))
   await userEvent.click(screen.getByRole('button', { name: '관리자 콘솔' }))
-  await screen.findByRole('heading', { name: '관리자 대시보드' })
+  await screen.findByRole('heading', { name: '활용 성과' })
   expect(currentPath()).not.toContain('workspaceId=')
 })
 

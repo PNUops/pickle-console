@@ -47,9 +47,9 @@ describe('운영자 계층 화면 접근', () => {
     expect(await screen.findByRole('heading', { name: '플랫폼 설정' })).toBeInTheDocument()
   })
 
-  test('SYS_MANAGER가 기관 관리(/admin/orgs)에 가면 대시보드로 돌아간다', async () => {
+  test('system managers return to performance when organization management is denied', async () => {
     renderAs('access-sys-manager', sysManagerUser, '/admin/orgs')
-    expect(await screen.findByRole('heading', { name: '관리자 대시보드' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '활용 성과' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '기관 관리' })).not.toBeInTheDocument()
   })
 })

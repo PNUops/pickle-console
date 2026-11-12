@@ -11,6 +11,7 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { AdminAnnouncementsPage } from './pages/AdminAnnouncementsPage'
 import { AdminAuditPage } from './pages/AdminAuditPage'
 import { AdminDashboardPage } from './pages/AdminDashboardPage'
+import { AdminPerformancePage } from './pages/AdminPerformancePage'
 import { AdminDomainsPage } from './pages/AdminDomainsPage'
 import { AdminDriftPage } from './pages/AdminDriftPage'
 import { AdminExpiryPage } from './pages/AdminExpiryPage'
@@ -247,6 +248,7 @@ function App() {
           <Route path="gpus/:allocationId" element={<AdminGpuDetailPage />} />
         </>}
         <Route index element={<AdminDashboardPage />} />
+        <Route path="performance" element={<AdminPerformancePage />} />
         <Route path="docs/*" element={guidePage} />
         <Route path="requests" element={<AdminRequestsPage />} />
         <Route path="requests/new" element={<AdminNewRequestPage />} />

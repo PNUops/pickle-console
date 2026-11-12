@@ -664,6 +664,8 @@ export type LlmCapacityQuery = NonNullable<import('./schema').operations['getAdm
 export type LlmUpstreamMetric = Schemas['LlmUpstreamMetricResponse']
 export type LlmLocalRejection = Schemas['LlmLocalRejectionMetricResponse']
 export type AdminLlmUsage = Schemas['AdminLlmUsageResponse']
+export type AdminLlmPerformance = Schemas['AdminLlmPerformanceResponse']
+export type AdminPerformanceOverview = Schemas['AdminPerformanceOverviewResponse']
 export type LlmUsageConsumer = Schemas['LlmUsageConsumerResponse']
 export type LlmUsageConsumerLevel = Schemas['LlmUsageConsumerLevel']
 export type LlmUsageDailyPoint = Schemas['LlmUsageDailyPointResponse']
@@ -892,6 +894,24 @@ export function fetchAdminLlmUsage(params: AdminLlmUsageQuery): Promise<AdminLlm
       params: { query: params },
     })
     if (!data) throw toApiError(error, '관리자 LLM 사용량을 불러오지 못했어요.')
+    return data
+  })
+}
+
+export function fetchAdminLlmPerformance(params: { orgId?: string; days?: 7 | 30 | 90 }): Promise<AdminLlmPerformance> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/llm/usage/performance', {
+      params: { query: params },
+    })
+    if (!data) throw toApiError(error, '활용 성과를 불러오지 못했어요.')
+    return data
+  })
+}
+
+export function fetchAdminPerformanceOverview(): Promise<AdminPerformanceOverview> {
+  return guardNetwork(async () => {
+    const { data, error } = await api.GET('/admin/performance/overview')
+    if (!data) throw toApiError(error, '플랫폼 현황을 불러오지 못했어요.')
     return data
   })
 }

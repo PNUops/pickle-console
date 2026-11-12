@@ -4,6 +4,8 @@ import { canEnterAdministration, hasAnyWork, SYS_READERS, type AuthorityActor } 
 export const REQUEST_READ_WORK = [...['vm', 'llm', 'domain', 'gpu'].flatMap((kind) => [`${kind}.request.read`, `${kind}.request.support.read`, `${kind}.request.decide`]), 'vm.recipient.retry', 'llm.recipient.retry']
 export const ROSTER_WORK = ['vm.roster.issue', 'llm.roster.issue']
 export const SUMMARY_WORK = ['vm.metadata.read', 'vm.observe', 'vm.publication.read', ...['vm', 'llm', 'domain', 'gpu'].map((kind) => `${kind}.request.read`)]
+export const PROVISION_WORK = ['vm.metadata.read', 'vm.observe', 'vm.publication.read']
+export const PERFORMANCE_WORK = [...PROVISION_WORK, 'llm.observe']
 
 function resourceWork(actor: AuthorityActor, kind: 'VM' | 'LLM' | 'DOMAIN' | 'GPU'): string[] {
   return actor.institutionAuthority?.catalogue.filter((work) => work.group === kind && !work.id.includes('.request.') && !work.id.includes('.roster.') && !work.id.includes('.recipient.')).map((work) => work.id) ?? []
@@ -16,6 +18,7 @@ export function canVisitAdministration(actor: AuthorityActor | null | undefined,
   const pathname = path.split('?')[0]
   const any = (ids: readonly string[]) => hasAnyWork(actor, ids)
   if (pathname === '/admin' || /^\/admin\/(docs|account|notifications)(\/|$)/.test(pathname)) return true
+  if (pathname === '/admin/performance') return any(PERFORMANCE_WORK)
   if (/^\/admin\/requests\/new/.test(pathname)) return any(ROSTER_WORK)
   if (/^\/admin\/requests(\/|$)/.test(pathname)) return any(REQUEST_READ_WORK)
   if (/^\/admin\/vms(\/|$)/.test(pathname)) return any(resourceWork(actor, 'VM'))

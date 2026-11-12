@@ -5,6 +5,7 @@ import { parseGuidePath } from './docs-paths'
 const ROOT_TITLE = 'PNU Cloud, Pickle'
 
 const ADMIN_TITLES: Record<string, string> = {
+  performance: '활용 성과',
   requests: '신청',
   vms: '가상머신',
   gpus: 'GPU',
