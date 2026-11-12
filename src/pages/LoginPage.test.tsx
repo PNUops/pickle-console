@@ -34,14 +34,14 @@ describe('로그인', () => {
     expect(screen.getByText('홍길동님, 환영해요.')).toBeInTheDocument()
   })
 
-  test('기관 관리자는 로그인 후 /admin 대시보드로 이동한다', async () => {
+  test('organization administrators land on performance after login', async () => {
     renderApp('/login')
     await screen.findByRole('heading', { name: '로그인' })
 
     await submitLogin(orgAdminUser.email, USER_PASSWORD)
 
     expect(
-      await screen.findByRole('heading', { name: '관리자 대시보드' }),
+      await screen.findByRole('heading', { name: '활용 성과' }),
     ).toBeInTheDocument()
   })
 

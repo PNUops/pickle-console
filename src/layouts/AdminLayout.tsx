@@ -44,6 +44,7 @@ export function AdminLayout() {
     {
       heading: '개요',
       items: [
+        { to: path('/admin/performance'), label: '활용 성과', icon: <DataUsage24Regular className={iconClass} /> },
         { to: path('/admin'), label: '대시보드', end: true, icon: <Home24Regular className={iconClass} /> },
       ],
     },
@@ -192,7 +193,7 @@ export function AdminLayout() {
 
   return (
     <AppShell
-      home={path('/admin')}
+      home={path(canVisitAdministration(user, '/admin/performance') ? '/admin/performance' : '/admin')}
       navLabel="관리자 메뉴"
       density="compact"
       sections={sections}

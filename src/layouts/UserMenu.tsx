@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router'
 import { useAuth } from '../auth/auth-context'
 import { canEnterAdministration } from '../auth/institution-authority'
+import { canVisitAdministration } from '../auth/admin-navigation'
 import { PopoverPanel, usePopover } from '../components/ui'
 import { USER_ROLE_LABELS } from '../lib/labels'
 import { adminPath } from '../lib/paths'
@@ -82,7 +83,7 @@ export function UserMenu() {
         {isAdministrator && (
           <button
             type="button"
-            onClick={() => go(inAdminConsole ? '/console' : '/admin')}
+            onClick={() => go(inAdminConsole ? '/console' : canVisitAdministration(user, '/admin/performance') ? '/admin/performance' : '/admin')}
             className={itemClass}
           >
             {inAdminConsole ? '사용자 콘솔' : '관리자 콘솔'}

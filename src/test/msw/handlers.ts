@@ -30,6 +30,8 @@ import { llmKeyHandlers } from './handlers/llm-keys'
 import { llmObservabilityHandlers } from './handlers/llm-observability'
 import { llmCapacityHandlers } from './handlers/llm-capacity'
 import { llmAdminUsageHandlers } from './handlers/llm-admin-usage'
+import { llmPerformanceHandlers } from './handlers/llm-performance'
+import { performanceOverviewHandlers } from './handlers/performance-overview'
 import { openRouterAccountHandlers } from './handlers/openrouter-accounts'
 import { metricsHandlers } from './handlers/metrics'
 import { networkHandlers } from './handlers/network'
@@ -72,6 +74,8 @@ export const handlers: RequestHandler[] = [
   ...llmObservabilityHandlers,
   ...llmCapacityHandlers,
   ...llmAdminUsageHandlers,
+  ...llmPerformanceHandlers,
+  ...performanceOverviewHandlers,
   ...resourceHandlers,
   ...terminalHandlers,
   ...vmSshKeyHandlers,

@@ -340,7 +340,7 @@ test('rejects malformed identifiers and viewer receipt access without reading or
   view.unmount()
   server.use(refreshSuccessHandler('access-sys-viewer', sysViewerUser))
   renderApp(adminPaths.bulkReceipt(uuid(99100)))
-  await screen.findByRole('heading', { name: '관리자 대시보드' })
+  await screen.findByRole('heading', { name: '활용 성과' })
   expect(reads).toBe(0)
   expect(bulkApplyBodies).toHaveLength(0)
 })
