@@ -50,7 +50,7 @@ test('refuses unsafe daily token input without sending a rounded update', async 
   await user.type(daily, '9007199254740993')
   await user.click(within(dialog).getByRole('button', { name: '저장' }))
   expect(adminLlmLimitBodies).toHaveLength(0)
-  expect(within(dialog).getByText('정확값 확인 불가')).toBeInTheDocument()
+  expect(within(dialog).getByText('수치를 확인할 수 없어요')).toBeInTheDocument()
   expect(within(dialog).getAllByText(/올바른 정수/).length).toBeGreaterThan(0)
 })
 

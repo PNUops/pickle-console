@@ -320,7 +320,7 @@ export function TimeSeriesChart({
       </div>
 
       {formatDetail && times.length > 0 && <div className="text-xs text-foreground-muted">
-        <label className="flex flex-wrap items-center gap-2">{title} 정확값
+        <label className="flex flex-wrap items-center gap-2"><span className="sr-only">{title} 날짜 선택</span>
           <select className="max-w-full rounded border border-stroke-subtle bg-surface-card p-1" value={selectedIndex < 0 ? '' : selected}
             onChange={(event) => setSelected(event.target.value)}>
             <option value="">날짜 선택</option>

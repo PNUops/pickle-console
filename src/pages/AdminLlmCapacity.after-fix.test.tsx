@@ -29,7 +29,7 @@ test.each([
   expect(consumers.getAllByRole('row')).toHaveLength(2)
   const totals = screen.getByText('보존된 요청').nextElementSibling
   expect(totals).toHaveTextContent(`${requests}건`)
-  const selector = screen.getByRole('combobox', { name: '같은 기간의 요청 기록 정확값' })
+  const selector = screen.getByRole('combobox', { name: '같은 기간의 요청 기록 날짜 선택' })
   await user.selectOptions(selector, Array.from((selector as HTMLSelectElement).options).at(-1)!.value)
   expect(screen.getByText(`요청 ${requests}건`)).toBeInTheDocument()
   const returned = new URL(link.getAttribute('href')!, 'https://pickle.invalid').searchParams.get('returnTo')!

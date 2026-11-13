@@ -1,5 +1,5 @@
 const UNITS = ['', 'K', 'M', 'B'] as const
-export const UNKNOWN_TOKEN_VALUE = '정확값 확인 불가'
+export const UNKNOWN_TOKEN_VALUE = '수치를 확인할 수 없어요'
 
 /** Only safe, nonnegative integers can be presented as exact token counts. */
 export function isExactTokenCount(value: number): boolean {

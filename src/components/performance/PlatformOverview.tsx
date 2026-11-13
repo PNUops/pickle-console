@@ -15,7 +15,7 @@ export function PerformanceBusinessSummary({ data }: { data: Business }) {
     {[
       { label: '등록 계정', value: data.registeredAccounts, unit: '개', icon: <People24Regular className="size-5" /> },
       { label: '워크스페이스', value: data.currentWorkspaces, unit: '개', icon: <Building24Regular className="size-5" /> },
-      { label: '승인한 신청', value: data.approvedRequests, unit: '건', icon: <DataUsage24Regular className="size-5" /> },
+      { label: '승인된 신청', value: data.approvedRequests, unit: '건', icon: <DataUsage24Regular className="size-5" /> },
       { label: '등록 도메인', value: data.registeredDomains, unit: '개', icon: <Desktop24Regular className="size-5" /> },
     ].map((item) => <Card key={item.label} className="rounded-xl"><CardContent className="px-4 py-4"><div className="flex items-center justify-between gap-2 text-foreground-muted"><h2 className="text-sm font-medium">{item.label}</h2><span aria-hidden="true" className="text-primary-600">{item.icon}</span></div><p className="mt-2 text-3xl font-bold tracking-tight">{number(item.value)}<span className="ml-1 text-sm font-medium text-foreground-muted">{item.unit}</span></p></CardContent></Card>)}
   </section>
@@ -48,6 +48,6 @@ export function PerformanceBusinessDetails({ data }: { data: Business }) {
   const max = approvals[0]?.[1] ?? 0
   return <section aria-label="지원 현황" className="grid gap-5 xl:grid-cols-2">
     <Card className="rounded-2xl"><CardContent className="space-y-5 py-6"><h2 className="text-base font-semibold">워크스페이스 구성</h2><DonutChart title="워크스페이스 구성" slices={slices} format={(value) => `${number(value)}개`} /></CardContent></Card>
-    <Card className="rounded-2xl"><CardContent className="space-y-5 py-6"><h2 className="text-base font-semibold">승인한 신청</h2><ul className="space-y-4">{approvals.map(([kind, value]) => <li key={kind}><div className="flex justify-between gap-3 text-sm"><span className="font-medium">{kinds[kind] ?? kind}</span><span className="text-foreground-muted">{number(value)}건</span></div><div aria-hidden="true" className="mt-2 h-2 overflow-hidden rounded-full bg-primary-50"><div className="h-full rounded-full bg-primary-500" style={{ width: `${max > 0 ? value / max * 100 : 0}%` }} /></div></li>)}</ul><div className="border-t border-stroke-subtle pt-4 text-sm text-foreground-secondary">누적 VM 등록 <strong className="ml-2 text-lg text-foreground-primary">{number(data.vmRegistrations)}대</strong></div></CardContent></Card>
+    <Card className="rounded-2xl"><CardContent className="space-y-5 py-6"><h2 className="text-base font-semibold">승인된 신청</h2><ul className="space-y-4">{approvals.map(([kind, value]) => <li key={kind}><div className="flex justify-between gap-3 text-sm"><span className="font-medium">{kinds[kind] ?? kind}</span><span className="text-foreground-muted">{number(value)}건</span></div><div aria-hidden="true" className="mt-2 h-2 overflow-hidden rounded-full bg-primary-50"><div className="h-full rounded-full bg-primary-500" style={{ width: `${max > 0 ? value / max * 100 : 0}%` }} /></div></li>)}</ul><div className="border-t border-stroke-subtle pt-4 text-sm text-foreground-secondary">지금까지 등록한 가상머신 <strong className="ml-2 text-lg text-foreground-primary">{number(data.vmRegistrations)}대</strong></div></CardContent></Card>
   </section>
 }

@@ -86,8 +86,8 @@ describe('관리자 LLM 사용량 route와 수요 추이', () => {
     const tokenDay = within(tokenTable).getByRole('rowheader', { name: '2026-08-31' }).closest('tr')!
     expect(within(tokenDay).getByRole('cell', { name: '1.2K' })).toBeInTheDocument()
     expect(within(tokenDay).getByRole('cell', { name: '400' })).toBeInTheDocument()
-    await user.click(within(tokenDay).getByRole('button', { name: '1.2K, 정확값 보기' }))
-    expect(within(tokenDay).getByText('정확값 1,200 토큰')).toBeVisible()
+    await user.click(within(tokenDay).getByRole('button', { name: '1.2K, 전체 숫자 보기' }))
+    expect(within(tokenDay).getByText('1,200 토큰')).toBeVisible()
     // 정확한 개수를 유지한다 — 이 단언이 아니면 표가 하나 늘어난 것을 아무도 못 본다.
     // 다섯째는 「호출 분해」 카드의 기본 눈금(모델별)이다.
     expect(screen.getAllByRole('table')).toHaveLength(5)
@@ -307,8 +307,8 @@ describe('관리자 LLM 사용량 소비처와 한도 검토', () => {
 
     const actual = (await screen.findByRole('link', { name: 'active-admin-key' })).closest('tr')!
     expect(within(actual).getByText('실제 소진 확인')).toBeInTheDocument()
-    expect(within(actual).getByRole('button', { name: '90K, 정확값 보기' })).toBeInTheDocument()
-    expect(within(actual).getByRole('button', { name: '1K, 정확값 보기' })).toBeInTheDocument()
+    expect(within(actual).getByRole('button', { name: '90K, 전체 숫자 보기' })).toBeInTheDocument()
+    expect(within(actual).getByRole('button', { name: '1K, 전체 숫자 보기' })).toBeInTheDocument()
     expect(within(actual).getByText('누적 사용 $0.00')).toBeInTheDocument()
     expect(within(actual).getByText('잔여 $10.00')).toBeInTheDocument()
     expect(actual.querySelector('time[datetime="2026-08-31T12:00:00+09:00"]')).not.toBeNull()
