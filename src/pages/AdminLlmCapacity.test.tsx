@@ -25,7 +25,7 @@ test('opens demand comparison inside service metrics without implying installed 
   expect(screen.getByText(/장비 수집이 설정되지 않았어요/)).toBeInTheDocument()
   expect(screen.queryByText(/초당 처리량이나 순간 최댓값이 아닙니다/)).not.toBeInTheDocument()
   expect(screen.queryByText(/TTFT|TPOT/)).not.toBeInTheDocument()
-  expect(screen.getByRole('combobox', { name: '같은 기간의 요청 기록 정확값' })).toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: '같은 기간의 요청 기록 날짜 선택' })).toBeInTheDocument()
 })
 
 test('does not render global telemetry for an institution even if the response flag is wrong', async () => {

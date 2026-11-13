@@ -26,7 +26,7 @@ describe('관리자 LLM API 키 목록', () => {
     expect(destination.searchParams.get('returnTo')).toBe(currentPath())
     expect(screen.getByText('suspended-admin-key')).toBeInTheDocument()
     expect(screen.getByText('other-org-key')).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: '40K, 정확값 보기' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: '40K, 전체 숫자 보기' }).length).toBeGreaterThan(0)
     expect(screen.getAllByRole('link', { name: 'AI 교육 사업 A' }).length).toBeGreaterThan(0)
     expect(screen.getAllByText('미결합').length).toBeGreaterThan(0)
     expect(screen.getAllByText('누적 금액 사용 $2.50').length).toBeGreaterThan(0)

@@ -206,7 +206,7 @@ function AdminLlmKeysPageContent() {
 
       {(keys.isPending || waitingForSearch) && !parsed.error && <LoadingBlock label="LLM API 키 목록 불러오는 중" />}
       {keys.isError && <MessageBar variant="danger">{keys.error.message}</MessageBar>}
-      {data && <p className="text-xs text-foreground-muted">총 {isExactTokenCount(data.totalElements) ? data.totalElements.toLocaleString('ko-KR') : '정확값 확인 불가'}개 · {formatDateTime(keys.data!.fetchedAt)} 조회</p>}
+      {data && <p className="text-xs text-foreground-muted">{isExactTokenCount(data.totalElements) ? `총 ${data.totalElements.toLocaleString('ko-KR')}개` : '키 개수를 확인할 수 없어요'} · {formatDateTime(keys.data!.fetchedAt)} 조회</p>}
       {data && data.content.length === 0 && (
         <EmptyState
           title="표시할 LLM API 키가 없어요"
