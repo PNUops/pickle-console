@@ -8,10 +8,10 @@ describe('token decisions', () => {
   it('preserves both exact sides of a change with the same abbreviation', async () => {
     const user = userEvent.setup()
     render(<BulkChangeDiffList targetType="LLM_KEY" fields={[{ field: 'dailyTokens', oldValue: 5000000, newValue: 5000001 }]} />)
-    const values = screen.getAllByRole('button', { name: /정확값 보기/ })
+    const values = screen.getAllByRole('button', { name: /전체 숫자 보기/ })
     for (const value of values) await user.click(value)
-    expect(screen.getByText('정확값 5,000,000 토큰')).toBeVisible()
-    expect(screen.getByText('정확값 5,000,001 토큰')).toBeVisible()
+    expect(screen.getByText('5,000,000 토큰')).toBeVisible()
+    expect(screen.getByText('5,000,001 토큰')).toBeVisible()
   })
   it('does not display full exhaustion before the raw quota is reached', () => {
     render(<BudgetGauge label="토큰" usedLabel="5M" limitLabel="5M" ratio={4999999 / 5000000} />)

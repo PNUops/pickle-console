@@ -26,10 +26,10 @@ test.each([
     http.get('*/api/v1/admin/llm/accounts/:accountId/usage', () => HttpResponse.json(response)))
   renderApp(`/admin/llm/accounts/${uuid(410)}?org=${uuid(1)}`)
   const row = (await screen.findByText('Synthetic unsafe-count consumer')).closest('tr')!
-  expect(within(row).getAllByText('정확값 확인 불가')).toHaveLength(2)
+  expect(within(row).getAllByText('수치를 확인할 수 없어요')).toHaveLength(2)
   for (const label of ['요청', '쓰인 키']) {
     const tile = screen.getByText(label, { selector: 'dt' }).parentElement!
-    expect(within(tile).getByText('정확값 확인 불가')).toBeInTheDocument()
+    expect(within(tile).getByText('수치를 확인할 수 없어요')).toBeInTheDocument()
   }
   expect(screen.queryByText(/9,007,199,254,740,992건/)).not.toBeInTheDocument()
 })

@@ -9,12 +9,12 @@ export function TokenValue({ value, decision = false }: { value: number; decisio
   if (!isExactTokenCount(value) || value < 1000) return <span>{label}</span>
   return <span className="inline-block max-w-full align-top whitespace-normal [overflow-wrap:anywhere]">
     <button type="button" aria-expanded={expanded} aria-controls={id}
-      aria-label={`${label}, 정확값 ${expanded ? '닫기' : '보기'}`}
+      aria-label={`${label}, 전체 숫자 ${expanded ? '닫기' : '보기'}`}
       onClick={() => setExpanded(!expanded)}
       className="cursor-pointer text-left underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-focus-ring">
       {label}
     </button>
-    {expanded && <span id={id} className="mt-1 block text-xs font-normal text-foreground-muted">정확값 {formatTokenExact(value)}</span>}
+    {expanded && <span id={id} className="mt-1 block text-xs font-normal text-foreground-muted">{formatTokenExact(value)}</span>}
   </span>
 }
 

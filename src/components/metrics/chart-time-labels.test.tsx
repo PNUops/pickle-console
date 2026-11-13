@@ -28,7 +28,7 @@ test('shortens axis labels while preserving exact point times and observations',
     format={String} formatDetail={String} formatTime={fullTime} formatAxisTime={(time) => `09:00:0${time}`} />)
   expect(axisLabels([1, 2])).toEqual(['09:00:01', '09:00:02'])
   expect(screen.getByRole('option', { name: fullTime(1) })).toBeInTheDocument()
-  await user.selectOptions(screen.getByRole('combobox', { name: '요청 기록 정확값' }), '1')
+  await user.selectOptions(screen.getByRole('combobox', { name: '요청 기록 날짜 선택' }), '1')
   expect(screen.getByText('요청 7')).toBeVisible()
   await user.selectOptions(screen.getByRole('combobox'), '2')
   expect(screen.getByText('요청 —')).toBeVisible()
