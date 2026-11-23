@@ -331,7 +331,7 @@ describe('bulk request from the administration area', () => {
     expect(await screen.findByLabelText('vCPU')).toHaveValue(2)
     expect(screen.queryByLabelText('호스트 이름 확정')).not.toBeInTheDocument()
     const capacity = await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
-    expect(within(capacity).getByText('1대 모두 배치 가능해요.')).toBeInTheDocument()
+    expect(within(capacity).getByText('확인된 서버 기준으로 1대 모두 배치 가능한 용량이 있어요.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '제출하고 승인' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })
@@ -361,7 +361,7 @@ describe('bulk request from the administration area', () => {
 
     expect(await screen.findByRole('heading', { name: '승인 내용' })).toBeInTheDocument()
     const capacity = await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
-    expect(within(capacity).getByText('3대 모두 배치 가능해요.')).toBeInTheDocument()
+    expect(within(capacity).getByText('확인된 서버 기준으로 3대 모두 배치 가능한 용량이 있어요.')).toBeInTheDocument()
     expect(screen.getByText(/생성 예정 3대.*가입 대기 1명/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '제출하고 승인' }))
     const dialog = await screen.findByRole('dialog', { name: '신청 승인' })

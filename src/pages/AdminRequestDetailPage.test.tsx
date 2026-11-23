@@ -82,7 +82,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     )
     expect(within(panel).getByText('소규모 개발용으로 승인')).toBeInTheDocument()
     const capacity = await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
-    expect(within(capacity).getByText('1대 모두 배치 가능해요.')).toBeInTheDocument()
+    expect(within(capacity).getByText('확인된 서버 기준으로 1대 모두 배치 가능한 용량이 있어요.')).toBeInTheDocument()
     expect(within(panel).queryByText(/스레드|오버커밋|승인이 가능합니다/)).not.toBeInTheDocument()
   })
 
@@ -93,7 +93,7 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     server.use(http.get('*/api/v1/admin/requests/:requestId/context', () => HttpResponse.json(context)))
     renderDetailAsSysAdmin(uuid(201))
     const capacity = await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
-    expect(within(capacity).getByText('1대 모두 배치 가능해요.')).toBeInTheDocument()
+    expect(within(capacity).getByText('확인된 서버 기준으로 1대 모두 배치 가능한 용량이 있어요.')).toBeInTheDocument()
     expect(screen.queryByText(/vCPU 오버커밋 비율이 임계값/)).not.toBeInTheDocument()
     expect(screen.queryByText('메모리 여유가 부족해 신중한 승인이 필요합니다.')).not.toBeInTheDocument()
   })

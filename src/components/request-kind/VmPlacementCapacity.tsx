@@ -62,14 +62,21 @@ function NodeCapacity({ node }: { node: Candidate }) {
 
 export function VmPlacementCapacity({ preview, onRefresh }: { preview: VmPlacementPreview; onRefresh?: () => void }) {
   const eligibleCount = preview.candidates.filter((node) => node.eligible).length
+  const automaticConnectivityUnknown = preview.nodeId == null && preview.candidates.some((node) =>
+    node.status === 'ACTIVE' && node.liveStatus === 'UNKNOWN' && node.capacityMode !== 'INVALID' && node.budget != null
+    && node.exclusionReasons.every((reason) => reason === 'LIVE_STATUS_UNKNOWN' || reason === 'NODE_NOT_SELECTED'),
+  )
   return <section aria-label="VM 배치 가능 자원" className="min-w-0 space-y-3 rounded-lg border border-stroke-subtle p-3">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3 className="font-semibold">VM 배치 가능 자원</h3>
       {onRefresh && <Button size="sm" variant="secondary" onClick={onRefresh}>자원 다시 조회</Button>}
     </div>
     <Alert variant={preview.fitsAllNow ? 'success' : 'warning'}>
-      {preview.fitsAllNow ? `${preview.count}대 모두 배치 가능해요.` : `${preview.count}대 중 ${preview.placeableCount}대 배치 가능 · ${preview.shortfallCount}대 부족해요.`}
+      {preview.fitsAllNow ? `확인된 서버 기준으로 ${preview.count}대 모두 배치 가능한 용량이 있어요.` : `확인된 서버 기준으로 ${preview.count}대 중 ${preview.placeableCount}대분의 용량이 있어요. ${preview.shortfallCount}대 부족해요.`}
     </Alert>
+    {automaticConnectivityUnknown && <Alert variant="warning">
+      응답 미확인 서버가 자동 배치에 선택될 수 있어요. 응답이 확인된 서버를 직접 선택하거나 서버 관리 상태를 확인해 주세요.
+    </Alert>}
     {eligibleCount === 0 ? <p className="text-sm">응답과 배치 조건이 확인된 서버가 없어요.</p> : <>
       <p className="text-xs text-foreground-muted">확인된 서버 {eligibleCount}대 합계 · 현재 잔여 → {preview.placeableCount}대 반영 후 예상</p>
       <ResourceChanges remaining={preview.totals.remaining} after={preview.totals.after} />

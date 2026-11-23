@@ -13,7 +13,7 @@ test('shows partial placement and only the resource impact of the VMs that fit',
   preview.totals.after.vcpu = 0
   render(<VmPlacementCapacity preview={preview} />)
   const panel = screen.getByRole('region', { name: 'VM 배치 가능 자원' })
-  expect(within(panel).getByText('30대 중 24대 배치 가능 · 6대 부족해요.')).toBeInTheDocument()
+  expect(within(panel).getByText('확인된 서버 기준으로 30대 중 24대분의 용량이 있어요. 6대 부족해요.')).toBeInTheDocument()
   expect(within(panel).getByText(/현재 잔여 → 24대 반영 후 예상/)).toBeInTheDocument()
   expect(within(panel).getAllByText(/24 vCPU/).length).toBeGreaterThan(0)
   expect(within(panel).getByText(/용량을 예약하지 않으며/)).toBeInTheDocument()
@@ -69,7 +69,7 @@ test('a node-specific limiting resource does not report a shortage when the enti
   const preview = vmPlacementFixture()
   preview.candidates[0].limitingResources = ['CPU']
   render(<VmPlacementCapacity preview={preview} />)
-  expect(screen.getByText('1대 모두 배치 가능해요.')).toBeInTheDocument()
+  expect(screen.getByText('확인된 서버 기준으로 1대 모두 배치 가능한 용량이 있어요.')).toBeInTheDocument()
   expect(screen.getByText(/대수 제한: CPU/)).toBeInTheDocument()
   expect(screen.queryByText(/CPU 부족/)).not.toBeInTheDocument()
 })
@@ -83,4 +83,48 @@ test('large memory numbers use readable GiB and keep exact MiB on the displayed 
   expect(screen.getByTitle('183,219 MiB')).toHaveTextContent('178.92 GiB')
   expect(screen.getAllByTitle('152,499 MiB')[0]).toHaveTextContent('148.92 GiB')
   expect(screen.getByTitle('512 MiB')).toHaveTextContent('512 MiB')
+})
+
+function addUnconfirmedNode(preview: ReturnType<typeof vmPlacementFixture>, reasons: typeof preview.candidates[number]['exclusionReasons'] = []) {
+  preview.candidates.push({ ...preview.candidates[0], nodeId: uuid(3), nodeName: 'pve3', liveStatus: 'UNKNOWN', eligible: false,
+    fitsOneNow: false, placeableCount: 0, plannedCount: 0, exclusionReasons: ['LIVE_STATUS_UNKNOWN', ...reasons] })
+}
+
+test('automatic placement warns that an active unconfirmed node remains selectable even when confirmed capacity fits', () => {
+  const preview = vmPlacementFixture({ count: 30, vcpu: 1 })
+  addUnconfirmedNode(preview)
+  render(<VmPlacementCapacity preview={preview} />)
+  expect(screen.getByRole('alert')).toHaveTextContent('응답 미확인 서버가 자동 배치에 선택될 수 있어요.')
+  expect(screen.getByRole('alert')).toHaveTextContent('응답이 확인된 서버를 직접 선택하거나 서버 관리 상태를 확인해 주세요.')
+  expect(screen.getByText('확인된 서버 기준으로 30대 모두 배치 가능한 용량이 있어요.')).toBeInTheDocument()
+})
+
+test('confirmed reachable nodes show a capacity-scoped verdict without an automatic-placement warning', () => {
+  const preview = vmPlacementFixture()
+  render(<VmPlacementCapacity preview={preview} />)
+  expect(screen.getByRole('status')).toHaveTextContent('확인된 서버 기준으로 1대 모두 배치 가능한 용량이 있어요.')
+  expect(screen.queryByText(/응답 미확인 서버가 자동 배치에 선택될 수 있어요/)).not.toBeInTheDocument()
+})
+
+test('direct node selection suppresses the automatic-placement warning for another unconfirmed node', () => {
+  const preview = vmPlacementFixture({ nodeId: uuid(2) })
+  addUnconfirmedNode(preview, ['NODE_NOT_SELECTED'])
+  render(<VmPlacementCapacity preview={preview} />)
+  expect(screen.getByRole('status')).toHaveTextContent('확인된 서버 기준으로 1대 모두 배치 가능한 용량이 있어요.')
+  expect(screen.queryByText(/응답 미확인 서버가 자동 배치에 선택될 수 있어요/)).not.toBeInTheDocument()
+})
+
+test('shortages stay scoped to confirmed capacity and an image-incompatible unconfirmed node adds no placement warning', () => {
+  const preview = vmPlacementFixture({ count: 30, vcpu: 1 })
+  preview.placeableCount = 24
+  preview.shortfallCount = 6
+  preview.fitsAllNow = false
+  preview.totals.remaining.vcpu = 24
+  preview.totals.after.vcpu = 0
+  preview.candidates[0].placeableCount = 24
+  preview.candidates[0].plannedCount = 24
+  addUnconfirmedNode(preview, ['IMAGE_UNAVAILABLE'])
+  render(<VmPlacementCapacity preview={preview} />)
+  expect(screen.getByRole('alert')).toHaveTextContent('확인된 서버 기준으로 30대 중 24대분의 용량이 있어요. 6대 부족해요.')
+  expect(screen.queryByText(/응답 미확인 서버가 자동 배치에 선택될 수 있어요/)).not.toBeInTheDocument()
 })
