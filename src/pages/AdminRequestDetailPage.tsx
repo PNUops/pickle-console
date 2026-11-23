@@ -57,7 +57,7 @@ import type { RequestKindView } from '../components/request-kind/types'
 import { cn } from '../lib/cn'
 import { fieldErrorsOf } from '../lib/field-errors'
 import { INVALID_ID_MESSAGE, isUuid } from '../lib/validation'
-import { formatDateTime, formatMemory, formatSpec } from '../lib/format'
+import { formatDateTime, formatSpec } from '../lib/format'
 import { adminPaths } from '../lib/paths'
 import { useAdminScope } from '../lib/use-admin-scope'
 import { effectiveLlmKeyStatus } from '../lib/status'
@@ -287,7 +287,6 @@ function DecisionSection({
   onNotice: (notice: Notice | null) => void
 }) {
   const queryClient = useQueryClient()
-  const form = kind.useApproveForm(request, decisionValue)
   const active = useActiveResult()
   const { activeOrgId } = useAdminScope()
   const { user } = useAuth()
@@ -297,6 +296,7 @@ function DecisionSection({
   if (context.isSuccess) for (const recipient of request.recipients ?? []) {
     if (recipient.userId && !targetFacts.some((target) => target.userId === recipient.userId)) targetFacts.push({ userId: recipient.userId, name: recipient.name ?? '대상자', userStatus: 'ACTIVE', member: false })
   }
+  const form = kind.useApproveForm(request, decisionValue, { targetFacts, targetFactsKnown: context.isSuccess })
   const [mode, setMode] = useState<'approve' | 'reject'>('approve')
 
   // 반려 폼
@@ -679,9 +679,6 @@ function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
           </> : <p className="text-foreground-muted">신청한 이미지 정보를 확인할 수 없어요. 현재 신청 가능한 이미지를 선택해 주세요.</p>}
         </CardContent>
       </Card>
-      {vm.orgHeadroom != null && <Alert variant={vm.orgHeadroom.warnings.length > 0 ? 'warning' : 'info'}>
-        {vm.guidance}
-      </Alert>}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">신청자 보유 가상머신</CardTitle>
@@ -699,37 +696,6 @@ function VmApprovalContext({ vm }: { vm: NonNullable<ApprovalContext['vm']> }) {
           <VmBriefList vms={vm.workspaceResources.activeVms} />
           <TotalsLine totals={vm.workspaceResources.totals} />
         </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">기관 가상머신 리소스 여유</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-neutral-700">{vm.orgHeadroom == null ? <p>현재 권한으로 기관 할당량과 용량을 확인할 수 없어요.</p> : <>
-          {vm.orgHeadroom.warnings.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {vm.orgHeadroom.warnings.map((warning) => (
-                <Badge key={warning} variant="danger">
-                  {warning}
-                </Badge>
-              ))}
-            </div>
-          )}
-          <RatioBar
-            label="vCPU 할당"
-            valueLabel={`${vm.orgHeadroom.allocated.vcpu} vCPU / ${vm.orgHeadroom.capacity.cpuThreads} 스레드`}
-            ratio={vm.orgHeadroom.vcpuOvercommitRatio}
-          />
-          <RatioBar
-            label="메모리 할당"
-            valueLabel={`${formatMemory(vm.orgHeadroom.allocated.memoryMb)} / ${formatMemory(vm.orgHeadroom.capacity.memoryMb)}`}
-            ratio={vm.orgHeadroom.memoryUsageRatio}
-          />
-          <p className="text-xs text-neutral-500">
-            vCPU 오버커밋 ×{vm.orgHeadroom.vcpuOvercommitRatio.toFixed(2)} · 메모리 사용률{' '}
-            {Math.round(vm.orgHeadroom.memoryUsageRatio * 100)}% · 디스크 할당 합계{' '}
-            {vm.orgHeadroom.allocated.diskGb} GiB
-          </p>
-        </>}</CardContent>
       </Card>
     </>
   )
@@ -808,38 +774,5 @@ function TotalsLine({ totals }: { totals: NonNullable<ApprovalContext['vm']>['ap
     <p className="text-xs text-neutral-500">
       합계 {formatSpec(totals.vcpu, totals.memoryMb, totals.diskGb)}
     </p>
-  )
-}
-
-/** 할당/용량 비율 바 — 임계(0.7 경고, 0.9 위험)에 따라 색이 바뀐다. */
-function RatioBar({
-  label,
-  valueLabel,
-  ratio,
-}: {
-  label: string
-  valueLabel: string
-  ratio: number
-}) {
-  const percent = Math.min(100, Math.round(ratio * 100))
-  const color =
-    ratio >= 0.9 ? 'bg-danger-500' : ratio >= 0.7 ? 'bg-warning-500' : 'bg-primary-500'
-  return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="font-medium text-neutral-600">{label}</span>
-        <span className="text-neutral-500">{valueLabel}</span>
-      </div>
-      <div
-        role="meter"
-        aria-label={label}
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        className="h-2 overflow-hidden rounded-full bg-neutral-100"
-      >
-        <div className={cn('h-full rounded-full', color)} style={{ width: `${percent}%` }} />
-      </div>
-    </div>
   )
 }

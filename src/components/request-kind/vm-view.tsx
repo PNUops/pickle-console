@@ -15,13 +15,22 @@ import {
   Spinner,
   Textarea,
 } from '../ui'
-import { formatDateTime, formatSpec, todayKstDate } from '../../lib/format'
-import { previewVmPlacement } from '../../api/request-review'
+import { formatSpec, todayKstDate } from '../../lib/format'
+import { previewVmPlacement, requestReaderKey, type VmPlacementPreview } from '../../api/request-review'
 import { useDebouncedValue } from '../../lib/use-debounced-value'
 import { isUuid, SUBDOMAIN_RE } from '../../lib/validation'
 import { Field } from './Field'
 import { periodText } from './period-text'
-import type { DecisionData, DecisionFormApi, RequestKindView } from './types'
+import type { DecisionData, DecisionFormApi, DecisionFormContext, RequestKindView } from './types'
+import { useAuth } from '../../auth/auth-context'
+import { useAdminScope } from '../../lib/use-admin-scope'
+import { approvalTargetCounts } from './approval-confirmation'
+import { VmPlacementCapacity } from './VmPlacementCapacity'
+
+function selectablePlacementNode(candidate: VmPlacementPreview['candidates'][number]): boolean {
+  return candidate.status === 'ACTIVE' && candidate.liveStatus === 'REACHABLE'
+    && candidate.exclusionReasons.every((reason) => reason === 'NODE_NOT_SELECTED')
+}
 
 function useVmDecisionData(): DecisionData {
   const osImages = useQuery({
@@ -69,7 +78,9 @@ function useVmDecisionData(): DecisionData {
   return { status: 'ready', value: osImages.data }
 }
 
-function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormApi {
+function useVmApproveForm(request: RequestDetail, value: unknown, context?: DecisionFormContext): DecisionFormApi {
+  const { user } = useAuth()
+  const { activeOrgId } = useAdminScope()
   // useVmDecisionData가 ready로 돌려준 그 값 — 이 모듈이 넣고 이 모듈이 꺼낸다.
   const images = value as OsImage[]
 
@@ -86,20 +97,28 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
   const bulk = (request.recipients?.length ?? 0) > 0
   const [nodeId, setNodeId] = useState('')
   const [approveComment, setApproveComment] = useState('')
-  const placementBody = { orgId: request.orgId ?? '', imageId, vcpu: Number(vcpu), memoryMb: Number(memoryGb) * 1024, diskGb: Number(diskGb) }
+  const counts = approvalTargetCounts(request, context?.targetFacts, context?.targetFactsKnown)
+  const count = counts.ready + counts.waiting + counts.unknown
+  const placementBody = { orgId: request.orgId ?? '', workspaceId: request.workspaceId, imageId, vcpu: Number(vcpu), memoryMb: Number(memoryGb) * 1024, diskGb: Number(diskGb), count, nodeId: nodeId || null }
   const placementText = JSON.stringify(placementBody)
   const debouncedPlacement = useDebouncedValue(placementText)
-  const validPlacement = !!request.orgId && isUuid(imageId)
+  const validPlacement = !!request.orgId && isUuid(imageId) && count > 0
+    && (activeOrgId == null || activeOrgId === request.orgId)
     && Number.isInteger(Number(vcpu)) && Number(vcpu) > 0
     && Number.isInteger(Number(memoryGb)) && Number(memoryGb) > 0
     && Number.isInteger(Number(diskGb)) && Number(diskGb) > 0
   const placement = useQuery({
-    queryKey: ['admin', 'vm-placement', request.orgId, debouncedPlacement],
+    queryKey: ['admin', 'vm-placement', request.id, activeOrgId ?? null, requestReaderKey(user), debouncedPlacement],
     queryFn: () => previewVmPlacement(JSON.parse(debouncedPlacement)),
     enabled: validPlacement && placementText === debouncedPlacement,
+    retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
-  const observedPlacement = placement.isSuccess && placementText === debouncedPlacement
-    && placement.data.orgId === request.orgId && placement.data.inputImageId === imageId ? placement.data : undefined
+  const observedPlacement = validPlacement && placement.isSuccess && !placement.isFetching && placementText === debouncedPlacement
+    && placement.data.orgId === request.orgId && placement.data.inputImageId === imageId
+    && placement.data.count === count && (placement.data.nodeId ?? null) === (nodeId || null) ? placement.data : undefined
+  const candidateOptions = placement.data && placement.data.orgId === request.orgId && placement.data.inputImageId === imageId ? placement.data.candidates : []
   const selectedNode = observedPlacement?.candidates.find((candidate) => candidate.nodeId === nodeId)
   const selectedImage = images.find((image) => image.id === imageId)
   const aliasImage = !selectedImage && imageId === request.vm?.imageId && observedPlacement?.image.selectableNow
@@ -126,7 +145,7 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
       else if (image && Number(diskGb) < image.minDiskGb)
         errors['vm.grantedDiskGb'] = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 해요.`
       if (!image && !aliasImage || observedPlacement?.image.selectableNow === false) errors['vm.grantedImageId'] = '현재 신청 가능한 OS 이미지를 선택해 주세요.'
-      if (nodeId && (!placement.isSuccess || placementText !== debouncedPlacement || !selectedNode))
+      if (nodeId && (!placement.isSuccess || placementText !== debouncedPlacement || !selectedNode || !selectablePlacementNode(selectedNode)))
         errors['vm.nodeId'] = '현재 배치 후보를 조회한 뒤 노드를 다시 확인해 주세요.'
       if (!bulk && grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
         errors['vm.grantedSlug'] =
@@ -222,21 +241,22 @@ function useVmApproveForm(request: RequestDetail, value: unknown): DecisionFormA
             maxLength={40}
           />
         </FormField>}
-        <FormField label="배치 노드" error={fieldErrors['vm.nodeId']} description="자동 배치 또는 현재 활성 노드의 선택 OS 이미지 후보를 골라요.">
+        <FormField label="배치 노드" error={fieldErrors['vm.nodeId']} description="자동 배치하거나 배치할 서버를 지정해요.">
           <Select value={nodeId} onChange={(event) => setNodeId(event.target.value)} disabled={placement.isFetching || placementText !== debouncedPlacement}>
             <option value="">자동 배치</option>
-            {nodeId && !selectedNode && <option value={nodeId} disabled>이전 선택 노드 (현재 후보 확인 필요)</option>}
-            {observedPlacement?.candidates.map((candidate) => <option key={candidate.nodeId} value={candidate.nodeId}>
+            {nodeId && !candidateOptions.some((candidate) => candidate.nodeId === nodeId) && <option value={nodeId} disabled>이전 선택 노드 (현재 후보 확인 필요)</option>}
+            {candidateOptions.map((candidate) => <option key={candidate.nodeId} value={candidate.nodeId} disabled={!selectablePlacementNode(candidate)}>
               {candidate.nodeName} / {candidate.fitsOneNow ? '현재 1대 배치 가능' : '현재 1대 배치 조건 미충족'}
             </option>)}
           </Select>
         </FormField>
         {placement.isFetching && <Spinner label="배치 후보 확인 중" />}
         {placement.isError && <Alert variant="warning">{placement.error.message}<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
-        {placement.isSuccess && placementText === debouncedPlacement && !observedPlacement && <Alert variant="warning">현재 입력의 배치 정보를 확인할 수 없어요.<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
-        {observedPlacement && <p className="text-xs text-neutral-500">{observedPlacement.image.name} revision {observedPlacement.image.version} / {formatDateTime(observedPlacement.observedAt)} 조회. 한 대 기준의 현재 조건이며 대상 전체의 용량을 예약하지 않아요.</p>}
+        {validPlacement && placement.isSuccess && !placement.isFetching && placementText === debouncedPlacement && !observedPlacement && <Alert variant="warning">현재 입력의 배치 정보를 확인할 수 없어요.<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
+        {count === 0 && <Alert>생성 예정인 대상이 없어요.</Alert>}
+        {count > 0 && <p className="text-sm text-foreground-muted">생성 예정 {count}대{validPlacement && ` · 부여 합계 ${formatSpec(Number(vcpu) * count, Number(memoryGb) * 1024 * count, Number(diskGb) * count)}`}{bulk && ` · 구성원 ${counts.ready}명 · 가입 대기 ${counts.waiting}명 · 자격 미확인 ${counts.unknown}명 · 취소·제외 ${counts.excluded}명`}</p>}
+        {observedPlacement && <VmPlacementCapacity preview={observedPlacement} onRefresh={() => void placement.refetch()} />}
         {observedPlacement && !observedPlacement.image.selectableNow && <Alert variant="warning">현재 선택한 OS 이미지는 신청 불가로 조회됐어요. 다른 이미지를 선택해 주세요.</Alert>}
-        {observedPlacement?.image.selectableNow && !observedPlacement.fitsAnyOneNow && <Alert variant="warning">현재 한 대를 배치할 수 있는 후보가 없어요. 실제 배치 시점에 다시 확인하며 대상자별 생성이 실패할 수 있어요.</Alert>}
         <FormField label="승인 의견" description="신청자에게 전달돼요. (선택)">
           <Textarea
             value={approveComment}
