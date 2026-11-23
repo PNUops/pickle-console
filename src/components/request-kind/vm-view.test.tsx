@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, expect, test, vi } from 'vitest'
 import type { UserProfile } from '../../auth/auth-context'
@@ -76,5 +77,33 @@ test('image-incompatible nodes are disabled while another eligible forced-node a
   await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
   expect(screen.getByRole('option', { name: /이미지 없는 서버/ })).toBeDisabled()
   expect(screen.getByRole('option', { name: /다른 배치 후보/ })).toBeEnabled()
+  client.clear()
+})
+
+
+test('forcing one node keeps uncalculated alternatives selectable without claiming their capacity', async () => {
+  const user = userEvent.setup()
+  vi.mocked(previewVmPlacement).mockImplementation(async (body) => {
+    const preview = vmPlacementFixture(body)
+    const sample = preview.candidates[0]
+    preview.candidates = [sample, { ...sample, nodeId: uuid(3), nodeName: 'pve3' }].map((node) =>
+      body.nodeId && node.nodeId !== body.nodeId
+        ? { ...node, eligible: false, exclusionReasons: ['NODE_NOT_SELECTED'], fitsOneNow: false, placeableCount: 0, plannedCount: 0 }
+        : node,
+    )
+    return preview
+  })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  render(<QueryClientProvider client={client}><Harness /></QueryClientProvider>)
+  await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
+  await user.selectOptions(screen.getByLabelText('배치 노드'), uuid(2))
+  const alternative = await screen.findByRole('option', { name: 'pve3 / 선택 시 다시 계산' })
+  expect(alternative).toBeEnabled()
+  expect(screen.queryByRole('option', { name: 'pve3 / 현재 1대 배치 조건 미충족' })).not.toBeInTheDocument()
+  expect(screen.getByRole('option', { name: 'pve2 / 현재 1대 배치 가능' })).toBeInTheDocument()
+  await user.selectOptions(screen.getByLabelText('배치 노드'), uuid(3))
+  expect(await screen.findByRole('option', { name: 'pve2 / 선택 시 다시 계산' })).toBeEnabled()
+  expect(screen.getByRole('option', { name: 'pve3 / 현재 1대 배치 가능' })).toBeInTheDocument()
+  expect(previewVmPlacement).toHaveBeenLastCalledWith(expect.objectContaining({ nodeId: uuid(3) }))
   client.clear()
 })

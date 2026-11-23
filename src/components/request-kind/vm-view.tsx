@@ -246,7 +246,9 @@ function useVmApproveForm(request: RequestDetail, value: unknown, context?: Deci
             <option value="">자동 배치</option>
             {nodeId && !candidateOptions.some((candidate) => candidate.nodeId === nodeId) && <option value={nodeId} disabled>이전 선택 노드 (현재 후보 확인 필요)</option>}
             {candidateOptions.map((candidate) => <option key={candidate.nodeId} value={candidate.nodeId} disabled={!selectablePlacementNode(candidate)}>
-              {candidate.nodeName} / {candidate.fitsOneNow ? '현재 1대 배치 가능' : '현재 1대 배치 조건 미충족'}
+              {candidate.nodeName} / {selectablePlacementNode(candidate) && candidate.exclusionReasons.includes('NODE_NOT_SELECTED')
+                ? '선택 시 다시 계산'
+                : candidate.fitsOneNow ? '현재 1대 배치 가능' : '현재 1대 배치 조건 미충족'}
             </option>)}
           </Select>
         </FormField>
