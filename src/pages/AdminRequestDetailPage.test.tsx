@@ -5,6 +5,7 @@ import { describe, expect, test } from 'vitest'
 import { todayKstDate } from '../lib/format'
 import {
   adminRequestStore,
+  approvalContextFixture,
   approveBodies,
   rejectBodies,
 } from '../test/msw/handlers/admin'
@@ -49,7 +50,7 @@ test.each([null, 0, 5000001])('keeps approved daily tokens in the request body a
 })
 
 describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
-  test('신청 내용과 참고 패널 5종, 안내문을 함께 보여준다', async () => {
+  test('shows request and supporting facts alongside the actual placement preview', async () => {
     renderDetail(uuid(201))
 
     await screen.findByRole('heading', { name: '신청 상세' })
@@ -65,10 +66,6 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
     const panel = await screen.findByRole('complementary', {
       name: '승인 판단 참고 정보',
     })
-    // guidance 안내문
-    expect(
-      within(panel).getByText('리소스에 여유가 있어 승인이 가능합니다.'),
-    ).toBeInTheDocument()
     // 1) 신청자
     expect(within(panel).getByText('example@pusan.ac.kr')).toBeInTheDocument()
     expect(within(panel).getByText('승인 2회 · 반려 0회')).toBeInTheDocument()
@@ -84,26 +81,21 @@ describe('관리자 신청 상세 — 의사결정 지원 패널', () => {
       `/admin/requests/${uuid(88)}?org=${uuid(1)}`,
     )
     expect(within(panel).getByText('소규모 개발용으로 승인')).toBeInTheDocument()
-    // 5) 기관 리소스 여유
-    expect(within(panel).getByText('34 vCPU / 40 스레드')).toBeInTheDocument()
-    expect(within(panel).getByText(/메모리 사용률 64%/)).toBeInTheDocument()
+    const capacity = await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
+    expect(within(capacity).getByText('1대 모두 배치 가능해요.')).toBeInTheDocument()
+    expect(within(panel).queryByText(/스레드|오버커밋|승인이 가능합니다/)).not.toBeInTheDocument()
   })
 
-  test('기관 리소스 경고가 있으면 경고 배지와 신중 안내문을 보여준다', async () => {
-    renderDetailAsSysAdmin(uuid(204))
-
-    const panel = await screen.findByRole('complementary', {
-      name: '승인 판단 참고 정보',
-    })
-    expect(
-      within(panel).getByText('메모리 여유가 부족해 신중한 승인이 필요합니다.'),
-    ).toBeInTheDocument()
-    expect(
-      within(panel).getByText('vCPU 오버커밋 비율이 임계값(1.5)을 초과했습니다'),
-    ).toBeInTheDocument()
-    expect(
-      within(panel).getByText('메모리 사용률이 임계값(85%)을 초과했습니다'),
-    ).toBeInTheDocument()
+  test('physical-thread advice does not override the current placement budget', async () => {
+    const context = approvalContextFixture(uuid(201))
+    context.vm!.orgHeadroom = approvalContextFixture(uuid(204)).vm!.orgHeadroom
+    context.vm!.guidance = '메모리 여유가 부족해 신중한 승인이 필요합니다.'
+    server.use(http.get('*/api/v1/admin/requests/:requestId/context', () => HttpResponse.json(context)))
+    renderDetailAsSysAdmin(uuid(201))
+    const capacity = await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
+    expect(within(capacity).getByText('1대 모두 배치 가능해요.')).toBeInTheDocument()
+    expect(screen.queryByText(/vCPU 오버커밋 비율이 임계값/)).not.toBeInTheDocument()
+    expect(screen.queryByText('메모리 여유가 부족해 신중한 승인이 필요합니다.')).not.toBeInTheDocument()
   })
 
   test('SYS scope deep link도 선택한 기관 밖의 신청을 렌더하지 않는다', async () => {

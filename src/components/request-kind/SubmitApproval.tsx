@@ -86,7 +86,7 @@ function SubmitApprovalForm({
   targetFactsKnown?: boolean
   workspaceReadable?: boolean
 }) {
-  const form = view.useApproveForm(request, value)
+  const form = view.useApproveForm(request, value, { targetFacts, targetFactsKnown })
   const confirmation = useConfirmedApproval(form, confirmOpen)
   useLayoutEffect(() => {
     handle.current = form

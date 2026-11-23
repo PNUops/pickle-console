@@ -13,7 +13,7 @@ import type { RecipientCandidate } from './recipients'
 
 export type { WizardStepId } from './wizard-steps'
 import type { FieldSlot, WizardStepId } from './wizard-steps'
-import type { ApprovalComparison } from './approval-confirmation'
+import type { ApprovalComparison, ApprovalTargetFacts } from './approval-confirmation'
 export type { FieldSlot }
 
 export type FieldErrors = Partial<Record<string, string>>
@@ -161,6 +161,11 @@ export type DecisionData =
   | { status: 'blocked'; gate: ReactNode }
   | { status: 'ready'; value: unknown }
 
+export interface DecisionFormContext {
+  targetFacts?: ApprovalTargetFacts[]
+  targetFactsKnown?: boolean
+}
+
 /** 승인 폼의 종류별 동작 — 제출 버튼·확인 모달·오류 매핑은 공통 골격 몫이다. */
 export interface DecisionFormApi {
   /** 승인 폼 본문 — 안내문·입력 전부. */
@@ -224,5 +229,5 @@ export interface RequestKindView {
    * 승인 폼 상태·검증·본문. ready일 때만 마운트되는 컴포넌트에서 불리므로,
    * 카탈로그 오류로 gate가 열리면 폼 상태는 이전처럼 통째로 초기화된다.
    */
-  useApproveForm(request: RequestDetail, value: unknown): DecisionFormApi
+  useApproveForm(request: RequestDetail, value: unknown, context?: DecisionFormContext): DecisionFormApi
 }
