@@ -1,3 +1,4 @@
+import { vmPlacementFixture } from './vm-placement'
 import { http, HttpResponse, type RequestHandler } from 'msw'
 import type { components } from '../../../api/schema'
 import { ACCESS_TOKENS, orgAdminUser, problemResponse, regularUser } from './auth'
@@ -819,8 +820,7 @@ export const adminHandlers: RequestHandler[] = [
     if (!actor || !(actor.role === 'SYS_ADMIN' || actor.managedOrgs.some((org) => org.orgId === body.orgId && (org.role === 'ORG_ADMIN' || org.role === 'ORG_MANAGER')))) return problemResponse({ type: 'about:blank', title: '접근할 수 없습니다', status: 403, detail: '이 기관의 신청 승인 권한이 필요합니다.', code: 'ACCESS_DENIED' })
     const image = osImages.find((row) => row.id === body.imageId)
     if (!image) return notFound()
-    const fits = body.memoryMb <= 8192 && body.diskGb <= 100
-    return HttpResponse.json({ orgId: body.orgId, inputImageId: body.imageId, observedAt: '2026-10-04T01:00:00Z', image: { id: image.id, name: image.displayName, version: image.version, selectableNow: image.status === 'ACTIVE' }, candidates: [{ nodeId: uuid(1), nodeName: 'pve1', fitsOneNow: fits }], fitsAnyOneNow: fits })
+    return HttpResponse.json({ ...vmPlacementFixture(body), image: { id: image.id, name: image.displayName, version: image.version, selectableNow: image.status === 'ACTIVE' } })
   }),
 
   http.post('*/api/v1/admin/requests/:requestId/approve', async ({ params, request }) => {

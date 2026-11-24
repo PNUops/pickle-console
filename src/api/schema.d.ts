@@ -2296,8 +2296,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 제안 VM 사양의 현재 한 VM 배치 조건 조회
-         * @description 신청 저장 전과 승인 검토에서 같은 이미지 revision과 VM 한 대의 사양을 조회해요. 호환 ACTIVE replica와 ACTIVE 노드, 실제 배치 용량 계산을 재사용해요. 용량을 예약하거나 승인 규칙을 바꾸지 않으며 여러 사람의 전체 생성이나 외부 적용 완료를 보장하지 않아요.
+         * 제안 VM 사양과 수량의 현재 배치 여유 조회
+         * @description 같은 사양 1~200대의 배치 가능 수량과 노드별 예산, 할당, 잔여와 계획 배치 후 잔여를 조회해요. 실제 배치 예산과 호환 이미지 조건을 사용하고 관리 상태와 실제 연결 관측을 구분해요. 확인되지 않은 노드는 가용 합계에서 제외해요. 용량을 예약하거나 승인 규칙을 바꾸지 않으며 전체 생성 완료를 보장하지 않아요.
          */
         post: operations["previewAdminVmPlacement"];
         delete?: never;
@@ -6008,18 +6008,51 @@ export interface components {
             userId: string;
         };
         AdminVmPlacementCandidate: {
+            after?: components["schemas"]["PlacementResources"] | null;
+            allocated: components["schemas"]["PlacementResources"];
+            budget?: components["schemas"]["PlacementResources"] | null;
+            capacityMode: components["schemas"]["PlacementCapacityMode"];
+            eligible: boolean;
+            exclusionReasons: components["schemas"]["PlacementExclusionReason"][];
             fitsOneNow: boolean;
+            limitingResources: components["schemas"]["PlacementResourceAxis"][];
+            /** Format: date-time */
+            liveObservedAt: string;
+            /** @description 실제 상태 조회의 응답 여부예요. UNKNOWN은 꺼짐을 확정하지 않으며 확인된 가용량에서 제외해요. */
+            liveStatus: components["schemas"]["PlacementLiveStatus"];
             /** Format: uuid */
             nodeId: string;
             nodeName: string;
+            /**
+             * Format: int32
+             * @description 이 노드에 배치할 수 있는 수량이며 요청 count를 넘지 않아요.
+             */
+            placeableCount: number;
+            /**
+             * Format: int32
+             * @description 자동 배치 우선순위 또는 지정 노드로 계산한 이번 제안의 배치 대수예요.
+             */
+            plannedCount: number;
+            remaining?: components["schemas"]["PlacementResources"] | null;
+            status: components["schemas"]["NodeStatus"];
         };
         AdminVmPlacementPreviewRequest: {
+            /**
+             * Format: int32
+             * @description 같은 사양으로 만들 VM 수예요. 생략하면 1대이며 용량을 예약하지 않아요.
+             */
+            count?: number | null;
             /** Format: int32 */
             diskGb: number;
             /** Format: uuid */
             imageId: string;
             /** Format: int32 */
             memoryMb: number;
+            /**
+             * Format: uuid
+             * @description 직접 지정할 노드예요. 생략하면 자동 배치 조건으로 계산해요.
+             */
+            nodeId?: string | null;
             /** Format: uuid */
             orgId: string;
             /** Format: int32 */
@@ -6032,19 +6065,29 @@ export interface components {
         };
         AdminVmPlacementPreviewResponse: {
             candidates: components["schemas"]["AdminVmPlacementCandidate"][];
-            /** @description 현재 한 VM의 제안 사양에 맞는 노드가 있는지 나타내요. N명 전체의 용량 예약이나 승인 성공을 보장하지 않아요. */
+            /** Format: int32 */
+            count: number;
+            fitsAllNow: boolean;
+            /** @description 현재 확인된 후보에 한 대 이상 배치할 수 있는지 나타내요. */
             fitsAnyOneNow: boolean;
-            /** @description 입력 이미지와 같은 논리 revision의 canonical 이미지 정보예요. 입력 ID는 inputImageId로 확인해요. */
+            /** @description 입력 이미지와 같은 논리 revision의 canonical 이미지 정보예요. */
             image: components["schemas"]["AdminApprovalImageReference"];
             /**
              * Format: uuid
              * @description 검증한 입력 이미지 ID예요. 호환 replica를 입력하면 image.id의 canonical ID와 다를 수 있어요.
              */
             inputImageId: string;
+            /** Format: uuid */
+            nodeId?: string | null;
             /** Format: date-time */
             observedAt: string;
             /** Format: uuid */
             orgId: string;
+            /** Format: int32 */
+            placeableCount: number;
+            /** Format: int32 */
+            shortfallCount: number;
+            totals: components["schemas"]["PlacementTotals"];
         };
         AdminWorkspaceDetailResponse: {
             allowedWorkIds: string[];
@@ -10160,6 +10203,30 @@ export interface components {
             memoryMiB: number;
             /** Format: int64 */
             physicalHosts: number;
+        };
+        /** @enum {string} */
+        PlacementCapacityMode: "PREPARED" | "LEGACY" | "INVALID";
+        /** @enum {string} */
+        PlacementExclusionReason: "INACTIVE_NODE" | "IMAGE_UNAVAILABLE" | "NODE_NOT_SELECTED" | "LIVE_STATUS_UNKNOWN" | "INVALID_CAPACITY" | "DISK_BELOW_MINIMUM";
+        /** @enum {string} */
+        PlacementLiveStatus: "REACHABLE" | "UNKNOWN";
+        /** @enum {string} */
+        PlacementResourceAxis: "CPU" | "MEMORY" | "DISK";
+        /** @description 배치 예산의 자원 수치예요. null은 해당 축에 합계 배치 한도가 없거나 확인할 수 없다는 뜻이며 0과 달라요. */
+        PlacementResources: {
+            /** Format: int64 */
+            diskGb?: number | null;
+            /** Format: int64 */
+            memoryMb?: number | null;
+            /** Format: int64 */
+            vcpu?: number | null;
+        };
+        /** @description 현재 확인된 유효 후보만 합산해요. 후보가 없으면 각 축은 0이에요. after는 배치 가능한 수량을 계획한 뒤의 잔여량이며 부족 대수는 shortfallCount로 구분해요. */
+        PlacementTotals: {
+            after: components["schemas"]["PlacementResources"];
+            allocated: components["schemas"]["PlacementResources"];
+            budget: components["schemas"]["PlacementResources"];
+            remaining: components["schemas"]["PlacementResources"];
         };
         /** @enum {string} */
         PortForwardApplyState: "PENDING" | "ACTIVE" | "FAILED";

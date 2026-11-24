@@ -1,3 +1,5 @@
+import { vmPlacementFixture } from '../test/msw/handlers/vm-placement'
+import type { components } from '../api/schema'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
@@ -234,12 +236,13 @@ test('placement reads are approver-scoped and names choose the exact node withou
   let previewBody: unknown
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser),
     http.get('*/api/v1/admin/nodes', () => { inventories += 1; return HttpResponse.json([]) }),
-    http.post('*/api/v1/admin/vm-placement/preview', async ({ request }) => { previewBody = await request.json(); return HttpResponse.json({ orgId: uuid(1), inputImageId: (previewBody as { imageId: string }).imageId, observedAt: '2026-10-04T01:00:00Z', image: { id: uuid(1), name: 'Ubuntu', version: 1, selectableNow: true }, candidates: [{ nodeId: uuid(2), nodeName: 'pve2', fitsOneNow: true }], fitsAnyOneNow: true }) }),
+    http.post('*/api/v1/admin/vm-placement/preview', async ({ request }) => { previewBody = await request.json(); return HttpResponse.json(vmPlacementFixture(previewBody as components['schemas']['AdminVmPlacementPreviewRequest'])) }),
   )
   renderApp(`/admin/requests/${uuid(201)}?org=${uuid(1)}`)
   const node = await screen.findByLabelText('배치 노드')
   await waitFor(() => expect(node).toBeEnabled())
   await user.selectOptions(node, uuid(2))
+  await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
   await user.click(screen.getByRole('button', { name: '승인하기' }))
   const modal = within(screen.getByRole('dialog', { name: '신청 승인' }))
   expect(modal.getByText('배치: pve2')).toBeInTheDocument()
@@ -302,7 +305,7 @@ test('a compatible requested image absent from the canonical list keeps its orig
   let observed: unknown
   server.use(refreshSuccessHandler('access-org-admin', orgAdminUser),
     http.get('*/api/v1/admin/requests/:requestId/context', () => HttpResponse.json(context)),
-    http.post('*/api/v1/admin/vm-placement/preview', async ({ request: incoming }) => { observed = await incoming.json(); return HttpResponse.json({ orgId: uuid(1), inputImageId: (observed as { imageId: string }).imageId, observedAt: '2026-10-04T01:00:00Z', image: { id: uuid(1), name: 'Ubuntu 24.04 LTS', version: 1, selectableNow: true }, candidates: [{ nodeId: uuid(2), nodeName: 'pve2', fitsOneNow: true }], fitsAnyOneNow: true }) }),
+    http.post('*/api/v1/admin/vm-placement/preview', async ({ request: incoming }) => { observed = await incoming.json(); return HttpResponse.json(vmPlacementFixture(observed as components['schemas']['AdminVmPlacementPreviewRequest'])) }),
   )
   renderApp(`/admin/requests/${request.id}?org=${uuid(1)}`)
   const image = await screen.findByLabelText('OS 이미지')
@@ -322,7 +325,7 @@ test.each([
   const user = userEvent.setup()
   const request = adminRequestStore.find((row) => row.id === uuid(201))!
   request.vm!.imageId = uuid(99)
-  server.use(refreshSuccessHandler('access-org-admin', orgAdminUser), http.post('*/api/v1/admin/vm-placement/preview', () => HttpResponse.json({ orgId, inputImageId, observedAt: '2026-10-04T01:00:00Z', image: { id: uuid(1), name: 'Ubuntu', version: 1, selectableNow: true }, candidates: [{ nodeId: uuid(2), nodeName: '다른 대상의 노드', fitsOneNow: true }], fitsAnyOneNow: true })))
+  server.use(refreshSuccessHandler('access-org-admin', orgAdminUser), http.post('*/api/v1/admin/vm-placement/preview', () => HttpResponse.json({ ...vmPlacementFixture(), orgId, inputImageId, candidates: [{ ...vmPlacementFixture().candidates[0], nodeName: '다른 대상의 노드' }] })))
   renderApp(`/admin/requests/${request.id}?org=${uuid(1)}`)
   await screen.findByText('현재 입력의 배치 정보를 확인할 수 없어요.')
   expect(screen.queryByRole('option', { name: /다른 대상의 노드/ })).not.toBeInTheDocument()
@@ -334,7 +337,7 @@ test.each([
 
 test('a newer unavailable image observation cannot be approved from an older selectable catalogue row', async () => {
   const user = userEvent.setup()
-  server.use(refreshSuccessHandler('access-org-admin', orgAdminUser), http.post('*/api/v1/admin/vm-placement/preview', () => HttpResponse.json({ orgId: uuid(1), inputImageId: uuid(1), observedAt: '2026-10-04T01:00:00Z', image: { id: uuid(1), name: 'Ubuntu', version: 1, selectableNow: false }, candidates: [], fitsAnyOneNow: false })))
+  server.use(refreshSuccessHandler('access-org-admin', orgAdminUser), http.post('*/api/v1/admin/vm-placement/preview', () => HttpResponse.json({ ...vmPlacementFixture(), image: { id: uuid(1), name: 'Ubuntu', version: 1, selectableNow: false }, candidates: [], fitsAnyOneNow: false, fitsAllNow: false })))
   renderApp(`/admin/requests/${uuid(201)}?org=${uuid(1)}`)
   await screen.findByText('현재 선택한 OS 이미지는 신청 불가로 조회됐어요. 다른 이미지를 선택해 주세요.')
   await user.click(screen.getByRole('button', { name: '승인하기' }))
@@ -574,4 +577,61 @@ test('a late approval response cannot replace another institution confirmation',
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)) })
   expect(resolved).toBe(true)
   expect(screen.queryByText('승인했어요.')).not.toBeInTheDocument()
+})
+
+test('placement uses eligible recipients including join waits and excludes departed or canceled targets', async () => {
+  const request = adminRequestStore.find((row) => row.id === uuid(201))!
+  request.recipients = [
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(600), userId: uuid(42), status: 'QUEUED' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(601), userId: uuid(57), status: 'QUEUED' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(602), status: 'PENDING_JOIN' },
+    { cancellationCapability: { ownerAllowed: false, supportAllowed: false, blockedReason: null }, id: uuid(603), status: 'CANCELED' },
+  ]
+  const context = approvalContextFixture(request.id)
+  context.workspace.members = context.workspace.members.filter((member) => member.userId !== uuid(57))
+  let input: components['schemas']['AdminVmPlacementPreviewRequest'] | undefined
+  server.use(refreshSuccessHandler('access-org-admin', orgAdminUser),
+    http.get('*/api/v1/admin/requests/:requestId/context', () => HttpResponse.json(context)),
+    http.post('*/api/v1/admin/vm-placement/preview', async ({ request: incoming }) => {
+      input = await incoming.json() as components['schemas']['AdminVmPlacementPreviewRequest']
+      return HttpResponse.json(vmPlacementFixture(input))
+    }),
+  )
+  renderApp(`/admin/requests/${request.id}?org=${uuid(1)}`)
+  await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
+  expect(input).toMatchObject({ count: 2, workspaceId: uuid(12), vcpu: 2, memoryMb: 2048 })
+  expect(screen.getByText(/생성 예정 2대.*구성원 1명.*가입 대기 1명.*취소·제외 2명/)).toBeInTheDocument()
+})
+
+test('resource estimates disappear immediately after spec edits and failed refreshes', async () => {
+  const user = userEvent.setup()
+  let fail = false
+  server.use(refreshSuccessHandler('access-org-admin', orgAdminUser),
+    http.post('*/api/v1/admin/vm-placement/preview', async ({ request }) => {
+      const input = await request.json() as components['schemas']['AdminVmPlacementPreviewRequest']
+      if (fail) return HttpResponse.json({ title: '조회 실패', status: 503 }, { status: 503 })
+      await delay(100)
+      return HttpResponse.json(vmPlacementFixture(input))
+    }),
+  )
+  renderApp(`/admin/requests/${uuid(201)}?org=${uuid(1)}`)
+  await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
+  await user.clear(screen.getByLabelText('vCPU'))
+  expect(screen.queryByRole('region', { name: 'VM 배치 가능 자원' })).not.toBeInTheDocument()
+  await user.type(screen.getByLabelText('vCPU'), '4')
+  const capacity = await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
+  expect(within(capacity).getAllByText(/32 vCPU/).length).toBeGreaterThan(0)
+  fail = true
+  await user.click(within(capacity).getByRole('button', { name: '자원 다시 조회' }))
+  await screen.findByRole('button', { name: '배치 후보 다시 조회' })
+  expect(screen.queryByRole('region', { name: 'VM 배치 가능 자원' })).not.toBeInTheDocument()
+})
+
+test('a preview for a different target count is never presented as current capacity', async () => {
+  server.use(refreshSuccessHandler('access-org-admin', orgAdminUser),
+    http.post('*/api/v1/admin/vm-placement/preview', () => HttpResponse.json(vmPlacementFixture({ count: 30 }))),
+  )
+  renderApp(`/admin/requests/${uuid(201)}?org=${uuid(1)}`)
+  await screen.findByText('현재 입력의 배치 정보를 확인할 수 없어요.')
+  expect(screen.queryByRole('region', { name: 'VM 배치 가능 자원' })).not.toBeInTheDocument()
 })
