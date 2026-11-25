@@ -622,9 +622,11 @@ test('resource estimates disappear immediately after spec edits and failed refre
   const capacity = await screen.findByRole('region', { name: 'VM 배치 가능 자원' })
   expect(within(capacity).getAllByText(/32 vCPU/).length).toBeGreaterThan(0)
   fail = true
-  await user.click(within(capacity).getByRole('button', { name: '자원 다시 조회' }))
-  await screen.findByRole('button', { name: '배치 후보 다시 조회' })
-  expect(screen.queryByRole('region', { name: 'VM 배치 가능 자원' })).not.toBeInTheDocument()
+  const refresh = within(capacity).getByRole('button', { name: '자원 다시 조회' })
+  await user.click(refresh)
+  expect(await within(capacity).findByText('배치 자원을 조회하지 못했어요')).toBeInTheDocument()
+  expect(within(capacity).queryByText('남은 CPU')).not.toBeInTheDocument()
+  expect(refresh).toHaveFocus()
 })
 
 test('a preview for a different target count is never presented as current capacity', async () => {
