@@ -27,6 +27,8 @@ import { useAdminScope } from '../../lib/use-admin-scope'
 import { approvalTargetCounts } from './approval-confirmation'
 import { VmPlacementCapacity } from './VmPlacementCapacity'
 
+const automaticPlacementCapacityError = '자동 배치를 진행할 수 없어요. 배치 노드에서 정상 서버를 선택하거나 서버 설정을 확인해 주세요.'
+
 function selectablePlacementNode(candidate: VmPlacementPreview['candidates'][number]): boolean {
   return candidate.status === 'ACTIVE' && candidate.liveStatus === 'REACHABLE'
     && candidate.exclusionReasons.every((reason) => reason === 'NODE_NOT_SELECTED')
@@ -115,11 +117,21 @@ function useVmApproveForm(request: RequestDetail, value: unknown, context?: Deci
     staleTime: 0,
     refetchOnMount: 'always',
   })
-  const observedPlacement = validPlacement && placement.isSuccess && !placement.isFetching && placementText === debouncedPlacement
-    && placement.data.orgId === request.orgId && placement.data.inputImageId === imageId
-    && placement.data.count === count && (placement.data.nodeId ?? null) === (nodeId || null) ? placement.data : undefined
+  const lastPlacement = placement.data
+  const matchingPlacement = validPlacement && placementText === debouncedPlacement && lastPlacement
+    && lastPlacement.orgId === request.orgId && lastPlacement.inputImageId === imageId
+    && lastPlacement.count === count && (lastPlacement.nodeId ?? null) === (nodeId || null) ? lastPlacement : undefined
+  const observedPlacement = placement.isSuccess && !placement.isFetching ? matchingPlacement : undefined
+  const checkingPlacement = validPlacement && (placementText !== debouncedPlacement || placement.isPending || placement.isFetching)
+  const placementError = checkingPlacement ? undefined : placement.error?.message
+    ?? (placement.isSuccess && !matchingPlacement ? '현재 입력의 배치 정보를 확인할 수 없어요.' : undefined)
+  // The allocator evaluates all active candidates that carry the selected image,
+  // so one invalid budget can stop automatic placement before a healthy node is chosen.
+  const automaticCapacityInvalid = nodeId === '' && (matchingPlacement?.candidates.some((node) => node.status === 'ACTIVE'
+    && node.exclusionReasons.includes('INVALID_CAPACITY') && !node.exclusionReasons.includes('IMAGE_UNAVAILABLE')) ?? false)
   const candidateOptions = placement.data && placement.data.orgId === request.orgId && placement.data.inputImageId === imageId ? placement.data.candidates : []
   const selectedNode = observedPlacement?.candidates.find((candidate) => candidate.nodeId === nodeId)
+  const selectedNodeInvalid = nodeId !== '' && (!selectedNode || !selectablePlacementNode(selectedNode))
   const selectedImage = images.find((image) => image.id === imageId)
   const aliasImage = !selectedImage && imageId === request.vm?.imageId && observedPlacement?.image.selectableNow
     ? observedPlacement.image : null
@@ -145,7 +157,11 @@ function useVmApproveForm(request: RequestDetail, value: unknown, context?: Deci
       else if (image && Number(diskGb) < image.minDiskGb)
         errors['vm.grantedDiskGb'] = `디스크는 이 OS 이미지의 최소 크기(${image.minDiskGb} GiB) 이상이어야 해요.`
       if (!image && !aliasImage || observedPlacement?.image.selectableNow === false) errors['vm.grantedImageId'] = '현재 신청 가능한 OS 이미지를 선택해 주세요.'
-      if (nodeId && (!placement.isSuccess || placementText !== debouncedPlacement || !selectedNode || !selectablePlacementNode(selectedNode)))
+      if (automaticCapacityInvalid)
+        errors['vm.nodeId'] = automaticPlacementCapacityError
+      else if (checkingPlacement)
+        errors['vm.nodeId'] = '배치 자원을 확인하고 있어요. 조회가 끝나면 다시 승인해 주세요.'
+      else if (selectedNodeInvalid)
         errors['vm.nodeId'] = '현재 배치 후보를 조회한 뒤 노드를 다시 확인해 주세요.'
       if (!bulk && grantedSlug.trim() && !SUBDOMAIN_RE.test(grantedSlug.trim()))
         errors['vm.grantedSlug'] =
@@ -252,12 +268,10 @@ function useVmApproveForm(request: RequestDetail, value: unknown, context?: Deci
             </option>)}
           </Select>
         </FormField>
-        {placement.isFetching && <Spinner label="배치 후보 확인 중" />}
-        {placement.isError && <Alert variant="warning">{placement.error.message}<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
-        {validPlacement && placement.isSuccess && !placement.isFetching && placementText === debouncedPlacement && !observedPlacement && <Alert variant="warning">현재 입력의 배치 정보를 확인할 수 없어요.<Button size="sm" variant="secondary" onClick={() => void placement.refetch()}>배치 후보 다시 조회</Button></Alert>}
         {count === 0 && <Alert>생성 예정인 대상이 없어요.</Alert>}
         {count > 0 && <p className="text-sm text-foreground-muted">생성 예정 {count}대{validPlacement && ` · 부여 합계 ${formatSpec(Number(vcpu) * count, Number(memoryGb) * 1024 * count, Number(diskGb) * count)}`}{bulk && ` · 구성원 ${counts.ready}명 · 가입 대기 ${counts.waiting}명 · 자격 미확인 ${counts.unknown}명 · 취소·제외 ${counts.excluded}명`}</p>}
-        {observedPlacement && <VmPlacementCapacity preview={observedPlacement} onRefresh={() => void placement.refetch()} />}
+        {validPlacement && <VmPlacementCapacity preview={matchingPlacement} onRefresh={() => void placement.refetch()}
+          refreshing={checkingPlacement} refreshError={placementError} automaticCapacityInvalid={automaticCapacityInvalid} />}
         {observedPlacement && !observedPlacement.image.selectableNow && <Alert variant="warning">현재 선택한 OS 이미지는 신청 불가로 조회됐어요. 다른 이미지를 선택해 주세요.</Alert>}
         <FormField label="승인 의견" description="신청자에게 전달돼요. (선택)">
           <Textarea
@@ -275,7 +289,11 @@ function useVmApproveForm(request: RequestDetail, value: unknown, context?: Deci
       { label: '호스트 이름', requested: bulk ? '대상자별 자동 생성' : request.vm?.desiredSlug ?? '자동 생성', granted: bulk ? '대상자별 자동 생성' : grantedSlug.trim() || '자동 생성' },
     ],
     nodeName: nodeId ? selectedNode?.nodeName ?? '현재 후보 확인 필요' : '자동 배치',
-    confirmBody: <p className="text-sm text-neutral-600">승인과 부여 내용이 저장된 뒤 대상자별 등록과 실제 VM 생성 상태를 확인할 수 있어요.</p>,
+    confirmReady: !automaticCapacityInvalid && !checkingPlacement && !selectedNodeInvalid,
+    confirmBody: automaticCapacityInvalid ? <Alert variant="warning">{automaticPlacementCapacityError}</Alert>
+      : checkingPlacement ? <Spinner label="배치 자원 확인 중" />
+        : selectedNodeInvalid ? <Alert variant="warning">선택한 서버를 확인할 수 없어요. 돌아가서 배치 노드를 다시 선택해 주세요.</Alert>
+          : <p className="text-sm text-neutral-600">승인과 부여 내용이 저장된 뒤 대상자별 등록과 실제 VM 생성 상태를 확인할 수 있어요.</p>,
 
     successMessage: bulk
       ? '승인 내용이 저장됐어요. 대상자별 등록 상태와 VM 상세에서 실제 생성 결과를 확인해 주세요.'
